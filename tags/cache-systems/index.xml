@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Cache Systems on bnm 3000</title>
+    <link>https://bnm3k.github.io/tags/cache-systems/</link>
+    <description>Recent content in Cache Systems on bnm 3000</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 23 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://bnm3k.github.io/tags/cache-systems/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>LRU vs FIFO (with Lazy Promotion and Quick Demotion)</title>
+      <link>https://bnm3k.github.io/blog/lru-vs-fifo/</link>
+      <pubDate>Mon, 23 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/lru-vs-fifo/</guid>
+      <description>Sprinkling some lazy promotion and quick demotion on FIFO</description>
+    </item>
+    <item>
+      <title> Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39;</title>
+      <link>https://bnm3k.github.io/blog/large-scale-analysis-caching-twitter/</link>
+      <pubDate>Sun, 22 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/large-scale-analysis-caching-twitter/</guid>
+      <description>TTLs are prevalent, object sizes are small, metadata overhead can be large, object sizes change, FIFO is better than LRU, you&amp;rsquo;ve got to address memory fragmentation</description>
+    </item>
+  </channel>
+</rss>

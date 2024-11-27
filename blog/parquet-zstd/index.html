@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Parquet &#43; Zstd: Smaller faster data formats | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/parquet-zstd/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/parquet-zstd/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Parquet &#43; Zstd: Smaller faster data formats">
+  <meta property="og:description" content="Often, parquet files have to be compressed. For fast compression, use LZ4 or Snappy. For the highest data compression ratio, use brotli. For both, zstd">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-07-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2023-07-08T00:00:00+00:00">
+    <meta property="article:tag" content="DuckDB">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/parquet-zstd/">Parquet &#43; Zstd: Smaller faster data formats</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Parquet &#43; Zstd: Smaller faster data formats</h1>
+    
+    <p class="single-summary">Often, parquet files have to be compressed. For fast compression, use LZ4 or Snappy. For the highest data compression ratio, use brotli. For both, zstd</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2023-07-08T00:00:00&#43;00:00">July 8, 2023</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      13 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <p>Here&rsquo;s the executive summary: if you&rsquo;re looking for a dataset format to use
+(particularly with Arrow/Polars/DuckDB), choose parquet over CSV as it lends
+itself to faster computation and imposes less conversion overhead. Raw parquet
+can still take up a lot of space. Therefore, do consider Zstd for compression:
+it&rsquo;s quite fast and provides high compression ratios, plus it&rsquo;s built into
+DuckDB so you don&rsquo;t need an external pre-processing step.</p>
+<h2 class="heading" id="the-problem-with-csvs">
+  The problem with CSVs
+  <a href="#the-problem-with-csvs">#</a>
+</h2>
+<p>The formal introduction: Dataset formats are just as important as the
+database/data analysis tool used to derive insight. Usually you want a stable
+and widely universal format. From there, you then consider nice-to-haves such as
+size footprint and computation efficiency. CSV is ubiquitous and depending on
+how it&rsquo;s generated, it can be stable. Additionally, one can quickly inspect CSVs
+using programs readily available on their computer - from simple text editors to
+web browsers. Since it&rsquo;s text-based, you don&rsquo;t even need external libraries to
+decode it - most languages&rsquo; standard libraries have CSV parsers and even if they
+don&rsquo;t, you can get away with some simple string wrangling. So it&rsquo;s no surprise
+that it&rsquo;s the go-to format for the hard drive datasets that Backblaze releases
+each quarter.</p>
+<p>However, CSVs have many shortcomings. Of the top of my head, I&rsquo;d say they lack
+schema, definite types and direct support for nested values. For this post
+though, let&rsquo;s focus on space and computation efficiency: raw CSVs take up a lot
+of space. The dataset released by Backblaze in the 1st quarter of 2023 takes up
+7.1 GB but on getting gzipped it reduces to 782 MB.</p>
+<pre tabindex="0"><code>&gt; du -sh data_Q1_2023.zip
+782M    data_Q1_2023.zip
+
+&gt; du -sh data_Q1_2023/
+7.1G    data_Q1_2023/
+</code></pre><p>Now, for some digression, let me dig a bit into the backblaze data. However, if
+you&rsquo;re here strictly for the parquet and compression codec stuff, skip the next
+two sections.</p>
+<h2 class="heading" id="detour-inspecting-the-backblaze-dataset">
+  Detour: Inspecting the backblaze dataset
+  <a href="#detour-inspecting-the-backblaze-dataset">#</a>
+</h2>
+<p>The dataset consists of a single file per day for January, February and March:</p>
+<pre tabindex="0"><code>&gt; ls -l data_Q1_2023/ | less
+2023-01-01.csv
+2023-01-02.csv
+2023-01-03.csv
+...
+2023-03-29.csv
+2023-03-30.csv
+2023-03-31.csv
+</code></pre><p>Let&rsquo;s check the header of one of the csv files. <code>head</code> outputs the first part of
+files, I&rsquo;ve limited it to the first line (csv header). Since the columns have
+been separated by commas, I&rsquo;ve then replaced each occurrence of a comma with a
+newline using <code>tr</code>. Finally, I&rsquo;ve piped it to <code>bat</code> given that there are many
+columns and I want to be able to page through the results (179 using
+<code>head -n1 2023-01-01.csv | tr , '\n' | wc -l</code> to count).
+<code>[bat](https://github.com/sharkdp/bat)</code> is a <code>cat</code> clone that I prefer since
+it&rsquo;s got automatic paging and syntax highlighting (also I&rsquo;m obligated by the
+&ldquo;Rewrite It In Rust&rdquo; task force to mention that it is in fact written in Rust).</p>
+<pre tabindex="0"><code>&gt; head -n1 2023-01-01.csv | tr , &#39;\n&#39; | bat
+
+   1   │ date
+   2   │ serial_number
+   3   │ model
+   4   │ capacity_bytes
+   5   │ failure
+   6   │ smart_1_normalized
+   7   │ smart_1_raw
+   8   │ smart_2_normalized
+   9   │ smart_2_raw
+:
+</code></pre><p>The file has 235,597 rows:</p>
+<pre tabindex="0"><code>&gt; wc -l 2023-01-03.csv
+235559 2023-01-03.csv
+</code></pre><p>Let&rsquo;s see the average number of rows per file.</p>
+<p>All the lines sum up to 21,455,082. And since we&rsquo;ve got 91 files, we end up with
+an average of 235,770 lines per file (Obviously I should subtract the headers).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="font-style:italic"># number of files</span>
+</span></span><span style="display:flex;"><span>&gt; files=<span style="font-weight:bold">$(</span>ls -l | wc -l<span style="font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>&gt; echo $files
+</span></span><span style="display:flex;"><span>91
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic"># number of lines</span>
+</span></span><span style="display:flex;"><span>&gt; lines=<span style="font-weight:bold">$(</span>find . -name <span style="font-style:italic">&#39;2023-*.csv&#39;</span> -exec cat {} + | wc -l<span style="font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>&gt; echo $lines
+</span></span><span style="display:flex;"><span>21455082
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic"># average</span>
+</span></span><span style="display:flex;"><span>&gt; python -c <span style="font-style:italic">&#34;print(</span>$lines<span style="font-style:italic">/</span>$files<span style="font-style:italic">)&#34;</span>
+</span></span><span style="display:flex;"><span>235770.13186813187
+</span></span></code></pre></div><p>DuckDB does provide the <code>describe</code> command that we could use as an alternative
+for getting an overview of the csv&rsquo;s schema.</p>
+<pre tabindex="0"><code>&gt; duckdb &#39;:memory:&#39; &#34;describe select * from read_csv_auto(&#39;./2023-01-01.csv&#39;)&#34;
+   1   │ ┌──────────────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+   2   │ │     column_name      │ column_type │  null   │   key   │ default │  extra  │
+   3   │ │       varchar        │   varchar   │ varchar │ varchar │ varchar │ varchar │
+   4   │ ├──────────────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+   5   │ │ date                 │ DATE        │ YES     │         │         │         │
+   6   │ │ serial_number        │ VARCHAR     │ YES     │         │         │         │
+   7   │ │ model                │ VARCHAR     │ YES     │         │         │         │
+   8   │ │ capacity_bytes       │ BIGINT      │ YES     │         │         │         │
+   9   │ │ failure              │ BIGINT      │ YES     │         │         │         │
+  10   │ │ smart_1_normalized   │ BIGINT      │ YES     │         │         │         │
+  11   │ │ smart_1_raw          │ BIGINT      │ YES     │         │         │         │
+  12   │ │ smart_2_normalized   │ BIGINT      │ YES     │         │         │         │
+</code></pre><p>Next, let&rsquo;s get a quick summary for a single CSV using DuckDB&rsquo;s <code>summarize</code>.
+Since I tend to use this query a lot with CSVs, I&rsquo;ve wrapped it into a bash
+function:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="">#!/usr/bin/bash
+</span></span></span><span style="display:flex;"><span><span style=""></span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">function</span> csv_summarize() {
+</span></span><span style="display:flex;"><span>	duckdb <span style="font-style:italic">&#39;:memory:&#39;</span> <span style="font-style:italic">&lt;&lt;-EOF
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">		summarize select *
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">		from
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">		read_csv_auto(&#39;$1&#39;)
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">	EOF</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Usage:</p>
+<pre tabindex="0"><code>&gt; csv_summarize 2023-01-01.csv
+   1   │ ┌──────────────────────┬─────────────┬──────────────────┬───┬────────────────┬────────┬─────────────────┐
+   2   │ │     column_name      │ column_type │       min        │ … │      q75       │ count  │ null_percentage │
+   3   │ │       varchar        │   varchar   │     varchar      │   │    varchar     │ int64  │     varchar     │
+   4   │ ├──────────────────────┼─────────────┼──────────────────┼───┼────────────────┼────────┼─────────────────┤
+   5   │ │ date                 │ DATE        │ 2023-01-01       │ … │                │ 235597 │ 0.0%            │
+   6   │ │ serial_number        │ VARCHAR     │ 000a43e7dee60010 │ … │                │ 235597 │ 0.0%            │
+   7   │ │ model                │ VARCHAR     │ CT250MX500SSD1   │ … │                │ 235597 │ 0.0%            │
+   8   │ │ capacity_bytes       │ BIGINT      │ 240057409536     │ … │ 14000519643136 │ 235597 │ 0.0%            │
+   9   │ │ failure              │ BIGINT      │ 0                │ … │ 0              │ 235597 │ 0.0%            │
+  10   │ │ smart_1_normalized   │ BIGINT      │ 43               │ … │ 100            │ 235597 │ 0.21%           │
+  11   │ │ smart_1_raw          │ BIGINT      │ 0                │ … │ 115853954      │ 235597 │ 0.21%           │
+  12   │ │ smart_2_normalized   │ BIGINT      │ 70               │ … │ 134            │ 235597 │ 48.67%          │
+</code></pre><p>Right off the bat, a couple of details worth noting:</p>
+<ul>
+<li><code>serial_number</code> and <code>model</code> are all strings</li>
+<li><code>failure</code> seems to be a boolean(0,1)</li>
+<li>hmm, what does a -1 <code>capacity_bytes</code> mean?</li>
+<li>a lot of the <code>smart_*</code> columns are null (hence duckDB defaults to assigning
+them the data-type VARCHAR). However, when they have values, those are
+numerical and seem to be within the 0 - 200 range</li>
+</ul>
+<p>It&rsquo;s probably worth heading back to Backblaze&rsquo;s info sections to get more
+details on the data + schema. Here&rsquo;s what I got:</p>
+<ul>
+<li>the date is in the yyyy-mm-dd format, should be obvious.</li>
+<li>the serial number and model are assigned by the manufacturer.</li>
+<li>capacity is in bytes</li>
+<li>Once a drive is marked as failed (with &ldquo;1&rdquo;), its data is not logged anymore. A
+drive is considered &lsquo;failed&rsquo; if it has totally stopped working or it&rsquo;s show
+evidence of failing soon [3].</li>
+<li>the <code>smart_*</code> columns are stats that each drive reports.</li>
+</ul>
+<h2 class="heading" id="more-digression-the-smart-stat-columns">
+  More digression: the SMART stat columns
+  <a href="#more-digression-the-smart-stat-columns">#</a>
+</h2>
+<ul>
+<li>From the Backblaze blog post [1], &ldquo;SMART stands for Self-Monitoring, Analysis,
+and Reporting Technology and is a monitoring system included in hard drives
+that reports on various attributes of the state of a given drive.&rdquo;</li>
+<li>SMART metrics are used to predict drive failures They are inconsistent from
+hard drive to hard drive, across different vendors and versions [3].</li>
+<li>Initially, Backblaze collected only subset of the SMART metrics daily but
+since 2014, they&rsquo;ve been collecting all of them daily [3].</li>
+<li>Each SMART stat stands for some attribute. For example, Smart 1 is the &ldquo;Read
+Error Rate&rdquo; and Smart 193 is the &ldquo;Load/Unload Cycle Count&rdquo;. For the full list
+of what each value means, check the
+<a href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">SMART Wikipedia entry</a></li>
+<li>Backblaze engineers narrow in on the following SMART values:
+<ul>
+<li>Reallocated Sectors Count (SMART 5): From wikipedia: &ldquo;Count of reallocated
+sectors. The raw value represents a count of the bad sectors that have been
+found and remapped&hellip; a drive which has had any reallocations at all is
+significantly more likely to fail in the immediate months&rdquo;. Raw values seem
+to range from 0 to 70,000, normalized values seem to range from 0 to 202?</li>
+<li>Reported Uncorrectable Errors (SMART 187): reads that could not be corrected
+using hardware ECC. Related? to SMART 195 (Hardware ECC Recovered) though
+SMART 195 is reported inconsistently across vendors and may increase even
+though no error has occurred [4]. Raw values seem to range from 0 to 120,
+normalized values range from 0 to 104. Any drive with a value above zero is
+scheduled for replacement. Most drives through out their lifetime report
+zero. The stat is reported consistently across different manufacturers [3]</li>
+<li>Command Timeout (SMART 188): From wikipedia: &ldquo;The count of aborted
+operations due to HDD timeout. Normally this attribute value should be equal
+to zero&rdquo;. Raw values range from 0G to 104G (Not quite sure what the G unit
+means). Normalized to 100? (Does this mean any value greater than zero is
+normalized to 100, I&rsquo;m not quite sure)</li>
+<li>Current Pending Sector Count (SMART 197): From wikipedia: &ldquo;Count of
+&ldquo;unstable&rdquo; sectors (waiting to be remapped because of unrecoverable read
+errors). If an unstable sector is subsequently read successfully, the sector
+is remapped and this value is decreased&rdquo;. The Wikipedia entry has more
+details. Raw values range from 0 to 1600. Normalized to 90-400?</li>
+<li>Uncorrectable Sector Count (SMART 198): From Wikipedia: &ldquo;The total count of
+uncorrectable errors when reading/writing sector. A rise in the value of
+this attribute indicates defects of the disk surface and/or problems in the
+mechanical subsystem&rdquo;. Raw values range from 0 to 16, normalized from 90
+to 400.</li>
+<li>Power Cycle Count (SMART 12) - number of times the power was turned off and
+turned back on - Correlates with failure but Backblaze does not use it since
+it might not be the case that cycling the power directly causes failure;
+power cycles occur infrequently. Maybe it&rsquo;s the pod? or &ldquo;new drives have
+flaws that are exposed during the first few dozen power cycles and then
+things settle down&rdquo; [3]. There&rsquo;s the raw value (ranges from 0 up to 91 with
+most drives having a value of less than 26), and the normalized value (in
+which 1 - worst, up to 253 - best). The normalized value is not useful [3].</li>
+<li>Read Error rate (SMART 1): From wikipedia: &ldquo;The raw value has different
+structure for different vendors and is often not meaningful as a decimal
+number&rdquo;. Zero indicates drive is OK, any value large than zero indicates
+there might be a failure but the larger the value doesn&rsquo;t mean failure is
+more probable.</li>
+</ul>
+</li>
+<li>However Backblaze only uses the first 5 SMART values (5,187,188,197 and 198)
+to check for failure: whenever any of these is greater than zero, a drive is
+examined and in combination with other factors, its determined whether the
+drive has/is going to fail or not. More details in [1].</li>
+<li>Except for SMART 197, all other SMART stats tracked are cumulative.</li>
+<li>One thing I&rsquo;m curious of: who does the normalization of values (is it the
+vendor, or the tools used to collect the SMART stats or Backblaze), and what
+is the procedure. I&rsquo;ll definitely be digging into it more as I do the data
+analysis thingy with the dataset</li>
+</ul>
+<h2 class="heading" id="conversion-from-csv-to-parquet">
+  Conversion from CSV to Parquet
+  <a href="#conversion-from-csv-to-parquet">#</a>
+</h2>
+<p>All&rsquo;s good so far but I&rsquo;m not quite keen on the dataset taking up all that disk
+space. Plus I&rsquo;ll be downloading from the other quarters so it&rsquo;ll only get worse.
+Time to switch formats. Given that I&rsquo;ll be using DuckDB heavily, the best option
+for now is Parquet which they support out of the box. I&rsquo;ll get to the best
+option for the <em>future</em> soon enough.</p>
+<p><a href="https://arrow.apache.org/docs/python/index.html">PyArrow</a> makes conversion of
+CSVs to Parquet quite easy albeit with some configuration to get the schema
+right (see why I wanted to get a hang of the dataset first). Here&rsquo;s the entire
+code for converting to parquet:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">os</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">re</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">duckdb</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pa</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow.csv</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">csv</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow.parquet</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pq</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ranges = [ (1, 5), (7, 13), (15, 18), (22, 24), (160, 161), (163, 184), 
+</span></span><span style="display:flex;"><span>        (187, 202), 206, 210, 218, 220, (222, 226), (230, 235), (240, 242), 
+</span></span><span style="display:flex;"><span>        (244, 248), (250, 252), (254, 255),
+</span></span><span style="display:flex;"><span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> smart_col_names(ranges):
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> v <span style="font-weight:bold">in</span> ranges:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> type(v) == int:
+</span></span><span style="display:flex;"><span>            start = v
+</span></span><span style="display:flex;"><span>            end_inclusive = v
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-style:italic"># else is tuple, unpack</span>
+</span></span><span style="display:flex;"><span>            start, end_inclusive = v
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">for</span> n <span style="font-weight:bold">in</span> range(start, end_inclusive + 1):
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">yield</span> <span style="font-style:italic">f</span><span style="font-style:italic">&#34;smart_</span><span style="font-weight:bold;font-style:italic">{</span>n<span style="font-weight:bold;font-style:italic">}</span><span style="font-style:italic">_normalized&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">yield</span> <span style="font-style:italic">f</span><span style="font-style:italic">&#34;smart_</span><span style="font-weight:bold;font-style:italic">{</span>n<span style="font-weight:bold;font-style:italic">}</span><span style="font-style:italic">_raw&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>smart_fields = ((name, pa.uint64()) <span style="font-weight:bold">for</span> name <span style="font-weight:bold">in</span> smart_col_names(ranges))
+</span></span><span style="display:flex;"><span>convert_options = csv.ConvertOptions(
+</span></span><span style="display:flex;"><span>    column_types={
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;failure&#34;</span>: pa.bool_(),
+</span></span><span style="display:flex;"><span>        **{name: col_type <span style="font-weight:bold">for</span> name, col_type <span style="font-weight:bold">in</span> smart_fields},
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>csvs_dir = <span style="font-style:italic">&#34;raw/data_Q1_2023&#34;</span>
+</span></span><span style="display:flex;"><span>outputs_dir = <span style="font-style:italic">&#34;output&#34;</span>
+</span></span><span style="display:flex;"><span>pattern = re.compile(<span style="font-style:italic">r</span><span style="font-style:italic">&#34;\d</span><span style="font-weight:bold;font-style:italic">{4}</span><span style="font-style:italic">-\d</span><span style="font-weight:bold;font-style:italic">{2}</span><span style="font-style:italic">-\d</span><span style="font-weight:bold;font-style:italic">{2}</span><span style="font-style:italic">\.csv&#34;</span>)
+</span></span><span style="display:flex;"><span>filenames = (
+</span></span><span style="display:flex;"><span>    f <span style="font-weight:bold">for</span> f <span style="font-weight:bold">in</span> os.listdir(csvs_dir) <span style="font-weight:bold">if</span> pattern.<span style="font-weight:bold">match</span>(f) <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>compression_codec = <span style="font-style:italic">&#34;ZSTD&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">for</span> filename <span style="font-weight:bold">in</span> filenames:
+</span></span><span style="display:flex;"><span>    filepath = os.path.join(csvs_dir, filename)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># read csv</span>
+</span></span><span style="display:flex;"><span>    tbl = csv.read_csv(filepath, convert_options=convert_options)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    stem = os.path.splitext(filename)[0]
+</span></span><span style="display:flex;"><span>    output_path = os.path.join(outputs_dir, <span style="font-style:italic">f</span><span style="font-style:italic">&#34;</span><span style="font-weight:bold;font-style:italic">{</span>stem<span style="font-weight:bold;font-style:italic">}</span><span style="font-style:italic">.parquet&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># write parquet</span>
+</span></span><span style="display:flex;"><span>    pq.write_table(
+</span></span><span style="display:flex;"><span>        tbl,
+</span></span><span style="display:flex;"><span>        output_path,
+</span></span><span style="display:flex;"><span>        use_dictionary=[<span style="font-style:italic">&#34;serial_number&#34;</span>, <span style="font-style:italic">&#34;model&#34;</span>],
+</span></span><span style="display:flex;"><span>        compression=compression_codec,
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><p>Of importance, I want the <code>failure</code> column to be set to boolean and all the
+smart fields <code>uint64</code>. The compression codec used is Zstd. Overall, with
+parquet + Zstd I end up at 556 MB, which is less than the gzipped CSVs while
+being faster to compute on. You kinda have to use compression because for my
+case, without it all the parquet size ends up at 7.7 GB.</p>
+<h2 class="heading" id="which-compression-codec-to-use-with-parquet">
+  Which compression codec to use with Parquet?
+  <a href="#which-compression-codec-to-use-with-parquet">#</a>
+</h2>
+<p>PyArrow does offers the following codecs to use with Parquet:</p>
+<ul>
+<li>NONE (as in no compression)</li>
+<li>SNAPPY</li>
+<li>GZIP</li>
+<li>BROTLI</li>
+<li>LZ4</li>
+<li>ZSTD</li>
+</ul>
+<p>Before settling on ZSTD, I had to do some moonshine benchmarking. Of
+consideration was:</p>
+<ul>
+<li>speed</li>
+<li>compression ratio</li>
+<li>integration with stand-alone DuckDB, i.e. I don&rsquo;t have to use PyArrow as an
+intermediary.</li>
+</ul>
+<p>It&rsquo;s worth noting that I&rsquo;m relying on the default configurations that PyArrow
+uses; maybe some of these codecs would&rsquo;ve performed better with different
+configs. PyArrow even goes so far as to allow for different codecs per column
+but that&rsquo;s out of scope for now.</p>
+<p>On speed, obviously having to do no compression is the fastest, but LZ4, Snappy
+are a close second followed by Zstd. Gzip and Brotli are relatively slow.</p>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+<figure class="">
+
+    <div>
+        <img loading="lazy" alt="speed comparison bar chart" src="/assets/images/parquet_zstd/speed_comparison.png" >
+    </div>
+
+    
+</figure>
+</p>
+<p>On the smallest disk footprint (compression ratio), Brotli offers the most bang
+for your back, closely followed by Zstd then Gzip. I&rsquo;ve included &lsquo;NONE&rsquo; in the
+bar chart just to show how necessary compression is.</p>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+<figure class="">
+
+    <div>
+        <img loading="lazy" alt="data size comparison bar chart" src="/assets/images/parquet_zstd/size_comparison.png" >
+    </div>
+
+    
+</figure>
+</p>
+<p>Finally, on direct integration with DuckDB, (in that I don&rsquo;t have to manually
+decompress the dataset nor do I have to use an intermediary), my options are
+pretty much narrowed down to snappy, zstd and gzip. Query speeds are similar (I
+used the <code>summarize</code> query).</p>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+<figure class="">
+
+    <div>
+        <img loading="lazy" alt="query time comparison bar chart" src="/assets/images/parquet_zstd/query_comparison.png" >
+    </div>
+
+    
+</figure>
+</p>
+<p>If it isn&rsquo;t obvious by now, the only codec that ticks all the boxes is, drumroll
+please, Zstd.</p>
+<h2 class="heading" id="the-duckdb-format">
+  The DuckDB format
+  <a href="#the-duckdb-format">#</a>
+</h2>
+<p>The DuckDB core team has been working on their own data format for a while. I
+mean, it&rsquo;s already there everytime you persist a database to a file, it&rsquo;s just
+not quite stable yet. And DuckDB does provide zero-copy conversion to Arrow and
+Polars, plus they have official libraries for almost all languages that I use,
+so I&rsquo;m not too worried about downstream tools having scamper around to add
+support for their format once its stable.</p>
+<p>I could list numerous reasons why I&rsquo;m excited for a DuckDB-native format, but to
+avoid yet another digression let me limit it one: <em>columnar compression</em>. When
+you have more information about a value&rsquo;s type and you&rsquo;ve got them clustered
+together in columns, you can always do better than black-box compression in
+terms of space and speed. Additionally, for some methods and cases you don&rsquo;t
+even need to decompress the data to compute over it. And that&rsquo;s exactly what
+database and systems researchers and practitioners have been working on. For
+example, we now have the following:</p>
+<ul>
+<li>Integer compression (delta encoding, delta-of-delta, running-length encoding).
+See
+<a href="https://www.timescale.com/blog/time-series-compression-algorithms-explained/">Time-Series Compression Algorithms, Explained</a>
+from Timescale.</li>
+<li>Floating point compression
+(<a href="https://www.vldb.org/pvldb/vol8/p1816-teller.pdf">Gorilla-based</a> and
+<a href="https://www.vldb.org/pvldb/vol15/p3058-liakos.pdf">Chimp</a>)</li>
+<li>Integer Set compression:
+<a href="https://vikramoberoi.com/a-primer-on-roaring-bitmaps-what-they-are-and-how-they-work/">Roaring Bitmaps</a>
+and <a href="https://db.in.tum.de/~lang/papers/tebs.pdf">Tree-encoded Bitmaps</a></li>
+<li>Dictionary Encoding for categorical data (already available in Parquet)</li>
+<li><a href="https://www.youtube.com/watch?v=uJ1KO_UMrQk">FSST compression</a> for strings.</li>
+<li><a href="https://db.in.tum.de/people/sites/durner/papers/json-tiles-sigmod21.pdf">JSON Tiles</a> -
+it does not directly compress JSON but it columnarizes JSON which then allows
+for relatively better compression.</li>
+</ul>
+<p>As detailed by one of the DuckDB co-creators in
+<a href="https://duckdb.org/2022/10/28/lightweight-compression.html">Lightweight Compression in DuckDB</a>,
+a lot of these methods are making there way into DuckDB and being improved upon
+even further. So keep Parquet close by for now, but watch out for DuckDB&rsquo;s
+format.</p>
+<h2 class="heading" id="backblaze-dataset-referencesfurther-reading">
+  Backblaze Dataset References/Further Reading
+  <a href="#backblaze-dataset-referencesfurther-reading">#</a>
+</h2>
+<ol>
+<li><a href="https://www.backblaze.com/blog/what-smart-stats-indicate-hard-drive-failures/">What SMART Stats Tell Us About Hard Drives - Andy Klein - Backblaze</a></li>
+<li><a href="https://www.backblaze.com/blog/managing-for-hard-drive-failures-data-corruption/">The Shocking Truth — Managing for Hard Drive Failure and Data Corruption - Skip Levens - Backblaze</a></li>
+<li><a href="https://www.backblaze.com/blog/hard-drive-smart-stats/">Hard Drive SMART Stats - Brian Beach - Backblaze</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">Self-Monitoring, Analysis and Reporting Technology - Wikipedia</a></li>
+<li><a href="https://www.backblaze.com/blog-smart-stats-2014-8.html#S198R">List of SMART stats - Backblaze</a></li>
+<li><a href="https://www.backblaze.com/b2/hard-drive-test-data.html#overview-of-the-hard-drive-data">Overview of the Hard Drive Data</a>,</li>
+</ol>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/sql-lateral-joins/">
+                        Lateral Joins &amp; Iterators in SQL
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/wrangling-json-with-duckdb/">
+                        Wrangling JSON with DuckDB
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

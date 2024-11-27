@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Some Notes on Vector Indexing in DuckDB | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/vss-duckdb-caveats/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/vss-duckdb-caveats/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Some Notes on Vector Indexing in DuckDB">
+  <meta property="og:description" content="Once you’ve indexed your vectors for similarity search, be sure to check your query plans, just in case the DB decides to opt for a sequential scan">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-08-06T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-08-06T00:00:00+00:00">
+    <meta property="article:tag" content="DuckDB">
+    <meta property="article:tag" content="RAG">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/vss-duckdb-caveats/">Some Notes on Vector Indexing in DuckDB</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Some Notes on Vector Indexing in DuckDB</h1>
+    
+    <p class="single-summary">Once you&rsquo;ve indexed your vectors for similarity search, be sure to check your query plans, just in case the DB decides to opt for a sequential scan</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2024-08-06T00:00:00&#43;00:00">August 6, 2024</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      12 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <h2 class="heading" id="overview">
+  Overview
+  <a href="#overview">#</a>
+</h2>
+<p>DuckDB
+<a href="https://duckdb.org/2024/05/03/vector-similarity-search-vss">recently added vector indexing</a>
+which is great for those of us that are tipping our toes into the current AI
+field, but still like the warm comfort of good-old fashioned SQL (and
+embedded/<a href="https://www.sqlite.org/serverless.html">serverless</a> databases).</p>
+<p>The VSS index is meant to speed up search - DuckDB already provides
+similarity/distance functions and vector/array data types, so strictly speaking,
+it is a nice-to-have feature rather than a must-have, especially when you&rsquo;ve got
+a few (1000s rather than millions) documents and can brute force your way
+without slowing things down, as was my case.</p>
+<p>Once you&rsquo;ve added the vector index, it&rsquo;s worth checking that the DB actually
+uses the index, specifically for the queries you wanted to speed up, and that
+they actually run faster.</p>
+<p>This post goes over a bunch of vector search SQL queries and their associated
+query plans. Here&rsquo;s a quick and very hand-wavey primer for those that aren&rsquo;t
+used to reading query plans:</p>
+<ul>
+<li>Each &ldquo;box&rdquo; or rather node is a step or action that the database undertakes
+while processing the query. An action can be something like, Order By (which
+entails sorting rows based on some criteria) or Projection (which entails
+picking some or all of the columns and leaving out the rest)</li>
+<li>Usually a query plan is tree-like or DAG-like but all the query plans we&rsquo;ll be
+going over today are somewhat linear (i.e. one step then the next step and so
+on)</li>
+<li>In OLAP databases such as DuckDB, indexing isn&rsquo;t really that important since
+most queries are going to be scanning the entire table regardless (rather than
+selecting one or two rows to carry out transactions on)</li>
+<li>However, for some specialized cases such as full-text search or vector
+similarity search, indexing is still quite important in OLAP DBs.</li>
+<li>In our case, once we&rsquo;ve got vector indexing in place, we need to look out for
+nodes in the query plan where the DB is performing an index scan
+(<code>HNSW_INDEX_SCAN</code>) indicating that it&rsquo;s not brute-forcing its way via a
+sequential scan (<code>SEQ_SCAN</code>).</li>
+</ul>
+<p>Let&rsquo;s start with some test data then create the index. The first thing to keep
+in mind with vector indexing in DuckDB is ALWAYS load the extension before
+running the queries - duckdb won&rsquo;t warn you if you don&rsquo;t, it&rsquo;ll simply opt for
+sequential scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-style:italic">--  snippet below borrowed from the DuckDB docs, with some modifications
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span><span style="font-weight:bold">load</span> vss;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> tbl (id integer <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>, vec float[3]);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> a, array_value(a, a+1,a+2)
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> range(1, 1000) ra(a);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">index</span> idx <span style="font-weight:bold">on</span> tbl <span style="font-weight:bold">using</span> hnsw (vec);
+</span></span></code></pre></div><h2 class="heading" id="limit-clause-is-necessary-for-index-scan">
+  Limit Clause is Necessary for Index Scan
+  <a href="#limit-clause-is-necessary-for-index-scan">#</a>
+</h2>
+<p>Without the limit clause, DuckDB opts for a sequential scan - which is the
+correct move. This should go without saying (specifically for top-K queries) but
+is still worth mentioning:</p>
+<p>Let&rsquo;s do an <a href="https://duckdb.org/docs/guides/meta/explain.html">explain</a> to get
+the query plan.</p>
+<p>When omitting the <code>limit</code> clause:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>;
+</span></span></code></pre></div><p>we end up with a sequential scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│          ORDER_BY         │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│          ORDERS:          │
+</span></span><span style="display:flex;"><span>│           <span style="font-style:italic">#2 ASC          │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│array_distance(vec, [1.0, 2│
+</span></span><span style="display:flex;"><span>│         .0, 3.0])         │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         SEQ_SCAN          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│            tbl            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 0           │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>Bringing back the limit clause:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10;
+</span></span></code></pre></div><p>And the database opts for an index scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│            NULL           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│      HNSW_INDEX_SCAN      │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│tbl (HNSW INDEX SCAN : idx)│
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 10          │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>All good so far.</p>
+<h2 class="heading" id="window-queries--vector-search">
+  Window Queries &amp; Vector Search
+  <a href="#window-queries--vector-search">#</a>
+</h2>
+<p>With regards to vector search, there are cases where window queries come quite
+in handy, such as when carrying out
+<a href="/blog/hybrid-search-rrf">Reciprocal Rank Fusion</a>.</p>
+<p>However, getting DuckDB to opt for an index scan in such cases is rather hard.</p>
+<p>Let&rsquo;s start off with the following query:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    rank() over(
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> rank,
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> tbl;
+</span></span></code></pre></div><p>It returns every tuple. Since where clauses cannot contain values from window
+functions, we need to wrap it in a CTE so as to get the top ranking rows:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> res <span style="font-weight:bold">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
+</span></span><span style="display:flex;"><span>        id,
+</span></span><span style="display:flex;"><span>        rank() over(
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>        ) <span style="font-weight:bold">as</span> rank,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> res
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> rank &lt;= 10;
+</span></span></code></pre></div><p>However, we end up with a sequential scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#2            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           FILTER          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│        (rank &lt;= 10)       │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 0           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#2            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           WINDOW          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│   RANK() OVER (ORDER BY   │
+</span></span><span style="display:flex;"><span>│ array_distance(vec, [...  │
+</span></span><span style="display:flex;"><span>│    .0]) ASC NULLS LAST)   │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         SEQ_SCAN          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│            tbl            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 0           │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>Don&rsquo;t quote me on this but we can rely on the implicit fact that the window
+clause orders the rows for us so we can plug in the <code>limit</code> clause without
+having an explicit <code>order by</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    rank() over(
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> rank,
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10;
+</span></span></code></pre></div><p>However, this does not help much, the db still does a sequential scan for this
+case.</p>
+<p>Back to CTEs: by rewriting it a bit differently, we can get the DB to use an
+index scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> id, vec
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">limit</span> 10
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    rank() over(
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> rank
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> t
+</span></span></code></pre></div><p>The above query&rsquo;s plan is:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            rank           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#2            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           WINDOW          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│   RANK() OVER (ORDER BY   │
+</span></span><span style="display:flex;"><span>│ array_distance(vec, [...  │
+</span></span><span style="display:flex;"><span>│    .0]) ASC NULLS LAST)   │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│            NULL           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│      HNSW_INDEX_SCAN      │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│tbl (HNSW INDEX SCAN : idx)│
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 10          │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>What if we move the limit clause to the &lsquo;outside&rsquo;:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> id, vec
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    rank() over(
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_distance(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> rank
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> t
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10 <span style="font-style:italic">-- it&#39;s now here
+</span></span></span></code></pre></div><p>That takes us back to sequential scan, unfortunately:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│           LIMIT           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            rank           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#2            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           WINDOW          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│   RANK() OVER (ORDER BY   │
+</span></span><span style="display:flex;"><span>│ array_distance(vec, [...  │
+</span></span><span style="display:flex;"><span>│    .0]) ASC NULLS LAST)   │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│          ORDER_BY         │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│          ORDERS:          │
+</span></span><span style="display:flex;"><span>│           <span style="font-style:italic">#2 ASC          │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│array_distance(vec, [1.0, 2│
+</span></span><span style="display:flex;"><span>│         .0, 3.0])         │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         SEQ_SCAN          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│            tbl            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 0           │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><h2 class="heading" id="cosine-similarity">
+  Cosine Similarity
+  <a href="#cosine-similarity">#</a>
+</h2>
+<p>As for cosine similarity, it seems there&rsquo;s a bug (I&rsquo;m on version v1.0.0
+1f98600c2c just in case you&rsquo;re reading this from the future and it&rsquo;s already
+fixed). DuckDB only does an index scan precisely for the case we&rsquo;re least likely
+to consider i.e. the &lsquo;furthest&rsquo; vectors.</p>
+<p>Let&rsquo;s repeat the same steps but with cosine as the metric option:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> tbl (id integer <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>, vec float[3]);
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> tbl <span style="font-weight:bold">select</span> a, array_value(a, a+1,a+2) <span style="font-weight:bold">from</span> range(1, 1000) ra(a);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">load</span> vss;
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">index</span> idx <span style="font-weight:bold">on</span> tbl <span style="font-weight:bold">using</span> hnsw (vec) <span style="font-weight:bold">with</span> (metric=<span style="font-style:italic">&#39;cosine&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_cosine_similarity(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">desc</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10;
+</span></span></code></pre></div><p>On running, the db does a sequential scan. Note that we have to use <code>desc</code>
+above, i.e. order from largest similaty score to lowest then pick the top K.
+Cosine similarity scores range from 1 to -1 with values similar to the query
+embedding being closer to 1.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           TOP_N           │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           Top 10          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│          <span style="font-style:italic">#2 DESC          │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│array_cosine_similarity(vec│
+</span></span><span style="display:flex;"><span>│     , [1.0, 2.0, 3.0])    │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         SEQ_SCAN          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│            tbl            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│          EC: 999          │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>Let&rsquo;s switch to <code>asc</code> i.e. order from the least similar to the most similar:</p>
+<p>On making the switch:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> array_cosine_similarity(vec, [1, 2, 3]::float[3]) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10;
+</span></span></code></pre></div><p>we get the following plan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│            NULL           │
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│      HNSW_INDEX_SCAN      │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│tbl (HNSW INDEX SCAN : idx)│
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           EC: 10          │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><p>Yay for index scan, but I don&rsquo;t think &lsquo;furthest&rsquo; queries are that common.</p>
+<p>What about switching to cosine distance instead of cosine similarity:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">explain</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> tbl
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> (1 - array_cosine_similarity(vec, [1, 2, 3]::float[3])) <span style="font-weight:bold">asc</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 10;
+</span></span></code></pre></div><p>We still get a sequential scan:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; duckdb &lt; snippet.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>┌─────────────────────────────┐
+</span></span><span style="display:flex;"><span>│┌───────────────────────────┐│
+</span></span><span style="display:flex;"><span>││       Physical Plan       ││
+</span></span><span style="display:flex;"><span>│└───────────────────────────┘│
+</span></span><span style="display:flex;"><span>└─────────────────────────────┘
+</span></span><span style="display:flex;"><span>┌───────────────────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#0            │</span>
+</span></span><span style="display:flex;"><span>│             <span style="font-style:italic">#1            │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│           TOP_N           │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           Top 10          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│           <span style="font-style:italic">#2 ASC          │</span>
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         PROJECTION        │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│(1.0 - array_cosine_similar│
+</span></span><span style="display:flex;"><span>│ ity(vec, [1.0, 2.0, 3.0]))│
+</span></span><span style="display:flex;"><span>└─────────────┬─────────────┘
+</span></span><span style="display:flex;"><span>┌─────────────┴─────────────┐
+</span></span><span style="display:flex;"><span>│         SEQ_SCAN          │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│            tbl            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│             id            │
+</span></span><span style="display:flex;"><span>│            vec            │
+</span></span><span style="display:flex;"><span>│   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │
+</span></span><span style="display:flex;"><span>│          EC: 999          │
+</span></span><span style="display:flex;"><span>└───────────────────────────┘
+</span></span></code></pre></div><h2 class="heading" id="alternatives---byoi-bring-your-own-index">
+  Alternatives - BYOI (Bring Your Own Index)
+  <a href="#alternatives---byoi-bring-your-own-index">#</a>
+</h2>
+<p>The kinks in DuckDB&rsquo;s vector indexing will eventually get ironed out. In the
+meantime, if need be, nothing stops us from bringing in vector indexing library
+such as <a href="https://github.com/nmslib/hnswlib">hnswlib</a> - aided by the fact that
+DuckDB has efficient and straighforward ways of interfacing with data formats
+such as numpy and arrow:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">with</span> duckdb.connect(<span style="font-style:italic">&#34;:memory:&#34;</span>) <span style="font-weight:bold">as</span> conn:
+</span></span><span style="display:flex;"><span>    conn.execute(
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    create table tbl (id integer primary key, vec float[3]);
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    insert into tbl
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    select a, array_value(a, a+1,a+2)
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    from range(1, 1000) ra(a);
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    dimension = 3
+</span></span><span style="display:flex;"><span>    num_elements = conn.sql(<span style="font-style:italic">&#34;select count(*) from tbl&#34;</span>).fetchone()[0]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># create &#39;external&#39; index</span>
+</span></span><span style="display:flex;"><span>    index = hnswlib.Index(space=<span style="font-style:italic">&#34;cosine&#34;</span>, dim=dimension)
+</span></span><span style="display:flex;"><span>    index.init_index(max_elements=num_elements, ef_construction=200, M=20)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    data = conn.sql(<span style="font-style:italic">&#34;select id, vec from tbl&#34;</span>).fetchnumpy()
+</span></span><span style="display:flex;"><span>    index.add_items(data[<span style="font-style:italic">&#34;vec&#34;</span>].tolist(), data[<span style="font-style:italic">&#34;id&#34;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    index.set_ef(50)  <span style="font-style:italic"># ef should always be greater than k</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># carry out search</span>
+</span></span><span style="display:flex;"><span>    query_embedding = np.array([1, 2, 3], dtype=np.float32)
+</span></span><span style="display:flex;"><span>    ids, distances = index.knn_query(query_embedding, k=10)
+</span></span></code></pre></div>
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/hybrid-search-rrf/">
+                        Combining Lexical and Semantic Search with Reciprocal Rank Fusion
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/sql-cypher-flights/">
+                        Graph Query Interfaces: A Comparison Between SQL and Cypher
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

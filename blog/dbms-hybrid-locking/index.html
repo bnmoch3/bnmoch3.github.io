@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Hybrid Locking &amp; Synchronization | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/dbms-hybrid-locking/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/dbms-hybrid-locking/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Hybrid Locking & Synchronization">
+  <meta property="og:description" content="Fast-path optimistic locking with fallback to pessimistic RW locks under contention">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-26T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-05-26T00:00:00+00:00">
+    <meta property="article:tag" content="Computer Systems">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/dbms-hybrid-locking/">Hybrid Locking &amp; Synchronization</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Hybrid Locking &amp; Synchronization</h1>
+    
+    <p class="single-summary">Fast-path optimistic locking with fallback to pessimistic RW locks under contention</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2024-05-26T00:00:00&#43;00:00">May 26, 2024</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      10 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <h2 class="heading" id="intro">
+  Intro
+  <a href="#intro">#</a>
+</h2>
+<p>Today&rsquo;s paper is
+<a href="https://db.in.tum.de/~boettcher/locking.pdf">Scalable and Robust Latches for Database Systems</a>
+by Jan Böttcher, Viktor Leis, Jana Giceva, Thomas Neumann and Alfons Kemper. In
+it, the authors who are also part of the Umbra DB team propose a <em>hybrid lock</em>,
+a locking implementation that starts off optimistically and only falls back to a
+pessimistic shared mode locking when needed.</p>
+<p>Since a general DBMS should support various kinds of workloads (read-heavy,
+write-heavy, hybrid), there are certain must-haves and nice-to-haves that locks
+used should have according to the authors:</p>
+<ul>
+<li><strong>fast and scalable</strong>: Locking and unlocking should be fast in cases where
+there is no contention (no other thread is waiting or currently accessing the
+item) or very little contention (the critical section is short). Such locks
+must support both coarse-grained locking e.g. for an entire table and
+fine-grained locking e.g. for nodes in a b-tree or buckets in a hash table.</li>
+<li><strong>effortless integration with the query engine</strong>: In the authors&rsquo; case, since
+they compile queries, the locks used should be able to be compiled quickly
+into efficient machine code while avoiding external function calls.</li>
+<li><strong>space efficient</strong>: Locks should &rsquo;not waste unreasonable amount of space&rsquo;.
+For example, the <code>pthread_mutex_t</code> provided by some OSs requires 64 bytes
+&ldquo;because of binary compatibility with programs that were compiled against
+ancient implementations that had to be 64 bytes)&rdquo; [2]. In my system,
+<code>pthread_mutex_t</code> takes up 40 bytes. Space-efficient locks (1 byte, 4 bytes)
+tie into the first point since they allow for fine-grained locking.</li>
+<li><strong>graceful contention handling</strong>: If two or more threads want to modify the
+same item concurrently, all but one will have to wait for their turn. The
+approach used in such contention handling should have minimal to no overhead
+in cases where there is little contention (such as read-only settings).
+Threads waiting for their turn should do so <em>quietly</em> i.e. without expending
+resources. Those threads that want to opt out e.g. user-initiated query
+cancellation should be able to do so.</li>
+</ul>
+<h2 class="heading" id="different-locks-for-different-folks-os-mutexes-and-spinlocks">
+  Different Locks for Different Folks: OS Mutexes and Spinlocks
+  <a href="#different-locks-for-different-folks-os-mutexes-and-spinlocks">#</a>
+</h2>
+<p>One way of ticking all the above boxes would be to use different locks in
+different scenarios. This is what pre-2015 Webkit did where they picked either a
+spinlock or an OS mutex based on the situation [2].</p>
+<p>Spinlocks are easy to implement and integrate into a query engine; they can be
+optimized for low space overhead and have fast lock/unlock under no contention.
+However, even with some contention, spinlocks end up being quite inefficient:</p>
+<blockquote>
+<p>The simplest spinlocks will make contending threads appear to be very busy and
+so the OS will make sure to schedule them. This will waste tons of power and
+starve other threads that may really be able to do useful work. A simple
+solution would be to make the spinlock sleep – maybe for a millisecond – in
+between CAS attempts. This turns out to hurt performance on real code because
+it postpones progress when the lock becomes available during the sleep
+interval. Also, sleeping doesn’t completely solve the problem of inefficiency
+when spinning - Locking in WebKit, Filip Pizlo</p>
+</blockquote>
+<p>On the other hand, OS mutexes handle contention quite efficiently since they are
+able to suspend threads that are waiting allowing for those doing &lsquo;actual&rsquo; work
+to be scheduled in. Unfortunately, they have high space overhead and are rather
+slow under little to no contention.</p>
+<p>Therefore, rather than use one kind of lock exclusively throughout the codebase,
+the WebKit team picked either kind based on the situation:</p>
+<blockquote>
+<p>WebKit had a mix of spinlocks and OS mutexes, and we would try to pick which
+one to use based on guesses about whether they would benefit more from
+uncontended speed or efficiency under contention. If we needed both of those
+qualities, we would have no choice but to punt on one of them. - Locking in
+WebKit, Filip Pizlo</p>
+</blockquote>
+<p>In the case of WebKit, they created what they term <em>Adaptive Locks</em>. To give a
+brief summary, WebKit Adaptive Locks handle contention by spinning a little, 40
+times to be precise (the iteration count is derived experimentally though it
+could safely range between 10 to 60). If the thread still is not able to acquire
+the lock, it&rsquo;s placed into a &lsquo;Parking Lot&rsquo; - a space-efficient FIFO queue
+whereby parked threads are able to conserve CPU time and power. The adaptive
+lock implementation takes 1 byte and the <em>Parking Lot</em> is implemented as a
+separate data structure outside of the lock which is shared across all threads
+and locks.</p>
+<p>It&rsquo;s worth noting Webkit is a browser engine, not a database. In most cases
+though, both teams seem to have the same must-haves and nice-to-haves as far as
+locking goes. Similarly, both teams settled on a hybrid strategy. In the case of
+the Umbra DB team, they opted for optimistic locking rather than bounded
+spinlocks for the &lsquo;fast-path&rsquo; and usage of a parking lot to handle contention.
+Let&rsquo;s see how their hybrid approach works:</p>
+<h2 class="heading" id="hybrid-locking-implementation">
+  Hybrid Locking Implementation
+  <a href="#hybrid-locking-implementation">#</a>
+</h2>
+<p>As already mentioned, hybrid locking builds upon optimistic locking. If you&rsquo;re
+in the database world, you&rsquo;ve probably already heard of optimistic locking (or
+rather OCC: Optimistic Concurrency Control as it&rsquo;s often referred to). Outside
+of the DBMS world, maybe not. Here&rsquo;s how optimistic locking works:</p>
+<ul>
+<li>Each data item has a version field</li>
+<li>Whenever a writer modifies the item, it atomically increments the version
+field</li>
+<li>Readers record the current version of the item at the start.</li>
+<li>After completion, the reader compares the current version with what it
+observed initially. If both are equal, its read is validated</li>
+<li>Otherwise, the reader has to restart the operation. As such, reads should not
+cause any side-effects [1].</li>
+</ul>
+<p>Optimistic Locking is ideal in situations where there is little to no
+contention. Readers don&rsquo;t have to acquire any lock. However, multiple concurrent
+writers will result in constant restarts and even complete reader starvation.
+Even with one exclusive writer, concurrent readers have to restart. Furthermore,
+the system has to keep around older versions of data items until it&rsquo;s sure there
+aren&rsquo;t any readers still accessing them [1].</p>
+<p>Since the cost of repeated restarts is non-negligible, the Umbra DB team opt for
+hybrid approach whereby readers start off <em>optimistically</em> and only fall back to
+acquiring a shared lock if the version check step fails; writers have to acquire
+the lock exclusively (i.e. <em>block</em> out other concurrent writers).</p>
+<p>A bit of a detour just to introduce the terms <em>shared</em> and <em>exclusive</em> as
+pertains locking for non-database folks. A lock can either be acquired in shared
+mode or exclusive mode. Shared mode allows for reads only while exclusive mode
+allows for both reads and writes. Two or more threads/workers/transactions can
+acquire shared locks concurrently i.e. shared locks are <em>compatible</em>. However,
+exclusive mode locking allows for only one thread/worker/tx at a time. Since,
+we&rsquo;re dealing with a low-level lock (or rather latch) implementation, one way to
+realize shared/exclusive mode locking is via RW (Readers-writer) locks such as
+<code>pthread_rwlock_t</code>. Also for DB folk, do excuse me for mixing up locks with
+latches - I&rsquo;ve done so to keep the details here as simple as possible.</p>
+<p>Hybrid Locking is designed to be amenable to different implementations of RW
+locks. In my case I&rsquo;ll implement it in Rust and use the
+<a href="https://docs.rs/parking_lot/latest/parking_lot/index.html">parking_lot</a> RW lock
+implementation since it is &ldquo;smaller, faster and more flexible&rdquo; than its Rust
+standard library equivalent. Here&rsquo;s the code:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="font-weight:bold">use</span> parking_lot::lock_api::RawRwLock;
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">use</span> std::sync::atomic::{AtomicU64, Ordering};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">struct</span> <span style="font-weight:bold">HybridLock</span> {
+</span></span><span style="display:flex;"><span>    rw_lock: <span style="font-weight:bold">parking_lot</span>::RawRwLock,
+</span></span><span style="display:flex;"><span>    version: <span style="font-weight:bold">AtomicU64</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">impl</span> HybridLock {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> new() -&gt; <span style="font-weight:bold">HybridLock</span> {
+</span></span><span style="display:flex;"><span>        Self {
+</span></span><span style="display:flex;"><span>            rw_lock: <span style="font-weight:bold">RawRwLock</span>::INIT,
+</span></span><span style="display:flex;"><span>            version: <span style="font-weight:bold">AtomicU64</span>::new(0),
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> lock_shared(&amp;self) {
+</span></span><span style="display:flex;"><span>        self.rw_lock.lock_shared();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> unlock_shared(&amp;self) {
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// SAFETY: this method should only be invoked by caller if lock was
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-style:italic">// acquired in shared mode
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-weight:bold">unsafe</span> { self.rw_lock.unlock_shared() };
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> lock_exclusive(&amp;self) {
+</span></span><span style="display:flex;"><span>        self.rw_lock.lock_exclusive();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> unlock_exclusive(&amp;self) {
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// TODO overflow checking?
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-weight:bold">let</span> _ = self.version.fetch_add(1, Ordering::SeqCst);
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// SAFETY: this method should only be called if lock was acquired in
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-style:italic">// exclusive mode
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-weight:bold">unsafe</span> { self.rw_lock.unlock_exclusive() };
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">fn</span> try_read_optimistically(&amp;self, read_callback: <span style="">&amp;</span><span style="font-weight:bold">dyn</span> Fn()) -&gt; <span style="">bool</span> {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> self.rw_lock.is_locked_exclusive() {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">return</span> <span style="font-weight:bold">false</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">let</span> pre_version = self.version.load(Ordering::Acquire);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// execute read callback
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        read_callback();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// was locked meanwhile?
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-weight:bold">if</span> self.rw_lock.is_locked_exclusive() {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">return</span> <span style="font-weight:bold">false</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic">// version is still the same?
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>        <span style="font-weight:bold">let</span> curr_version = self.version.load(Ordering::Acquire);
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">return</span> pre_version == curr_version;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">pub</span> <span style="font-weight:bold">fn</span> read_optimistic_if_possible(&amp;self, read_callback: <span style="">&amp;</span><span style="font-weight:bold">dyn</span> Fn()) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> self.try_read_optimistically(read_callback) == <span style="font-weight:bold">false</span> {
+</span></span><span style="display:flex;"><span>            self.lock_shared();
+</span></span><span style="display:flex;"><span>            read_callback();
+</span></span><span style="display:flex;"><span>            self.unlock_shared();
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now the code above is not quite idiomatic Rust since it&rsquo;s a one-to-one
+translation of the pseudocode in the paper. More seasoned rust library authors
+would make it ergonomic and misuse resistant e.g. by providing
+<a href="https://doc.rust-lang.org/std/sync/struct.MutexGuard.html">Mutex Guards</a>, but
+this should suffice for demonstration. Optimistic readers have to check if the
+lock is held exclusively both before and after executing the read since to
+ensure that there isn&rsquo;t any concurrent modification taking place that would
+result in inconsistent reads. This is because optimistic readers don&rsquo;t block
+writers, it&rsquo;s only when readers fall back to shared mode that they are able to
+block writers.</p>
+<p>Of note, this implementation ticks all the boxes. It&rsquo;s fast, scalable,
+lightweight (16 bytes) and handles contention gracefully. Moreover, reads can
+only be restarted at most once unlike in a purely optimistic approach where
+restarts can take place several times.</p>
+<p>At a much lower level, successful optimistic reads do not result in any
+underlying writes for example by updating some state to indicate that reading is
+taking place. Such underlying writes that modify cache lines lower read
+performance since the reads end up being bounded by the cache-coherency
+latencies [1].</p>
+<p>Of course, all these is thanks to the <code>parking_lot</code> crate whose authors were in
+turn inspired by the WebKit team&rsquo;s lightweight locks and parking lot approach.</p>
+<p>Which brings us to the next point:</p>
+<h2 class="heading" id="robust-contention-handling">
+  Robust Contention Handling
+  <a href="#robust-contention-handling">#</a>
+</h2>
+<p>Both Umbra and WebKit use a <em>parking lot</em> to handle contention. This is &ldquo;a
+global hash table that maps arbitrary locks to wait queues using their addresses
+as keys&rdquo; [1].</p>
+<p>When a thread X is about to acquire a given lock and finds that it&rsquo;s already
+held by another thread Y, X updates the lock&rsquo;s wait bit, takes the hash of the
+lock&rsquo;s address and uses it to find a spot in the parking lot where it enqueues
+itself and waits.</p>
+<p>Once the thread Y that held the lock is about to unlock it, it first checks if
+the wait bit is set. In most cases where there&rsquo;s no contention, the wait bit is
+unset and all the thread has to do is unset the lock bit and move on
+(low-overhead unlocking).</p>
+<p>However, there was a contending thread X that set the wait bit. Therefore Y has
+to go the parking lot and find X via the lock&rsquo;s address plus X&rsquo;s ID then
+<em>unpark</em> it (dequeue + resumption) [2].</p>
+<p>Parking lot supports multiple threads waiting on the same lock. The size of the
+parking lot is constant since it only has to support a bounded number of
+concurrent threads, such as 10 or 500. The WebKit post has more details plus its
+code is quite readable [2]. The Umbra version does add some additional features
+such as allowing users to &ldquo;integrate additional logic like checking for query
+cancellation, or in the buffer manager to ensure that the page we are currently
+waiting for has not been evicted in the meantime&rdquo; [1].</p>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+<figure class="">
+
+    <div>
+        <img loading="lazy" alt="parking lot - credits &lsquo;Scalable and Robust Latches for Database Systems&rsquo;" src="/assets/images/hybrid_locking/figure_5.png" >
+    </div>
+
+    
+</figure>
+</p>
+<h2 class="heading" id="parting-note">
+  Parting Note
+  <a href="#parting-note">#</a>
+</h2>
+<p>The respective evaluations carried out by the Umbra and WebKit team are worth
+checking out. Spoiler alert - hybrid locking + parking lot performs quite well
+compared to other approaches under various kinds of workloads. The key take-away
+is that rather than use different locks for different cases throughout the
+codebase, opting for a hybrid lock implementation allows us to use one kind of
+lock that ticks all the boxes all while being quite fast and scalable.</p>
+<h2 class="heading" id="references">
+  References
+  <a href="#references">#</a>
+</h2>
+<ol>
+<li><a href="https://db.in.tum.de/~boettcher/locking.pdf">Scalable and Robust Latches for Database Systems</a></li>
+<li><a href="https://webkit.org/blog/6161/locking-in-webkit/">Locking in Webkit - Filip Pizlo</a></li>
+<li><a href="https://matklad.github.io/2020/01/02/spinlocks-considered-harmful.html">Spinlocks Considered Harmful - matklad</a></li>
+<li><a href="https://matklad.github.io/2020/01/04/mutexes-are-faster-than-spinlocks.html">Mutexes Are Faster Than Spinlocks - matklad</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Optimistic_concurrency_control">Optimistic Concurrency Control - Wikipedia</a></li>
+</ol>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/data-placement-optimization/">
+                        Optimizing Data Placement for Distributed OLAP Systems
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/larger-than-mem-intro/">
+                        Larger-Than-Memory Data Management
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

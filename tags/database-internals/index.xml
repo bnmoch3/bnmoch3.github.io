@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Database Internals on bnm 3000</title>
+    <link>https://bnm3k.github.io/tags/database-internals/</link>
+    <description>Recent content in Database Internals on bnm 3000</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 11 Jun 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://bnm3k.github.io/tags/database-internals/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Leanstore: High Performance Low-Overhead Buffer Pool</title>
+      <link>https://bnm3k.github.io/blog/leanstore/</link>
+      <pubDate>Tue, 11 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/leanstore/</guid>
+      <description>A dash of pointer swizzling, a sprinkle of optimistic locking and a touch of lean eviction, that&amp;rsquo;s the secret to a high performance buffer pool!</description>
+    </item>
+    <item>
+      <title>Tiered Storage via 2-Tree</title>
+      <link>https://bnm3k.github.io/blog/two-tree/</link>
+      <pubDate>Mon, 10 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/two-tree/</guid>
+      <description>Split a data-structure into two: a memory-optimized &amp;rsquo;top&amp;rsquo;-tree and a disk optimized &amp;lsquo;bottom&amp;rsquo;-tree. Implement a lightweight migration protocol for hot records to move up and cold records down.</description>
+    </item>
+    <item>
+      <title>Pointer Swizzling Buffer Pools</title>
+      <link>https://bnm3k.github.io/blog/pointer-swizzling/</link>
+      <pubDate>Sun, 09 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/pointer-swizzling/</guid>
+      <description>Switching pointers as the data pointed to moves to and fro memory and secondary storage</description>
+    </item>
+    <item>
+      <title>Compacting Transactional Data in HyPer</title>
+      <link>https://bnm3k.github.io/blog/hyper-compaction/</link>
+      <pubDate>Sat, 08 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/hyper-compaction/</guid>
+      <description>Keep hot tuples uncompressed, organize cold data into chunks of columns then use lightweight compression, handle both OLTP and OLAP workloads</description>
+    </item>
+    <item>
+      <title>Virtual Memory Hot/Cold Data Re-organization for OLTP</title>
+      <link>https://bnm3k.github.io/blog/efficient-os-paging-hot-cold-db/</link>
+      <pubDate>Fri, 07 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/efficient-os-paging-hot-cold-db/</guid>
+      <description>Hot/Cold aware memory allocation with locking of the hot region to physical memory and letting the OS swap out cold LRU pages as needed.</description>
+    </item>
+    <item>
+      <title>Offline (but Faster and more Accurate) Classification of Hot and Cold Data </title>
+      <link>https://bnm3k.github.io/blog/project-siberia-hot-cold-id/</link>
+      <pubDate>Thu, 06 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/project-siberia-hot-cold-id/</guid>
+      <description>Hint, it&amp;rsquo;s based on exponential smoothing</description>
+    </item>
+    <item>
+      <title>Anti-Caching</title>
+      <link>https://bnm3k.github.io/blog/anti-caching/</link>
+      <pubDate>Wed, 05 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/anti-caching/</guid>
+      <description>Track hot/cold data at tuple-level granularity. Evict LRU cold data in blocks.</description>
+    </item>
+    <item>
+      <title>Larger-Than-Memory Data Management</title>
+      <link>https://bnm3k.github.io/blog/larger-than-mem-intro/</link>
+      <pubDate>Tue, 04 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/blog/larger-than-mem-intro/</guid>
+      <description>For when the database exceeds the main memory size</description>
+    </item>
+  </channel>
+</rss>

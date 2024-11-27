@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Offline (but Faster and more Accurate) Classification of Hot and Cold Data  | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/project-siberia-hot-cold-id/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/project-siberia-hot-cold-id/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Offline (but Faster and more Accurate) Classification of Hot and Cold Data ">
+  <meta property="og:description" content="Hint, it’s based on exponential smoothing">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="notes">
+    <meta property="article:published_time" content="2024-06-06T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-06-06T00:00:00+00:00">
+    <meta property="article:tag" content="Database Internals">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/notes/">Notes</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/project-siberia-hot-cold-id/">Offline (but Faster and more Accurate) Classification of Hot and Cold Data </a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Offline (but Faster and more Accurate) Classification of Hot and Cold Data </h1>
+    
+    <p class="single-summary">Hint, it&rsquo;s based on exponential smoothing</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2024-06-06T00:00:00&#43;00:00">June 6, 2024</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      5 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <p>Hekaton is Microsoft&rsquo;s SQL Server&rsquo;s take on in-memory databases systems. With
+Hekaton, tables can be declared as memory-resident. These tables are implemented
+and indexed using memory-optimized lock-free data-structures. They can also be
+queried and updated the same way as &lsquo;regular&rsquo; tables in SQL Server [1].</p>
+<p>Project Siberia, launched by the same team, then builds up on Hekaton by
+allowing for cold-records within a memory-optimized table to be moved to a <em>cold
+store</em> while hot records are kept in memory:</p>
+<blockquote>
+<p>We are investigating techniques to automatically migrate cold rows to a &ldquo;cold
+store&rdquo; residing on external storage while the hot rows remain in the in-memory
+&ldquo;hot store&rdquo;. The separation into two stores is only visible to the storage
+engine; the upper layers of the engine (and applications) are entirely unaware
+of where a row is stored. The goal of our project, called Project Siberia, is
+to enable the Hekaton engine to automatically and transparently maintain cold
+data on cheaper secondary storage.</p>
+</blockquote>
+<p>The same idea of physically separating a logical data structure into a
+&lsquo;hot-store&rsquo; (memory-optimized) vs a &lsquo;cold-store&rsquo; (disk/SSD optimized) and
+migrating records back and forth is explored in a recent paper &lsquo;Two is Better
+Than One: The Case for 2-Tree for Skewed Data Sets&rsquo; by Xinjing Zhou et al. We&rsquo;ll
+cover this paper in a future post. What I would suggest is that after getting
+familiarized the 2-Tree approach, it&rsquo;s worth revisiting the Project Siberia
+papers for two reasons:</p>
+<ol>
+<li>The 2-Tree paper does not address concurrency-control and transactional
+migrations leaving it up for future work. Luckily, Project Siberia details
+how accesses (reads, writes, updates, deletes) and live migrations (hot to
+cold, cold to hot) can be carried out transactionally across both stores in a
+unified manner all while allowing for concurrent transactions (queries).
+Though tailor-made for Hekaton&rsquo;s internals, Project Siberia&rsquo;s approach is
+worth checking out.</li>
+<li>Project Siberia also proposes and evaluates the use of access filters (bloom
+filters and range filters) to avoid unnecessary &rsquo;trips&rsquo; to the cold-store.
+Might be a decent low-effort high-reward addition to 2-Tree</li>
+</ol>
+<p>For today, I&rsquo;d like to focus on one specific component of Project Siberia - the
+method they use to classify hot data from cold which is described in the paper
+<a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2013/04/ColdDataClassification-icde2013-cr.pdf">Identifying Hot and Cold Data in Main-Memory Databases</a>
+authored by Justin Levandoski, Per-Åke Larson and Radu Stoica.</p>
+<p>The main problem the paper addresses is the overhead of online cache maintenance
+both CPU-wise and memory-wise. In the
+<a href="/blog/anti-caching">Anti-Caching overview post</a>, we saw this overhead addressed
+by using only a sample of the accesses to update the LRU chain. In future posts,
+we&rsquo;ll see other approaches that lower/coarsen the granularity from record level
+accesses to page level accesses and even use hardware support so as to minimize
+the cache maintenance overhead.</p>
+<p>Back to Levandoski et al&rsquo;s paper: what makes their approach unique is that it&rsquo;s
+based on offline analysis rather than online caching (LRU, LFU, Second-chance
+etc):</p>
+<ol>
+<li>The system logs record accesses asynchronously off the critical path. A log
+entry consists of record ID plus time it was accessed. The logs can be
+sampled to reduce overhead.</li>
+<li>A classification algorithm based on exponential smoothing is used to estimate
+the <em>future</em> frequency of access for each record based on the logs. The top K
+records with the highest estimated access frequency form the hot set while
+the rest will be part of the cold set.</li>
+<li>This result is relayed back to the DBMS which migrates cold records to the
+cold store (disk/SSD) while keeping the hot records in memory</li>
+<li>This is carried out periodically (e.g. every hour or so) depending on how
+frequent the hot set changes.</li>
+</ol>
+<p>The authors provide the following advantages of offline analysis:</p>
+<ol>
+<li>Minimal runtime overhead compared to online counterparts</li>
+<li>Requires minimal modification within the database internals. Only key change
+to make is adding the code for logging. Record migration can be carried out
+using transactions.</li>
+<li>Flexibility: offline analysis can be carried out within the same process, in
+a different process or even in a different node altogether. The core
+estimation algorithm can be sped up via parallelization.</li>
+<li>Sampling &amp; accuracy: in most cases (if not all), with only 10% of the logs,
+the estimation algorithm reduces its accuracy by 2.5%. So you can drop 90% of
+the logs</li>
+</ol>
+<p>As already mentioned, the algorithm they deploy is based on <em>exponential
+smoothing</em>. This is a technique used in time-series analysis for short-term
+forecasting whereby newer observations are given more weight than earlier
+observations. The algorithm itself is quite simple:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">from</span> <span style="font-weight:bold">dataclasses</span> <span style="font-weight:bold">import</span> dataclass
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> <span style="font-weight:bold">collections</span> <span style="font-weight:bold">import</span> defaultdict
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>@dataclass
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">class</span> <span style="font-weight:bold">Entry</span>:
+</span></span><span style="display:flex;"><span>    prev_timestamp: int = 0
+</span></span><span style="display:flex;"><span>    estimate: float = 0.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> forward_classification(logs, k, alpha=0.05):
+</span></span><span style="display:flex;"><span>    estimates = defaultdict(<span style="font-weight:bold">lambda</span>: Entry())
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> timestamp, record_id <span style="font-weight:bold">in</span> logs:
+</span></span><span style="display:flex;"><span>        entry = estimates[record_id]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># estimate at the time slice when the record was last observed</span>
+</span></span><span style="display:flex;"><span>        prev_estimate = entry.estimate
+</span></span><span style="display:flex;"><span>        prev_timestamp = entry.prev_timestamp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># update new estimate</span>
+</span></span><span style="display:flex;"><span>        entry.estimate = alpha + prev_estimate * (
+</span></span><span style="display:flex;"><span>            (1 - alpha) ** (timestamp - prev_timestamp)
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># update entry&#39;s last observed timestamp</span>
+</span></span><span style="display:flex;"><span>        entry.prev_timestamp = timestamp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    record_ids = list(estimates.keys())
+</span></span><span style="display:flex;"><span>    record_ids.sort(key=<span style="font-weight:bold">lambda</span> r: estimates[r].estimate, reverse=<span style="font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> record_ids[:k], record_ids[k:]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic"># usage</span>
+</span></span><span style="display:flex;"><span>hot_set, cold_set = forward_classification(logs, k)
+</span></span></code></pre></div><p>The <code>alpha</code> parameter is the &ldquo;decay factor that determines the weight given to
+new observations and how quickly to decay old estimates. α is typically set in
+the range 0.01 to 0.05 – higher values give more weight to newer observations&rdquo;
+[2]. The timestamps need to be normalized such that the &lsquo;begin&rsquo; timestamp for
+the period when a new batch of logging is set to 0. The authors then introduce a
+<em>backward</em> variant of the above algorithm (starts from the newest log back to
+the oldest) which ends up being faster and having a lower space overhead.
+Furthermore, they show how both variants can be parallelized all while providing
+better accuracy than online caching.</p>
+<p>Part of why I covered this paper is that the same offline analysis procedure is
+utilized in a different paper, &ldquo;Enabling Efficient OS paging for main-memory
+OLTP databases&rdquo; by Radu Stoica et al, whereby we&rsquo;ve got VoltDB (the same system
+used by the Anti-caching folks) but with a whole different hot/cold approach for
+larger-than-memory workloads. Here&rsquo;s
+<a href="/blog/efficient-os-paging-hot-cold-db">the post where I go over Radu Stoica and co&rsquo;s approach</a></p>
+<h2 class="heading" id="references">
+  References
+  <a href="#references">#</a>
+</h2>
+<ol>
+<li><a href="https://www.microsoft.com/en-us/research/publication/trekking-through-siberia-managing-cold-data-in-a-memory-optimized-database/">Trekking Through Siberia: Managing Cold Data in a
+Memory-Optimized Database - Ahmed Eldawy, Justin Levandoski, Per-Åke Larson</a></li>
+<li><a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2013/04/ColdDataClassification-icde2013-cr.pdf">Identifying Hot and Cold Data in Main-Memory Databases - Justin J. Levandoski, Per-Åke Larson, Radu Stoica</a></li>
+</ol>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/anti-caching/">
+                        Anti-Caching
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/efficient-os-paging-hot-cold-db/">
+                        Virtual Memory Hot/Cold Data Re-organization for OLTP
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on bnm 3000</title>
+    <link>https://bnm3k.github.io/tags/</link>
+    <description>Recent content in Tags on bnm 3000</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 15 Nov 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://bnm3k.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>PostgreSQL</title>
+      <link>https://bnm3k.github.io/tags/postgresql/</link>
+      <pubDate>Fri, 15 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/postgresql/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Timeseries</title>
+      <link>https://bnm3k.github.io/tags/timeseries/</link>
+      <pubDate>Fri, 15 Nov 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/timeseries/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>DuckDB</title>
+      <link>https://bnm3k.github.io/tags/duckdb/</link>
+      <pubDate>Thu, 17 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/duckdb/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>SQL</title>
+      <link>https://bnm3k.github.io/tags/sql/</link>
+      <pubDate>Thu, 17 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/sql/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Cache Systems</title>
+      <link>https://bnm3k.github.io/tags/cache-systems/</link>
+      <pubDate>Mon, 23 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/cache-systems/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>RAG</title>
+      <link>https://bnm3k.github.io/tags/rag/</link>
+      <pubDate>Tue, 06 Aug 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/rag/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Database Internals</title>
+      <link>https://bnm3k.github.io/tags/database-internals/</link>
+      <pubDate>Tue, 11 Jun 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/database-internals/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Computer Systems</title>
+      <link>https://bnm3k.github.io/tags/computer-systems/</link>
+      <pubDate>Sun, 26 May 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/computer-systems/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Distributed Systems</title>
+      <link>https://bnm3k.github.io/tags/distributed-systems/</link>
+      <pubDate>Tue, 16 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/distributed-systems/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Python</title>
+      <link>https://bnm3k.github.io/tags/python/</link>
+      <pubDate>Thu, 04 Apr 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/python/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Discrete Optimization</title>
+      <link>https://bnm3k.github.io/tags/discrete-optimization/</link>
+      <pubDate>Thu, 21 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/discrete-optimization/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Golang</title>
+      <link>https://bnm3k.github.io/tags/golang/</link>
+      <pubDate>Tue, 22 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/golang/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Misc</title>
+      <link>https://bnm3k.github.io/tags/misc/</link>
+      <pubDate>Sun, 16 Apr 2023 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/misc/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Javascript</title>
+      <link>https://bnm3k.github.io/tags/javascript/</link>
+      <pubDate>Fri, 29 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/javascript/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Node.js</title>
+      <link>https://bnm3k.github.io/tags/node.js/</link>
+      <pubDate>Fri, 29 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https://bnm3k.github.io/tags/node.js/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>

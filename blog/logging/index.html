@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Logging in Go | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/logging/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/logging/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Logging in Go">
+  <meta property="og:description" content="Best practices, Logging levels, structured logging, Logging &amp; Telemetry (Metrics, Tracing), Audit logs">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-08-22T00:00:00+00:00">
+    <meta property="article:modified_time" content="2023-08-22T00:00:00+00:00">
+    <meta property="article:tag" content="Golang">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/logging/">Logging in Go</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Logging in Go</h1>
+    
+    <p class="single-summary">Best practices, Logging levels, structured logging, Logging &amp; Telemetry (Metrics, Tracing), Audit logs</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2023-08-22T00:00:00&#43;00:00">August 22, 2023</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      18 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <h2 class="heading" id="intro">
+  Intro
+  <a href="#intro">#</a>
+</h2>
+<p>This post is about logging. It contains some advice here and there, and as with
+most aspects of software engineering, it should be tempered with context. In
+other words: &lsquo;it depends&rsquo; - always factor in the problem at hand rather than
+adhering blindly to &lsquo;best practices&rsquo; that someone wrote on the internet. Now for
+the best practices which also serves as a quick overview of the rest of the
+post:</p>
+<h2 class="heading" id="best-practices">
+  Best Practices
+  <a href="#best-practices">#</a>
+</h2>
+<ul>
+<li>Make logs descriptive, but also keep them straight to the point</li>
+<li>Log only actionable information: &lsquo;When a program has nothing to say, it should
+say nothing&rsquo;. Logging is a means to an end with the end being being able to
+run systems confidently, understand these systems behavior and being able to
+effectively troubleshoot them when things go wrong. Also being able to carry
+out long-term analyses doesn&rsquo;t hurt.</li>
+<li>Do consider the audience of the logs. This ties in to the first point. Some
+logs are meant for humans and should be readily discoverable, others are meant
+for machines, therefore:</li>
+<li>Use structured logging instead of shoving/concatenating a bunch of attributes
+into a string. It&rsquo;s faster to query.</li>
+<li>Use Leveled logging since not every event has the same severity</li>
+<li>Be austere in the number of logging levels used: there&rsquo;s no point in having a
+&lsquo;Critical&rsquo;, &lsquo;Emergency&rsquo;, &lsquo;Alert&rsquo; and &lsquo;Error&rsquo; level logs if the application can
+make do with a single &lsquo;Error&rsquo; level.</li>
+<li>Put in place a retention policy: logs don&rsquo;t have to be kept for eternity:
+storage costs money and the older the logs the less useful they are for
+understanding the system&rsquo;s current behavior</li>
+<li>Logging should be low-overhead. Use performant logging libraries if the
+default logger is slow/resource intensive.</li>
+<li>Do not log an error then return the error value back to the caller. It might
+be logged again and again resulting in the same information being repeated
+several times in the log stream. Errors should be handled only once and
+logging an error does count as handling it. Therefore, if it&rsquo;s not the
+responsibility of a function to handle an error it follows that it&rsquo;s not its
+responsibility to log that error. At best what such a function can do is add
+more context or annotate the error before returning it.</li>
+<li>Audit and transactional logs should be handled separately from operational
+logs. Do not log audit/transactional details as info-level logs</li>
+<li>Log after an event has happened, not before. In some cases though, this is not
+feasible, for example, you have to log before your application binds to and
+listens on a port because after that it enters into an event loop.</li>
+<li>Log in present tense (&lsquo;Cannot open file X&rsquo;) or present continuous tense
+(&lsquo;Listening on port 6000&rsquo;). The fact that an event occurred is implied by the
+previous point: &rsquo;log after an event&rsquo;).</li>
+<li>Avoid <code>log.Fatal</code>. It calls <code>os.Exit(1)</code> after logging the error hence <code>defer</code>
+statements don&rsquo;t get run. If you must exit the program, prefer <code>panic</code> or
+bubble up the error back to <code>main</code>.</li>
+<li>In production, use the UTC timezone for timestamps. In development, you can
+get away with using your local timezone.</li>
+<li>Avoid logging sensitive values that compromise security. If you really have to
+log them, do anonymize them and also do ensure that downstream log aggregators
+are secure and compliant.</li>
+<li>Log routing and destination should not be configured within the application -
+instead log to <code>stdout</code> and in the production environment, the log stream can
+be redirected as needed (as per the 12 factor Application best practices)</li>
+<li>Additionally, log rotation and log compression should not be handled within
+the application, a separate process/utility should handle it.</li>
+<li>For libraries, if you must log some information, log against an interface then
+let the caller inject their logger for cases where the logger you&rsquo;re using
+internally does not suffice/is not needed</li>
+<li>Favor metrics over logging for low cardinality events that are meant to be
+aggregated</li>
+<li>Include trace IDs and span IDs for request-scoped logs for correlation with
+traces.</li>
+</ul>
+<h2 class="heading" id="formal-introduction">
+  Formal Introduction
+  <a href="#formal-introduction">#</a>
+</h2>
+<p>Logging is outputting a record to indicate the occurrence of an event that&rsquo;s
+occurred in a system. That event can be as simple as &lsquo;hey this program has
+started, here&rsquo;s a &ldquo;Hello World&rdquo; message&rsquo; or be much more descriptive with 20 or
+so attributes. In Go, you&rsquo;ve got <code>fmt.Println</code> and its cousins. You&rsquo;ve also got
+the <code>log</code> package in the standard library. Plus a whole slew of third-party
+logging libraries.</p>
+<p>There are various aspects to consider when it comes to logging. Let&rsquo;s go over
+some of these aspects:</p>
+<h2 class="heading" id="leveled-logging">
+  Leveled Logging
+  <a href="#leveled-logging">#</a>
+</h2>
+<p>Log levels indicate the severity of a log entry. They originated as part of Eric
+Allman&rsquo;s Sendmail project, particularly
+<a href="https://en.wikipedia.org/wiki/Syslog">syslog</a>. Syslog had the following levels:
+Emergency, Alert, Critical, Error, Warning, Notice, Informational and Debug,
+ordered from lowest to highest, most severe to least severe. Some other
+applications also add a Trace level right after Debug and others use Fatal in
+place of Emergency. The levels form a hierarchy such that by setting the
+output&rsquo;s level to Warning, you&rsquo;d get all warn-level logs and lower, up to the
+emergency level, and higher level logs would be filtered out.</p>
+<p>The level a log should have tends to be application dependent: what counts as
+critical for one application might be a warning in a different application. A
+good practice though is to limit the number of levels used and give each level
+an unambiguous connotation. From previous experience and based on various
+references (particularly Dave Cheney&rsquo;s
+<a href="https://dave.cheney.net/2015/11/05/lets-talk-about-logging">Let&rsquo;s Talk About Logging</a>),
+the following levels should suffice for most Golang applications: Fatal, Error,
+Warn, Info and Debug. Let&rsquo;s dig a bit deeper into these levels:</p>
+<ol>
+<li><strong>Fatal</strong>:
+<ul>
+<li>For logging errors/anomalies right when the application has entered a state
+in which a crucial business functionality is not working.</li>
+<li>With such errors, the application/service must be shutdown and
+operators/administrators notified immediately. The fix might not be
+straightforward.</li>
+<li>They should be accompanied by a stack-trace to simplify debugging.</li>
+<li><code>FATAL</code> errors are the unforeseen and infrequent ones - when this level
+occurs too frequently it means it&rsquo;s being overused/misused [2.3].</li>
+</ul>
+</li>
+<li><strong>Error</strong>:
+<ul>
+<li>For logging errors which are fatal but &lsquo;scoped&rsquo; within a procedure [2.3].
+Such errors require administrator/operator/developer intervention and the
+fix is relatively simple. For example, the wrong address was provided, or a
+server is not permitted to bind to a given port.</li>
+<li>Given that errors are &lsquo;values&rsquo; in Go that can be returned from a function,
+one
+<a href="https://dave.cheney.net/2015/11/05/lets-talk-about-logging">anti-pattern highlighted by Dave Cheney</a>
+I&rsquo;m guilty of in the past is logging an error then returning it to the
+caller. Then the parent caller logs it, then the grandparent caller logs it
+and so on such that the same error ends up being output multiple times. The
+logs become noisy and noisy logs tend to be less useful.</li>
+<li>The best course of action is simply to return the error and if necessary,
+add more context. For example, if I was unable to open a file, annotate the
+error with the file&rsquo;s path then return it</li>
+</ul>
+</li>
+<li><strong>Warn</strong>:
+<ul>
+<li>For logging expected anomalies which an application can recover from
+retrying, switching to a different node or to a backup and so on [2.1].</li>
+<li>Such anomalies are transient/temporary. For example, a HTTP request might
+fail but you expect that after a retry or two it should go through.</li>
+<li>Other anomalies have a pre-defined handling strategy: for example, if the
+primary database fails, the application is configured to switch to the
+backup (but we still want to record somewhere that the application could
+not access the primary)</li>
+<li>This then brings up an
+<a href="https://dave.cheney.net/2015/11/05/lets-talk-about-logging">interesting discussion, once more brought up by Dave Cheney</a>:
+if the application can eventually proceed normally, what&rsquo;s even the point
+of logging warnings: either log them as ERROR or as INFO.</li>
+<li>Later on, we&rsquo;ll have a brief section on logging as it pertains to telemetry
+and observability, for now, it&rsquo;s worth pointing out that when using the
+<a href="https://www.youtube.com/watch?v=zk77VS98Em8">RED Method</a> majority of
+warn-level logs are better output as metrics so that operators can monitor
+the error-rates and set up the appropriate alerts</li>
+</ul>
+</li>
+<li><strong>Info</strong>:
+<ul>
+<li>For logging normal application behavior to indicate that an expected
+happy-path event happened.</li>
+<li>There is a special class of logs termed &lsquo;Audit logs&rsquo;. These should not be
+logged as info-level logs and should have there own separate pathways and
+destination. In the next section I give a quick overview of audit logs.</li>
+<li>As an aside, for applications where configuration comes from multiple
+sources (defaults, config files, command-line flags, environment variables
+and so on) and other deploy-specific values such as the binary&rsquo;s
+version/commit-hash etc, a pattern that works for me is to log all these
+values on start-up at <code>INFO</code> level rather than <code>DEBUG</code> level (it&rsquo;s more
+likely that the logging level is set to <code>INFO</code> in prod). A huge class of
+operation errors stem from misconfiguration and this simplifies
+debugging/inspecting the config for operators (an alternative approach is
+to expose such information as metrics, but we&rsquo;ll save this for the section
+on logging &amp; telemetry :-D )</li>
+<li>It goes without saying, but it should be mentioned nonetheless,
+confidential information, secrets and keys should not be logged at all.</li>
+</ul>
+</li>
+<li><strong>Debug</strong>:
+<ul>
+<li>For diagnostic information that should be helpful to developers</li>
+<li>Due to their verbosity, Debug logs should only be emitted during
+development and disabled in production</li>
+<li>Better yet, code that emits debug logs should not be checked into the
+main/deploy branch - it adds noise and you can always use a debugger or
+good old-fashioned print statements to trace steps in dev. The cost of
+adding logging (or more generally any instrumentation) isn&rsquo;t just in the
+infrastructure to support routing, storage, queries etc, there&rsquo;s also an
+implicit developer cost - with too many lines of code (LOC) dedicated just
+to logging, the underlying code handling the business logic risks being
+obscured. This increases both development and debugging time. That&rsquo;s why
+we&rsquo;ve got the B2I ratio (business-logic to instrumentation ratio) which can
+be computed with various tools and used to indicate if there&rsquo;s too much LOC
+dedicated to logging</li>
+</ul>
+</li>
+</ol>
+<h2 class="heading" id="audit-logs--transactional-logs">
+  Audit Logs &amp; Transactional Logs
+  <a href="#audit-logs--transactional-logs">#</a>
+</h2>
+<p>There are a special kind of logs that are categorized as Audit or Transactional
+logs.</p>
+<p>They tend to deal with money, personally identifiable information (PII) or
+end-user actions. In &lsquo;Logging in Action&rsquo;, author Phil Wilkins further defines an
+audit event as &lsquo;a record of an action, event, or data state that needs to be
+retained to provide a formal record that may be required at some future point to
+help resolve an issue of compliance (such as accounting processes or security).&rsquo;</p>
+<p>Additionally, from the
+<a href="https://github.com/cncf/tag-observability/blob/main/whitepaper.md">Observability Whitepaper</a>
+from CNCF we get the following definition:</p>
+<blockquote>
+<p>Audit log - also called an audit trail, is essentially a record of events and
+changes. Typically, they capture events by recording who performed an
+activity, what activity was performed, and how the system responded. Often the
+system administrator will determine what is collected for the audit log based
+on business requirements.</p>
+</blockquote>
+<p>Of key is the intended audience of such logs: unlike operational logs, they are
+not meant for developers/operators. Instead, they are meant for the &ldquo;business&rdquo;
+be it analysts or auditors or upstairs.</p>
+<p>Therefore, it&rsquo;s best to have separate pathways and destinations for such logs
+rather than shoe-horn them into operational logs. These logs may have separate
+confidentiality requirements, they may need to be retained much longer, maybe
+even for years and might even have to be deleted when requested by respective
+users as per privacy laws.</p>
+<p>Usually, the business domain will dictate the audit/tx logs that need to be
+recorded.</p>
+<h2 class="heading" id="structured-logging">
+  Structured Logging
+  <a href="#structured-logging">#</a>
+</h2>
+<p>The default approach to logging is &lsquo;stringy&rsquo; or &lsquo;string-based&rsquo; logging i.e.
+formatting attributes/parameters into the log messages to be output.</p>
+<p>It works when a &lsquo;human&rsquo; is directly going through the logs and all they need to
+query the logs is grep, awk and other unix-based CLI tools. It&rsquo;s also suitable
+for CLI applications. However, if the logs have to be pre-processed before
+analyzing them using beefier tools, then structured logging should be used. In
+<a href="https://github.com/golang/go/discussions/54763">this</a> Go discussion, github
+user jba describes structured logging in the following way:</p>
+<blockquote>
+<p>Structured logging is the ability to output logs with machine-readable
+structure, typically key-value pairs, in addition to a human-readable message.</p>
+</blockquote>
+<p>The format used for structured logs is usually JSON - its still human readable
+but is also machine-parse-able.</p>
+<p>Protobuf can be used but it involves too much setup overhead with having to
+define messages upfront. Also, most logging aggregators are not protobuf
+friendly.</p>
+<p>There are a couple of low-overhead/high-speed JSON parsing libraries such as
+<a href="https://github.com/ibireme/yyjson">yyjson</a> (used by DuckDB) and
+<a href="https://github.com/simdjson/simdjson">simdjson</a> (used by Clickhouse) so the
+overhead of parsing/querying JSON relative to binary formats should not be much
+of a concern. However, both JSON and stringy logs tend to take up a lot of space
+hence the need for lightweight, query-friendly compression schemes. Structured
+logs can also be wrangled into traditional database columns as a quick
+pre-processing step or they can be queried directly. I&rsquo;ve written a separate
+post on how you can use
+<a href="https://bnm3k.github.io/blog/wrangling-json-with-duckdb">DuckDB to derive structure from and query JSON</a>.</p>
+<p>For Go-based apps, there are a couple of structured logging libraries:</p>
+<ul>
+<li><a href="https://github.com/sirupsen/logrus">Logrus</a>. Being the oldest entry here,
+it&rsquo;s credited for introducing structured loggging to Go. Relatively slow due
+to its API which necessitates the use of expensive methods and lots of
+allocations for serialization.</li>
+<li><a href="https://github.com/uber-go/zap">Zap</a>: High performance logging library from
+Uber. Highly configurable, suitable for large-scale projects</li>
+<li><a href="https://github.com/sirupsen/logrus">Zerolog</a>: An alternative to Zap that&rsquo;s
+slightly faster while making fewer allocations. It&rsquo;s also simpler to use with
+a more minimal API and few knobs to configure.</li>
+<li><a href="golang.org/x/exp/slog">slog</a>: New kid on the block. Developed by the
+Go-team - represents their attempt to standardize the interface for structured
+logging in Go while providing a default alternative to the std library&rsquo;s <code>log</code>
+which is stringy.</li>
+</ul>
+<p>For now, my preference is zerolog due to its minimal API (the speed/memory
+efficiency is a plus).</p>
+<h2 class="heading" id="logging-observability--telemetry">
+  Logging, Observability &amp; Telemetry
+  <a href="#logging-observability--telemetry">#</a>
+</h2>
+<p>When we add logging, we are making a system <em>observable</em>. &ldquo;In control theory,
+observability is a measure of how well internal states of a system can be
+inferred from knowledge of its external outputs&rdquo; [4.14]. These external outputs
+pertaining a system&rsquo;s behavior are termed as <em>Telemetry</em> - &ldquo;. Logging is one of
+the means of deriving telemetry. Others include tracing, collecting metrics,
+profiling, error reporting and collecting crash dumps.</p>
+<p>Logging, tracing and metrics form what&rsquo;s often referred to as the &ldquo;Three
+Observability Pillars&rdquo;. Of importance for this post is how logging intersects
+with tracing and with metrics. Let&rsquo;s start with metrics:</p>
+<h3 class="heading" id="logging--metrics">
+  Logging &amp; Metrics
+  <a href="#logging--metrics">#</a>
+</h3>
+<p>Metrics are defined as &ldquo;a set of numbers that give information about a
+particular process or service&rdquo;. These are sampled at configured time intervals
+and represent the state of the service over a given period.</p>
+<p>Usually, for online services, metrics are used to monitor
+(<a href="https://www.weave.works/blog/the-red-method-key-metrics-for-microservices-architecture/">The RED Method</a>):</p>
+<ul>
+<li>Request Rates: number of requests per second</li>
+<li>Error rates: the number of requests that are failing per period</li>
+<li>Durations: the amount of time requests take</li>
+</ul>
+<p>And for resources,
+(<a href="https://www.brendangregg.com/usemethod.html">The USE Method</a>):</p>
+<ul>
+<li>Utilization: how much time percentage was the resource busy for</li>
+<li>Saturation: amount of work resource has to do: often the queue length</li>
+<li>Errors: count of error events</li>
+</ul>
+<p>With the frameworks above, it&rsquo;s easy to see when/where to favor metrics over
+logging. This though isn&rsquo;t just a matter of data representation or library
+usage: metrics are lightweight, metric collection is low-overhead and querying
+them is faster. Furthermore, metric systems such as Prometheus have extra
+features such as alerting systems and are easier to integrate into visualization
+tools.</p>
+<p>Now, when to switch from metrics back to logs: A log entry is represented as a
+text line, or better yet, a structured object. A metric output on the other hand
+is represented as a name, timestamp and numerical value (usually a double).
+Additionally, one can attach labels to a metric output: these are key-value
+pairs that add context or uniquely identify a metric. So for example, if we&rsquo;re
+tracking the error rate at the endpoint <code>/shop/checkout</code> this can be represented
+via a counter as:</p>
+<pre tabindex="0"><code>checkout_errors{payment_method=&#34;paypal&#34;, region=&#34;EU&#34;} 0.003129720687866211
+</code></pre><p>This representation is Prometheus specific and the timestamp is added at the
+destination. The labels for the metric are <code>payment_method</code> and <code>region</code>.Since
+metrics are meant to be lightweight both in data size and for querying, adding
+more and more labels defeats their purpose and is often the source of
+significant slow-downs. As such, if a group of metrics really really needs to
+have, let&rsquo;s say 50 labels each, it&rsquo;s best to switch back to (structured) logging
+so as not to impact performance.</p>
+<p>One last point wrt to metrics: I had earlier mentioned that basic configs and
+build information can be output as INFO logs. Well, there&rsquo;s an approach where
+such information is also emitted as metrics, usually with the suffix <code>_info</code>.</p>
+<p>For example, the Prometheus client for Python outputs the following:</p>
+<pre tabindex="0"><code># HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation=&#34;CPython&#34;,major=&#34;3&#34;,minor=&#34;8&#34;,patchlevel=&#34;10&#34;,version=&#34;3.8.10&#34;} 1.0`
+</code></pre><p>It might seem like an anti-pattern but this information is often useful to query
+on, for example, to see if the new version has introduced certain latencies
+compared to the previous version. Ultimately it&rsquo;s all about convenience and
+surfacing the requisite information right where it&rsquo;s needed.</p>
+<h3 class="heading" id="logging--tracing">
+  Logging &amp; Tracing
+  <a href="#logging--tracing">#</a>
+</h3>
+<p>Tracing involves capturing the entire lifecycle of a request i.e. the paths
+taken by the request plus any additional metadata as it&rsquo;s handled across
+services.</p>
+<p>A trace consists of a root span and one or more child spans. A span encompasses
+a single operation or unit of work and includes the trace ID, span ID, name,
+start and end timestamps, pointer to the parent (if non-root) and additional
+events and attributes. The root span represents the request from start to
+finish. All spans within a single trace have the same trace ID. A span&rsquo;s context
+(trace &amp; span ID, flags and state) can be propagated across
+nodes/services/processes. This allows for spans to be correlated and associated
+across a distributed system.</p>
+<p>As far as tracing goes, all logs fall into one of these two categories:</p>
+<ul>
+<li>Request-scoped logs/Embedded logs: logs emitted as part of a request and can
+be attached to a span</li>
+<li>Standalone Logs: non-request logs i.e. logs not embedded inside of a span and
+are recorded elsewhere</li>
+</ul>
+<p>The question then is how to handle request-scoped logs: we want these logs and
+traces to complement each other plus avoid duplication while also be able to use
+the desired tools and libraries.</p>
+<p>As mentioned prior, spans can contain events and attributes. Therefore,
+request-scoped logs can be attached to traces as
+<a href="https://opentelemetry.io/docs/specs/otel/logs/event-api/">span events</a>. And if
+structured logging is being used, the attributes that would normally be part of
+the log entry can instead be captured as Span attributes.</p>
+<p>However, in my opinion, logs should be emitted separately from traces. Trace
+APIs for Golang such as OpenTelemetry haven&rsquo;t yet stabilized support for
+logging. Also trace destinations such as Jaeger don&rsquo;t quite yet provide rich
+extensive querying for logs.</p>
+<p>Rather than insert logs into traces, trace IDs and span IDs should be added as
+attributes to logs. This allows for logs to be aggregated and queried separately
+and when correlating logs to traces (and vice versa), the trace &amp; span IDs are
+used for lookups.</p>
+<p>For example, when using zerolog for logging, span context can be added to logs
+as follows:</p>
+<p>First define the hook:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Go" data-lang="Go"><span style="display:flex;"><span><span style="font-weight:bold">func</span> traceHook(ctx context.Context) zerolog.HookFunc {
+</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> <span style="font-weight:bold">func</span>(
+</span></span><span style="display:flex;"><span>		e *zerolog.Event,
+</span></span><span style="display:flex;"><span>		level zerolog.Level,
+</span></span><span style="display:flex;"><span>		message <span style="">string</span>,
+</span></span><span style="display:flex;"><span>	) {
+</span></span><span style="display:flex;"><span>		<span style="font-style:italic">// Enabled: returns false if event is going to be filtered out by
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>		<span style="font-style:italic">// log level or sampling
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>		<span style="font-weight:bold">if</span> level == zerolog.NoLevel || !e.Enabled() || ctx == <span style="font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		span := trace.SpanFromContext(ctx)
+</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">if</span> !span.IsRecording() {
+</span></span><span style="display:flex;"><span>			e.Bool(<span style="font-style:italic">&#34;trace&#34;</span>, <span style="font-weight:bold">false</span>)
+</span></span><span style="display:flex;"><span>			<span style="font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="font-style:italic">// Add traceIDs and spanIDs to logs
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>		sc := span.SpanContext()
+</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">if</span> sc.HasTraceID() {
+</span></span><span style="display:flex;"><span>			e.Str(<span style="font-style:italic">&#34;traceId&#34;</span>, sc.TraceID().String())
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">if</span> sc.HasSpanID() {
+</span></span><span style="display:flex;"><span>			e.Str(<span style="font-style:italic">&#34;spanId&#34;</span>, sc.SpanID().String())
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Then define a function for creating loggers:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Go" data-lang="Go"><span style="display:flex;"><span><span style="font-weight:bold">var</span> initLoggerOnce sync.Once
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">var</span> zeroLogger zerolog.Logger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">func</span> GetLogger(ctx context.Context, app <span style="">string</span>) zerolog.Logger {
+</span></span><span style="display:flex;"><span>	initLoggerOnce.Do(<span style="font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>		l := zerolog.New(os.Stdout).
+</span></span><span style="display:flex;"><span>			Level(zerolog.TraceLevel).
+</span></span><span style="display:flex;"><span>			With().
+</span></span><span style="display:flex;"><span>			Caller().
+</span></span><span style="display:flex;"><span>			Timestamp().
+</span></span><span style="display:flex;"><span>			Str(<span style="font-style:italic">&#34;app&#34;</span>, app).
+</span></span><span style="display:flex;"><span>			Logger()
+</span></span><span style="display:flex;"><span>		zeroLogger = l
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> zeroLogger.Hook(traceHook(ctx))
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><code>GetLogger</code> can be invoked at the beginning of a request operation and used
+throughout. Each log entry will have a <code>traceID</code> and <code>spanID</code> attribute.</p>
+<p>Let&rsquo;s finish off with the following Venn diagram, credits to Peter Bourgon in
+<a href="https://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html">Metrics, tracing, and logging</a>:</p>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+<figure class="">
+
+    <div>
+        <img loading="lazy" alt="Intersection of logging, metrics and tracing" src="https://peter.bourgon.org/img/instrumentation/03.png" >
+    </div>
+
+    
+</figure>
+</p>
+<p>It&rsquo;s important to know where logging, tracing and metrics intersect and where
+they don&rsquo;t. Client side libraries and frameworks are evolving fast to provide a
+single API for all three. Observability platforms too are emerging and evolving
+to accommodate these signals within a single package/service. The goal as always
+remains being able to understand and troubleshoot running systems.</p>
+<h2 class="heading" id="references">
+  References
+  <a href="#references">#</a>
+</h2>
+<ol>
+<li>
+<p>General References</p>
+<ol>
+<li>
+<p><a href="https://sematext.com/blog/best-practices-for-efficient-log-management-and-monitoring/#5-use-the-proper-log-level">10+ Logging and Monitoring Best Practices - Sematext</a></p>
+</li>
+<li>
+<p><a href="https://12factor.net/logs">&lsquo;Treat logs as event streams&rsquo; - 12-Factor App</a></p>
+</li>
+<li>
+<p><a href="https://tuhrig.de/my-logging-best-practices/">My Logging Best Practices - Thomas Uhrig</a></p>
+</li>
+<li>
+<p><a href="https://betterstack.com/community/guides/logging/sensitive-data/">Best Logging Practices for Safeguarding Sensitive Data - Eric Hu - BetterStack</a></p>
+</li>
+<li>
+<p><a href="http://www.catb.org/~esr/writings/taoup/html/ch01s06.html">&lsquo;Basics of the Unix Philosophy&rsquo; - &lsquo;The Art of Unix Programming&rsquo; - Eric S.
+Raymond</a></p>
+</li>
+</ol>
+</li>
+<li>
+<p>Logging Levels:</p>
+<ol>
+<li>
+<p>Let&rsquo;s talk about logging - Dave Cheney:
+<a href="https://dave.cheney.net/2015/11/05/lets-talk-about-logging">link</a></p>
+</li>
+<li>
+<p><a href="https://sematext.com/blog/logging-levels/">Understanding Logging Levels - What They Are &amp; How To Use Them - Rafal KuĆ</a></p>
+</li>
+<li>
+<p><a href="https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels">When to use the different log levels - stackoverflow</a></p>
+</li>
+<li>
+<p><a href="https://web.archive.org/web/20180914181534/https://www.aib42.net/article/five-levels-of-logging">The 5 Levels of Logging</a></p>
+</li>
+</ol>
+</li>
+<li>
+<p>Structured Logging</p>
+<ol>
+<li><a href="https://www.kartar.net/2015/12/structured-logging/">Structured Logging - James Turnbull</a></li>
+<li><a href="https://github.com/golang/go/discussions/54763">structured, leveled logging - jba - github discussion</a></li>
+<li><a href="https://docs.google.com/document/d/1shW9DZJXOeGbG9Mr9Us9MiaPqmlcVatD_D8lrOXRNMU/edit#">Proposal: standard Logger interface - Peter Bourgon, Chris Hines</a></li>
+<li><a href="https://betterstack.com/community/guides/logging/zerolog/">A Complete Guide to Logging in Go with Zerolog - Ayooluwa Isaiah - BetterStack</a></li>
+<li><a href="https://betterstack.com/community/guides/logging/logging-in-go/">A Comprehensive Guide to Logging in Go with Slog - Ayooluwa Isaiah - BetterStack</a></li>
+</ol>
+</li>
+<li>
+<p>Logging, Telemetry &amp; Observability</p>
+<ol>
+<li><a href="https://copyconstruct.medium.com/distributed-tracing-weve-been-doing-it-wrong-39fc92a857df">Distributed Tracing — we’ve been doing it wrong - Cindy Sridharan</a></li>
+<li><a href="https://peter.bourgon.org/blog/2017/02/21/metrics-tracing-and-logging.html">&lsquo;Metrics, tracing and logging&rsquo; - Peter Bourgon</a></li>
+<li><a href="https://peter.bourgon.org/blog/2016/02/07/logging-v-instrumentation.html">&lsquo;Logging v. instrumentation&rsquo; - Peter Bourgon</a></li>
+<li><a href="https://copyconstruct.medium.com/logs-and-metrics-6d34d3026e38">&lsquo;Logs and Metrics&rsquo; - Cindy Sridharan</a></li>
+<li><a href="https://charity.wtf/2019/02/05/logs-vs-structured-events/">&lsquo;Logs vs Structured Events&rsquo; - Charity Majors</a></li>
+<li><a href="https://www.honeycomb.io/blog/lies-my-parents-told-me-about-logs">&lsquo;Lies My Parents Told Me (About Logs)&rsquo; - Charity Majors</a></li>
+<li><a href="https://www.youtube.com/watch?v=TJLpYXbnfQ4">&lsquo;The RED Method: How To Instrument Your Services&rsquo; - Tom Wilkie</a></li>
+<li><a href="https://www.manning.com/books/cloud-observability-in-action">Cloud Observability In Action - Michael Hausenblas</a></li>
+<li><a href="https://www.oreilly.com/library/view/prometheus-up/9781098131135/">Prometheus: Up &amp; Running - Julien Pivotto, Brian Brazil</a></li>
+<li><a href="https://danluu.com/tracing-analytics/">A simple way to get more value from tracing - Dan Luu</a></li>
+<li><a href="https://medium.com/lightstephq/why-tracing-might-replace-almost-all-logging-790c7d7c5c2c">Why Tracing Might Replace (Almost) All Logging</a></li>
+<li><a href="https://blog.acolyer.org/2015/10/06/dapper-a-large-scale-distributed-systems-tracing-infrastructure/">Dapper, A Large Scale Distributed Systems Tracing Infrastructure - Paper
+Review - Adrian Colyer</a></li>
+<li><a href="https://opentelemetry.io/docs/specs/otel/logs/data-model/">Logs Data Model - OpenTelemetry</a></li>
+<li><a href="https://github.com/cncf/tag-observability/blob/main/whitepaper.md#what-is-observability">Observability Whitepaper - CNCF</a></li>
+</ol>
+</li>
+</ol>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/timeseries-filling-missing-values/">
+                        Handling Missing Values in Timeseries Datasets
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/microbenchmarking-c/">
+                        Microbenchmarking: Way more than I set out to know
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    SQL joins as reduce/folds over relations | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/sql-joins-p1/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/sql-joins-p1/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="SQL joins as reduce/folds over relations">
+  <meta property="og:description" content="Of what to make of joins in sql, mental models and building better understanding">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-01-03T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-01-03T00:00:00+00:00">
+    <meta property="article:tag" content="SQL">
+    <meta property="article:tag" content="PostgreSQL">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/sql-joins-p1/">SQL joins as reduce/folds over relations</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">SQL joins as reduce/folds over relations</h1>
+    
+    <p class="single-summary">Of what to make of joins in sql, mental models and building better understanding</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2020-01-03T00:00:00&#43;00:00">January 3, 2020</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      7 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <p>Mental models help us navigate complex ideas. However, forming one own&rsquo;s mental
+models can be a tricky affair. On one hand, by putting the effort to come up
+with mental a model by ourselves, we gain a deeper understanding of the subject
+at hand. We also become better and more efficient at reasoning and
+problem-solving. However, on the other hand, a deficient or even an entirely
+wrong mental model can derail arriving at a far deeper understanding and even
+result in huge errors and blindspots later on, despite such mental models
+serving us well in the beginning. This was my case when I encountered <em>joins</em> at
+first when I was learning SQL.</p>
+<p>With joins, I initially visualized <em>foreign keys</em> as sort of &lsquo;pointers&rsquo; to
+different storage locations where the rows contained the primary keys, and
+<em>joins</em> themselves as &lsquo;dereferencing&rsquo; procedures. This worked well when I had to
+write queries for simple inner joins involving two tables. Beyond that, e.g.
+three or four tables, or if the situation called for outer queries, I was always
+left stumped.</p>
+<p>I then ditched the whole pointers-dereferencing model, and for a while, simply
+treated joins as opaque procedures, tinkering with them until the query somehow
+worked. I could afford such a &lsquo;strategy&rsquo; when writing queries where there was
+always a set answer for comparison (such as in online exercises) but I knew at
+some point I&rsquo;d have to write &lsquo;greenfield&rsquo; queries without crutches to hold on
+to. I just had to understand how joins fit in as completely as possible.</p>
+<p>My strategy then was to go back to the basics. When you&rsquo;re at an intermediate
+level, going back to the basics always feels like a chore - there&rsquo;s that
+impatience coming from hey, I already know this why should I go through it over
+again. Furthermore, every minute spent on &lsquo;going back to the basics&rsquo; could be
+spent on becoming more &lsquo;advanced&rsquo;, taking on more technical projects and all
+that kind of stuff. Well, revisiting fundamentals can be made into an engaging
+exercise. It&rsquo;s the best time to reevaluate and challenge one&rsquo;s mental models and
+assumptions. Which is how I ended up getting a better understanding of how to
+use sql <em>joins</em>.</p>
+<p>Note, there&rsquo;s a part 2 of this post that actually does go back to the basics
+-the fundamental ideas on which joins are based on. This post is more of an
+alternative per se: an attempt at using another high-level concept so as to make
+sense of <em>joins</em>.</p>
+<p>And it&rsquo;s as follows. Let&rsquo;s start with a simple SQL query:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">SELECT</span> column1, column2... columnN
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">FROM</span> relationA
+</span></span></code></pre></div><p>If we think about the &lsquo;order&rsquo; of evaluation: the <code>from</code> gets &rsquo;evaluated&rsquo; before
+the <code>select</code>. The <em>from</em> is where the <code>join</code> clauses are placed. The word
+&rsquo;evaluated&rsquo; is in quotation marks because technically, SQL engines aren&rsquo;t
+required to, nor have to evaluate a query in some given order. In fact,
+data-retrieval sql queries themselves aren&rsquo;t dictating some imperative order of
+evaluation in the same way &rsquo;line number&rsquo; dictates order of evaluation in
+synchronous code. Instead, such queries describe the shape of the data we want
+back, which is why SQL is said to be declarative. The &lsquo;declarativess&rsquo; of SQL is
+yet another concept I struggled with initally. And before going further, I&rsquo;d
+like to link to a particular Julia Evans&rsquo; blog
+<a href="https://jvns.ca/blog/2019/10/03/sql-queries-don-t-start-with-select/">post</a>,
+which gives a more in-depth treatment of the &rsquo;evaluation&rsquo; order of SQL queries.</p>
+<p>Back to the SQL code we have above. As mentioned, let&rsquo;s suspend the
+technicalities and assume an &lsquo;order of evaluation&rsquo;: By the time <code>select</code> is
+evaluated, all it has to work with is a single table from which it picks the
+required columns, i.e. the projection part in relational algebra. Therefore, if
+there are any joins, these <em>joins</em> can be conceptualized as procedures or
+operations that build a huge single table from many related tables, using the
+join clauses to connect rows. Another way of seeing it is that the evaluation of
+a series of joins is in fact a <strong>reduce</strong> operation.</p>
+<p>Now, <a href="https://en.wikipedia.org/wiki/Fold_higher-order_function">reduce</a> itself
+is a high-level concept, being one of the fundamental higher-order functions in
+functional programming; <em>reduce</em> abstracts a common iteration pattern as we
+shall see. However, the manner in which <em>reduce</em> is normally introduced to
+novices waters down its essence. The standard example used usually entails a
+collection of numbers and calculating a value such as a sum. For example, the
+MDN javascript docs provide the following sample:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="font-weight:bold">const</span> array1 = [1, 2, 3, 4];
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">const</span> reducer = (accumulator, currentValue) =&gt; accumulator + currentValue;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic">// 1 + 2 + 3 + 4
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>console.log(array1.reduce(reducer));
+</span></span><span style="display:flex;"><span><span style="font-style:italic">// expected output: 10
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic">// 5 + 1 + 2 + 3 + 4
+</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>console.log(array1.reduce(reducer, 5));
+</span></span><span style="display:flex;"><span><span style="font-style:italic">// expected output: 15
+</span></span></span></code></pre></div><p>I kinda get why such examples are used to demonstrate <em>reduce</em>: rather than
+presenting the abstracted version - it&rsquo;s easier for learners to at least be
+familiar with it and know that it exists. Generally, all beginner material has
+to balance between ease of understanding, clarity, correctness and thoroughness.
+Most choose ease-of-understanding in the hope that once learners progress to the
+intermediate level, they can take on the technicalities.</p>
+<p>And so, for quite a while as a novice, I simply thought of reduce as a fancy way
+to perform calculations over an array of numbers, in which case, I&rsquo;d rather use
+good old-fashioned for-loops. It&rsquo;s not until I was working through Daniel
+Higgibotham&rsquo;s <em>&lsquo;Clojure for the Brave and True&rsquo;</em> that I saw <em>reduce</em> in a new
+light. Here&rsquo;s how Daniel introduces reduce:</p>
+<blockquote>
+<p>The pattern of <em>process each element in a sequence and build a result</em> is so
+common that there’s a built-in function for it called reduce&hellip;.</p>
+</blockquote>
+<p>This was a mini-moment of enlightenment for me! My understanding of reduce
+became more generalized and abstract:</p>
+<ul>
+<li>
+<p>For one, the sequence can consist of anything, not just numbers: a sequence of
+cats, dogs, json, other sequences, whatever.</p>
+</li>
+<li>
+<p>Moreover, the sequence itself doesn&rsquo;t even have to be an array, it can be a
+tree, a map, any sequence-like/iterable data-structure.</p>
+</li>
+<li>
+<p>And finally, the value we are building up using reduce doesn&rsquo;t even have to be
+of the same type as the elements in the sequence - just because the array
+consists of numbers doesn&rsquo;t mean <em>reduce</em> has to return a number.</p>
+</li>
+</ul>
+<p>For the sake of repetition, here&rsquo;s yet another definition of reduce that I got
+from Eric Elliot&rsquo;s post, <em>10 Tips for Better Redux Architecture</em> ,
+<a href="https://medium.com/javascript-scene/10-tips-for-better-redux-architecture-69250425af44">link</a>:</p>
+<blockquote>
+<p>In functional programming, the common utility <em><code>reduce()</code></em> or <em><code>fold()</code></em> is
+used to apply a reducer function to each value in a list of values in order to
+accumulate a single output value.</p>
+</blockquote>
+<p>And now back to SQL. Do keep in mind that I might just be shoehorning one
+concept into another out of sheer excitement. As already mentioned, no matter
+how many tables are listed in the <strong>from</strong> clause, at the end of the day
+<strong>select</strong> expects only a single table from which it can pick out the specified
+collumns. Thus, one might visualize the <em>join</em> &lsquo;operator&rsquo; as a reducer function.
+And just like a reducer, it takes in two arguments: the first argument is the
+table accumulated so far, and the second argument is the next table in line.
+Within this reducer function, join then builds, or rather accumulates both
+tables into a much larger table. The accumulation is across two dimensions, rows
+and collumns. On columns, since this reduction takes place before the <strong>select</strong>
+clause, all the columns from both tables are included. However, if we use the
+keyword <strong>using</strong> in the join clause instead of the more common <strong>on</strong> clause,
+the two columns that are being compared to are collapsed into a single column.
+As for the rows, it all depends on the type of <em>join</em> we are using. For example,
+when we are using a <strong>right-outer join</strong>, if a row in the left accumulated table
+cannot be partnered up with a row in the right table, it is discarded; once all
+the rows are partnered up, if there were any rows in the right table that didn&rsquo;t
+get a partner, nulls are used to fill up the gaps. This was kind of the idea in
+my head on how joins work. It kinda still is.</p>
+<p>Nonetheless, all join-clauses I had come across or worked on at that point
+related primary keys with foreign keys. Therefore I wrongly presumed both
+concepts are tightly related. Toying with a couple of queries though, I found
+out that the columns used in a join clause don&rsquo;t even have to have some
+primary-key - secondary-key sort of relationship. All this time, I was
+intertwining joins and keys, when they weren&rsquo;t even dependent on each other. As
+such, faced with gaping holes in my understanding, I had to go back to the
+basics&hellip; which is exactly what I explore in the
+<a href="https://www.nagamocha.dev/posts/sql-joins-p2/">second part</a> of this article.
+See you there!</p>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/sql-joins-p2/">
+                        Back To Basics: The foundation of Joins in SQL
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

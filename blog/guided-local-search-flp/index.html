@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+    Guided Local Search for the Capacitated Facility Location Problem | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/guided-local-search-flp/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/guided-local-search-flp/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content="Guided Local Search for the Capacitated Facility Location Problem">
+  <meta property="og:description" content="Overview of Guided Local Search plus how it can be applied to the capacitated facility location problem.">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-21T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-03-21T00:00:00+00:00">
+    <meta property="article:tag" content="Discrete Optimization">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/posts/">Posts</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/guided-local-search-flp/">Guided Local Search for the Capacitated Facility Location Problem</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">Guided Local Search for the Capacitated Facility Location Problem</h1>
+    
+    <p class="single-summary">Overview of Guided Local Search plus how it can be applied to the capacitated facility location problem.</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2024-03-21T00:00:00&#43;00:00">March 21, 2024</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      15 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <h2 class="heading" id="introduction">
+  Introduction
+  <a href="#introduction">#</a>
+</h2>
+<p>In this post, I&rsquo;ll give a quick overview of Guided Local Search and then
+demonstrate how it can be applied to the capacitated facility location problem
+(which from here on shall be abbreviated as FLP).</p>
+<h2 class="heading" id="complete-and-incomplete-search">
+  Complete and Incomplete Search
+  <a href="#complete-and-incomplete-search">#</a>
+</h2>
+<p>In previous posts, I&rsquo;ve provided an overview of <em>Complete Search</em> methods for
+solving FLP. These are exhaustive and guaranteed to find the optimal (lowest
+cost) solution if the problem is satisfiable or otherwise prove unsatisfiability
+[1]. However, they can be quite slow for larger problem sizes [1].</p>
+<p>On the other hand, we have <em>incomplete search</em> methods: these typically start
+from an initial solution (usually generated randomly or via a greedy approach)
+and modify it over and over again to try and optimize the objective. Unlike
+Complete Search, the solution derived with these methods in almost all cases are
+not guaranteed to be optimal nor can they tell us whether the problem is
+unsatisfiable. However, incomplete search methods are faster and scale to larger
+problem sizes [1].</p>
+<h2 class="heading" id="local-search">
+  Local Search
+  <a href="#local-search">#</a>
+</h2>
+<p>From <a href="https://en.wikipedia.org/wiki/Local_search_optimization">wikipedia</a>, local
+search involves moving &ldquo;from solution to solution in the space of candidate
+solutions (the search space) by applying local changes, until a solution deemed
+optimal is found or a time bound is elapsed&rdquo;. Since we&rsquo;re starting from an
+initial solution, all the decision variables have a set value and what we&rsquo;ve got
+is an initial <em>state</em> [1]. From there a <em>move</em> involves changing some of the
+decision variables so as to move to a new state; we&rsquo;ve also got the neighborhood
+which is the &ldquo;set of moves to consider at each point in the search&rdquo; [1].</p>
+<p>With regards to FLP, an initial solution can be derived via a randomly assigning
+a customer to a facility while keeping track of each facility&rsquo;s current
+capacity. From there, a move entails picking a customer and swapping the
+facility it&rsquo;s assigned. This might result in increasing the cost if a customer
+is moved to an unopened facility (which will result in new setup costs) and/or
+assigning a customer to a facility that&rsquo;s further away than the previous one. It
+might also result in reducing the cost if the customer was the last customer for
+that facility hence it does not have to be constructed and/or the customer is
+assigned a closer facility. The neighborhood for each move is the set of
+facilities that have enough remaining capacity to take up the new customer. We
+can also reduce the neighborhood further by limiting a customer to nearby
+facilities. With each move, we keep track of the best state (i.e. has the lowest
+cost). After either a certain amount of time or a fixed number of iterations, we
+stop the local search and return the assignment derived from the best state.</p>
+<h2 class="heading" id="guided-local-search">
+  Guided Local Search
+  <a href="#guided-local-search">#</a>
+</h2>
+<p>From [2], Local Search &ldquo;an find good solutions very quickly. However, it can be
+trapped in local optima – positions in the search space that are better than all
+their neighbors, but not necessarily representing the best possible solution
+(the global optimum)&rdquo;. Hence the development of meta-heuristic methods for
+escaping local minima. Once search method is Guided Local Search (GLS).</p>
+<p>With GLS we define a set of features and track which subset of the features is
+present in a given state. When we reach a local minima, the subset of features
+present in that local minima are then penalized. To be more precise, we don&rsquo;t
+penalize all the features in that subset rather we select for those features
+that will give us the maximum <em>utility</em> if we penalize them. We do not want to
+waste time penalizing low cost features that contribute very little to the
+overall cost nor do we want to penalize features that we&rsquo;ve already penalized a
+lot since additional penalties won&rsquo;t do much to help us escape the local minima.
+From there, the cost function is <em>augmented</em> with the penalties such that the
+more time we spend at or near the local minima, the more the penalties accrue
+until eventually local search moves to a different state entirely. The
+contribution of the penalties to the augmented cost is governed by a <em>lambda</em>
+parameter - that is, how much do we want the penalties to contribute to the
+cost?</p>
+<p>When running guided local search, we&rsquo;ve got to decide two things:</p>
+<ol>
+<li>Features: which features do we use? In the case of FLP, it could be the
+facility setup costs, distance between facilities and customers, facilities'
+capacities or a combination of 2 or more of these.</li>
+<li>The lambda parameter: it could be 1.5 or 100</li>
+</ol>
+<p>There&rsquo;s no once fixed answer that will apply to all the problems - we&rsquo;ll have to
+experiment around for each problem.</p>
+<p>It goes without saying, as with local search, we do keep track of the best
+solution found so far and after a given duration or number of iterations, we
+return that as the final solution - it probably won&rsquo;t be the optimal solution
+but if we&rsquo;ve set everything fine it should be a good enough solution.</p>
+<h2 class="heading" id="gls-implementation-preliminaries">
+  GLS Implementation: Preliminaries
+  <a href="#gls-implementation-preliminaries">#</a>
+</h2>
+<p>We start with the following input:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>num_facilities = 25
+</span></span><span style="display:flex;"><span>num_customers = 50
+</span></span><span style="display:flex;"><span>facility_capacities = [7500.0, ... ]
+</span></span><span style="display:flex;"><span>facility_setup_costs = [58268, ... ]
+</span></span><span style="display:flex;"><span>facility_locations = [(430582.903998, 430582.903998), ... ]
+</span></span><span style="display:flex;"><span>customer_demands = [146, ... ]
+</span></span><span style="display:flex;"><span>customer_locations = [(416189.973974, 279924.793498), ... ]
+</span></span></code></pre></div><p>The cost of assigning a facility to a customer is the euclidean distance between
+the two. Therefore, we derive the <code>dist_matrix</code> for quick lookups of this cost:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">math</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>length = <span style="font-weight:bold">lambda</span> p0,p1: math.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2)
+</span></span><span style="display:flex;"><span>dist_matrix = [
+</span></span><span style="display:flex;"><span>    [0.0 <span style="font-weight:bold">for</span> _ <span style="font-weight:bold">in</span> range(num_customers)] <span style="font-weight:bold">for</span> _ <span style="font-weight:bold">in</span> range(num_facilities)
+</span></span><span style="display:flex;"><span>]
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">for</span> f_i, f_loc <span style="font-weight:bold">in</span> enumerate(facility_locations):
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> c_i, c_loc <span style="font-weight:bold">in</span> enumerate(customer_locations):
+</span></span><span style="display:flex;"><span>        dist_matrix[f_i][c_i] = length(f_loc, c_loc)
+</span></span></code></pre></div><p>The overall cost of an assignment is the sum of all the setup costs for
+facilities that are assigned 1 or more customers plus the sum of all the
+distances between customers and the facilities they are assigned to. Recall that
+that goal is to minimize this cost as much as possible. We&rsquo;ll use the following
+function to calculate this cost:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">def</span> calc_cost(assignments, dist_matrix, facility_setup_costs):
+</span></span><span style="display:flex;"><span>    overall_cost = sum(
+</span></span><span style="display:flex;"><span>        dist_matrix[f][c] <span style="font-weight:bold">for</span> c, f <span style="font-weight:bold">in</span> enumerate(assignments)
+</span></span><span style="display:flex;"><span>    ) + sum(facility_setup_costs[f] <span style="font-weight:bold">for</span> f <span style="font-weight:bold">in</span> set(assignments))
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> overall_cost
+</span></span></code></pre></div><p>The decision variable is <code>assignments</code>. This is an array of length
+<code>num_customers</code> whereby the index is the customer&rsquo;s ID and the value at that
+index is the facility ID that the customer is assigned to. Since this is the
+capacitated variant of the problem, we must ensure that the sum of the demands
+of all the customers assigned to a given facility is less than or equal to that
+facility&rsquo;s capacity.</p>
+<p>Before carrying out the search, we need to calculate an initial solution that
+will be improved upon. According to the authors of [2], GLS isn&rsquo;t particularly
+sensitive to the initial solution so any quick down-and-dirty approach should
+work. Using a greedy approach, I get an assignment whose cost is 8,364,601.59:</p>
+<pre tabindex="0"><code>initial_assignments = solve_greedy(
+    facility_setup_costs, facility_capacities, customer_demands, dist_matrix
+)
+initial_cost = calc_cost(
+    initial_assignments, dist_matrix, facility_setup_costs
+)
+print(initial_cost) # 8364601.587374086
+</code></pre><h2 class="heading" id="gls-implementation-state-variables">
+  GLS Implementation: State Variables
+  <a href="#gls-implementation-state-variables">#</a>
+</h2>
+<p>We&rsquo;ll start of with the state variables. These include the decision variables
+plus any ancillary variables we have to modify any time we make a move (moving a
+customer from one facility to another) so as to reflect our current state.
+<code>assignments</code> is initialized with the <code>initial_assignments</code> we calculated above.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>assignments = initial_assignments
+</span></span></code></pre></div><p>We also keep around a bunch of derived values from <code>assignments</code> so as to speed
+up some computations. <code>facility_current_capacities</code> is used to keep track of how
+much unassigned capacity a facility has; this should not go below 0.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>facility_current_capacities = facility_capacities.copy()
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">for</span> c, f <span style="font-weight:bold">in</span> enumerate(initial_assignments):
+</span></span><span style="display:flex;"><span>    facility_current_capacities[f] -= customer_demands[c]
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">assert</span> all(c &gt;= 0 <span style="font-weight:bold">for</span> c <span style="font-weight:bold">in</span> facility_current_capacities)
+</span></span></code></pre></div><p>There&rsquo;s also <code>facility_to_customer_num</code> which keeps track of the number of
+customers a facility has - if it&rsquo;s 0, the facility should remain unopened, if
+it&rsquo;s 1 or more, we need to include its setup costs. As I am writing this, I&rsquo;ve
+just realized I don&rsquo;t need this variable: since both demands and capacities are
+integers, I could compare a facility&rsquo;s initial capacity with its current used
+capacity and if both values are the same it remains unopened.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>facility_to_customer_num = [0 <span style="font-weight:bold">for</span> _ <span style="font-weight:bold">in</span> range(num_facilities)]
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">for</span> f <span style="font-weight:bold">in</span> initial_assignments:
+</span></span><span style="display:flex;"><span>    facility_to_customer_num[f] += 1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">assert</span>(sum(facility_to_customer_num) == num_customers)
+</span></span></code></pre></div><h2 class="heading" id="gls-implementation-parameters-features-and-penalties">
+  GLS Implementation: Parameters, Features and Penalties
+  <a href="#gls-implementation-parameters-features-and-penalties">#</a>
+</h2>
+<p>GLS requires that the implementer decide on which features to use. In my case, I
+used the facility setup costs as the features - with all credits to github user
+Kouei whose
+<a href="https://github.com/kouei/discrete-optimization/blob/master/facility/main.cpp">approach</a>
+I referenced. A feature is present in a particular solution if the facility is
+opened (has 1 or more customers) in that solution. Therefore, we&rsquo;ve also got
+<code>feature_indicators</code> which track whether a facility is opened or not. We&rsquo;ve also
+got <code>penalities</code> which is initialized to 0 for all features and incremented by 1
+whenever a particular feature is penalized. We&rsquo;ve got <code>num_steps</code> which is the
+number of iterations we want to carry out local search. Lastly we&rsquo;ve got the
+lambda parameter which for now is set to a magic number but we&rsquo;ll see how we can
+tune it dynamically based on where we are in the search space:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>features = facility_setup_costs.copy()
+</span></span><span style="display:flex;"><span>feature_indicators = [int(n &gt; 0) <span style="font-weight:bold">for</span> n <span style="font-weight:bold">in</span> facility_to_customer_num] <span style="font-style:italic"># 0 or 1</span>
+</span></span><span style="display:flex;"><span>penalties = [0 <span style="font-weight:bold">for</span> _ <span style="font-weight:bold">in</span> features]
+</span></span><span style="display:flex;"><span>num_steps = 100
+</span></span><span style="display:flex;"><span>lambda_ = 27.5
+</span></span></code></pre></div><p>A point worth noting is that in GLS, we don&rsquo;t use the cost function directly to
+guide search. Instead, we augment the cost function with the penalties (weighted
+by lambda) so as to guide the search. When a feature is present, <code>I</code> will be 1
+hence the penalty associated with that feature will be included. When a feature
+is absent, <code>I</code> will be 0 and the penalty won&rsquo;t be included:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cost = calc_cost(assignments, dist_matrix, facility_setup_costs)
+</span></span><span style="display:flex;"><span>augmented_cost = cost + (
+</span></span><span style="display:flex;"><span>    lambda_ * sum(I * p <span style="font-weight:bold">for</span> (I, p) <span style="font-weight:bold">in</span> zip(feature_indicators, penalties))
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>Any time we make a move, we also check whether it has resulted in the best
+solution seen so far based on its augmented cost, so we need variables to keep
+track:</p>
+<pre tabindex="0"><code>best_assignment = None
+best_augm_cost = augmented_cost
+</code></pre><h2 class="heading" id="gls-implementation-neighborhoods-and-making-moves">
+  GLS Implementation: Neighborhoods and Making Moves
+  <a href="#gls-implementation-neighborhoods-and-making-moves">#</a>
+</h2>
+<p>With incomplete search methods, we have to decide what a move constitutes plus
+the moves we&rsquo;re allowed to make at each step (i.e. the neighborhood).</p>
+<p>As mentioned earlier, a move at a single step will involve picking a customer
+and assigning them to a new facility. I&rsquo;ll use the steepest descent approach: at
+each step pick the customer-facility swap pair that results in the lowest
+reduction of the augmented cost. For each customer, the neighborhood will
+consist of all facilities that still have enough capacity to accommodate that
+customer.</p>
+<p>This approach is simple to implement though it makes every move rather expensive
+since we have to evaluate nearly all the pairs to get the best move. We could
+speed it up by parallelizing the evaluation. We could also maintain a Tabu list
+e.g. of all previous K facilities that have had a customer moved out of them
+recently. Alternatively, we could also limit the neighborhood of a customer to
+all nearby facilities (e.g. by using K-means clustering in the initial stage to
+define a customer&rsquo;s &lsquo;geographical&rsquo; partition).</p>
+<p>It&rsquo;s worth pointing out that rather than calculate the augmented cost over and
+over again any time a move made, I&rsquo;ll instead keep track of the delta/diff for
+that move and use it to update the augmented cost. This makes the implementation
+more efficient at the expense of increased complexity.</p>
+<p>Now, for the move. For each step, we&rsquo;ll iterate over all customer and facility
+pairs. We&rsquo;ll also keep track of the best move and best diff seen so far at each
+iteration. <code>f_old</code> is a customer&rsquo;s currently assigned facility and <code>f_new</code> is
+the new facility we want to assign it to. We skip over facilities that don&rsquo;t
+have enough unused capacity.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>best_augm_diff = <span style="font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>best_move = <span style="font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">for</span> c <span style="font-weight:bold">in</span> range(num_customers):
+</span></span><span style="display:flex;"><span>    f_old = assignments[c]
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> f_new <span style="font-weight:bold">in</span> range(num_facilities):
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> f_old == f_new:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> customer_demands[c] &gt; facility_current_capacities[f_new]:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">continue</span>
+</span></span></code></pre></div><p>To calculate the diff of a move, we subtract the cost of moving a customer out
+of the old facility and add the newly incurred cost of moving a customer to the
+new facility. If the old facility had just that one customer, then moving the
+customer out will result in the facility getting &lsquo;unopened&rsquo; hence we don&rsquo;t have
+to incur its setup costs. If the newly assigned facility did not have any
+customers yet, we&rsquo;ll have to incur its setup costs. Therefore, good moves will
+result in diffs less than zero (a reduction in costs) and bad moves will result
+in 0 or higher diffs (an increase in costs). There are search methods where we
+make moves even if it increases cost. However, in our case, since we&rsquo;re using a
+steepest descent approach, we won&rsquo;t make any moves if all of them result in
+increasing the cost. When we&rsquo;re in such a state (local minima), courtesy of GLS,
+we&rsquo;ll rely on penalizing the features present in that state to bail us out and
+move us to a different minima. Also worth reiterating, GLS requires us to use
+the augmented cost rather than the actual cost when evaluating moves:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>        <span style="font-style:italic"># calc augmented cost of move</span>
+</span></span><span style="display:flex;"><span>        augm_diff = 0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># leave f_old</span>
+</span></span><span style="display:flex;"><span>        augm_diff -= dist_matrix[f_old][c]
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># check if move results in shutting down f_old</span>
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> facility_to_customer_num[f_old] == 1:
+</span></span><span style="display:flex;"><span>            augm_diff -= facility_setup_costs[f_old]
+</span></span><span style="display:flex;"><span>            augm_diff -= lambda_ * penalities[f_old]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># go to f_new</span>
+</span></span><span style="display:flex;"><span>        augm_diff += dist_matrix[f_new][c]
+</span></span><span style="display:flex;"><span>        <span style="font-style:italic"># check if move results in opening up f_new</span>
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> facility_to_customer_num[f_new] == 0:
+</span></span><span style="display:flex;"><span>            augm_diff += facility_setup_costs[f_new]
+</span></span><span style="display:flex;"><span>            augm_diff += lambda_ * penalities[f_new]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> best_augm_diff <span style="font-weight:bold">is</span> <span style="font-weight:bold">None</span> <span style="font-weight:bold">or</span> augm_diff &lt; best_augm_diff:
+</span></span><span style="display:flex;"><span>            best_augm_diff = augm_diff
+</span></span><span style="display:flex;"><span>            best_move = (c, f_old, f_new)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic"># if the diff is positive (results in an increase of costs), we do not make</span>
+</span></span><span style="display:flex;"><span><span style="font-style:italic"># the move as per steepest descent approach</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">if</span> best_augm_diff <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">None</span> <span style="font-weight:bold">and</span> best_augm_diff &gt; 0:
+</span></span><span style="display:flex;"><span>    best_move = <span style="font-weight:bold">None</span>
+</span></span></code></pre></div><p>If we&rsquo;ve got a move we can make, we make that move and update the state
+variables accordingly:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">if</span> best_move <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">None</span>:  <span style="font-style:italic"># make move</span>
+</span></span><span style="display:flex;"><span>    (c, f_old, f_new) = best_move
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># move from old facility</span>
+</span></span><span style="display:flex;"><span>    facility_to_customer_num[f_old] -= 1
+</span></span><span style="display:flex;"><span>    facility_current_capacities[f_old] -= customer_demands[c]
+</span></span><span style="display:flex;"><span>    feature_indicators[f_old] = int(facility_to_customer_num[f_old] &gt; 0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># move to new facility</span>
+</span></span><span style="display:flex;"><span>    assignments[c] = f_new
+</span></span><span style="display:flex;"><span>    facility_to_customer_num[f_new] += 1
+</span></span><span style="display:flex;"><span>    facility_current_capacities[f_new] += customer_demands[c]
+</span></span><span style="display:flex;"><span>    feature_indicators[f_new] = int(facility_to_customer_num[f_new] &gt; 0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    augmented_cost += augm_diff
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">if</span> augmented_cost &lt; best_augm_cost:
+</span></span><span style="display:flex;"><span>        best_augm_cost = augmented_cost
+</span></span><span style="display:flex;"><span>        best_assignment = assignments.copy()
+</span></span></code></pre></div><p>If we can&rsquo;t make a move (we&rsquo;re at a local minima), it&rsquo;s time to penalize the
+features present at state (tracked via the <code>feature_indicators</code> list). We don&rsquo;t
+penalize all the features, just those for which we&rsquo;ll get the greatest bang for
+our buck, via the following utility function:</p>
+<pre tabindex="0"><code class="language-math" data-lang="math">\displaystyle{ util_{i}(s_{{\ast}}) = I_{i}(s_{{\ast}}) \times \frac{c_{i}} {1 + p_{i}} }
+</code></pre><p>For each feature, we calculate the utility of penalizing that feature via the
+formula above. It&rsquo;s worth pointing out that the higher the cost of a feature (a
+facility&rsquo;s setup cost) the greater the utility of penalizing that feature and
+the lower the cost the lower its utility. Additionally, if we&rsquo;ve already
+penalized that feature a lot already, then the lower the utility we&rsquo;ll derive
+from penalizing it again - if we haven&rsquo;t penalized it that much yet, then the
+utility will be higher. From there, we get the max utility and increment the
+penalties of all the features with <code>max_util</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">else</span>: <span style="font-style:italic"># best_move is None and we&#39;re at a local minima</span>
+</span></span><span style="display:flex;"><span>    utils = [
+</span></span><span style="display:flex;"><span>        I * (cost / (1 + penalty)) <span style="font-style:italic"># 1 is there to prevent division by zero</span>
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">for</span> (I, cost, penalty) <span style="font-weight:bold">in</span> zip(feature_indicators, features, penalties)
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>    max_util = max(utils)
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> i, util <span style="font-weight:bold">in</span> enumerate(utils):
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">if</span> util == max_util:
+</span></span><span style="display:flex;"><span>            penalties[i] += 1
+</span></span></code></pre></div><h2 class="heading" id="gls-implementation-deriving-lambda">
+  GLS Implementation: Deriving Lambda
+  <a href="#gls-implementation-deriving-lambda">#</a>
+</h2>
+<p>Determining a value for lambda seems to involve a lot of fiddling around. Also,
+just because a particular value of lambda worked quite well for one problem does
+not mean it can be plugged into other problems and work right out of the box. To
+aid a bit in deriving a value for lambda, the authors of [2] provide the
+following formula:</p>
+<pre tabindex="0"><code class="language-math" data-lang="math">\displaystyle{ \lambda =\alpha {\ast}g(x^{{\ast}})/(\mbox{ no. of features present in }x^{{\ast}}) }
+</code></pre><p>As they state: &ldquo;for several problems, it has been observed that good values for
+lambda can be found by dividing the value of the objective function of a local
+minimum with the number of features present in it&rdquo;.</p>
+<p>Translating this into code, it&rsquo;ll mean we also have to update the actual cost
+also every time we make a move. Therefore, when we&rsquo;re stuck at a local minima,
+we update lambda as follows:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>num_features = sum(feature_indicators)
+</span></span><span style="display:flex;"><span>lambda_ = alpha * (cost / num_features)
+</span></span></code></pre></div><p>Now we just have to determine what alpha should be set to :) - after all, to
+quote Butler Lampson, &ldquo;all problems in computer science can be solved by another
+level of indirection&rdquo;.</p>
+<h2 class="heading" id="evaluation--results">
+  Evaluation &amp; Results
+  <a href="#evaluation--results">#</a>
+</h2>
+<p>For my particular problem, after a 100 iterations and with lambda set statically
+to 27.5, I get a solution whose overall cost is 3,271,169.00. This isn&rsquo;t too bad
+considering that the optimal solution has a cost of 3,269,821.32. With a 100
+iterations, I get stuck in a local minima once which I then escape. With a 1000
+iterations, I escape local minimas 432 times even though I don&rsquo;t get much
+improvement cost-wise - in fact, the solution gets slightly worse at
+3,273,110.93 which means that as penalties accrue, the augmented cost seems to
+direct the search space elsewhere even though the actual cost increases a bit.
+I&rsquo;ve mentioned a couple of methods for speeding up Guided Local Search. There&rsquo;s
+one additional way to speed it up - rewrite it in everyone&rsquo;s favorite language -
+Rust which&rsquo;s what I&rsquo;m currently doing :D</p>
+<h2 class="heading" id="references">
+  References
+  <a href="#references">#</a>
+</h2>
+<ol>
+<li>Local Search - Prof. Jimmy Lee and Prof. Peter Stuckey - Solving Algorithms
+for Discrete Optimization:
+<a href="https://www.coursera.org/learn/solving-algorithms-discrete-optimization/lecture/1YLYy/3-4-1-local-search">Lecture</a></li>
+<li>Guided Local Search - Alsheddy, Voudouris, Tsang &amp; Alhindi - Handbook of
+Heuristics:
+<a href="https://link.springer.com/referenceworkentry/10.1007/978-3-319-07153-4_2-1">link</a></li>
+</ol>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/facility-location-problem-p2/">
+                        Minizinc: Alternative Modeling Approaches for the Facility Location Problem
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/duckdb-jit-udfs-numba/">
+                        DuckDB JIT Compiled UDFs with Numba
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>

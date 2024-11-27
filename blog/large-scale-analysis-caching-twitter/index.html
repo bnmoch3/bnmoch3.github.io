@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en-us"
+  dir="ltr">
+
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+
+
+
+<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
+
+<meta name="description" content=""/>
+
+<title>
+    
+     Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39; | bnm 3000
+    
+</title>
+
+<link rel="canonical" href="https://bnm3k.github.io/blog/large-scale-analysis-caching-twitter/"/>
+
+<meta property="og:url" content="https://bnm3k.github.io/blog/large-scale-analysis-caching-twitter/">
+  <meta property="og:site_name" content="bnm 3000">
+  <meta property="og:title" content=" Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39;">
+  <meta property="og:description" content="TTLs are prevalent, object sizes are small, metadata overhead can be large, object sizes change, FIFO is better than LRU, you’ve got to address memory fragmentation">
+  <meta property="og:locale" content="en_us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="notes">
+    <meta property="article:published_time" content="2024-09-22T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-09-22T00:00:00+00:00">
+    <meta property="article:tag" content="Cache Systems">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
+
+
+
+
+
+
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="light">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+
+    
+
+    <h1 class="header-title">
+        <a href="https://bnm3k.github.io/">bnm 3000</a>
+    </h1>
+
+    <div class="flex">
+        
+
+        
+        
+      
+        <p class="small ">
+            <a href="/" >
+                /home
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/posts" >
+                /posts
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/notes" >
+                /notes
+            </a>
+        </p>
+        
+      
+        <p class="small ">
+            <a href="/tags" >
+                /tags
+            </a>
+        </p>
+        
+        
+    </div>
+
+    
+
+</div>
+
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Home</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/notes/">Notes</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/blog/large-scale-analysis-caching-twitter/"> Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39;</a>
+</div>
+
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title"> Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39;</h1>
+    
+    <p class="single-summary">TTLs are prevalent, object sizes are small, metadata overhead can be large, object sizes change, FIFO is better than LRU, you&rsquo;ve got to address memory fragmentation</p>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2024-09-22T00:00:00&#43;00:00">September 22, 2024</time>
+      
+
+      
+      &nbsp; · &nbsp;
+      6 min read
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <p>The following are my key take-aways from the paper
+&ldquo;<a href="https://www.usenix.org/conference/osdi20/presentation/yang">A large scale analysis of hundreds of in-memory cache clusters at
+Twitter</a>&rdquo; authored
+by Juncheng Yang, Yao Yue and K.V Rashmi.</p>
+<p>I find the paper worth reading for three reasons: First, I&rsquo;m currently
+interested in caching systems and one of the authors, Juncheng Yang, has done
+some great research on the caching (check out <a href="https://s3fifo.com/">s3-fifo</a> and
+<a href="https://cachemon.github.io/SIEVE-website/">sieve</a>). Secondly, based on the
+title of the paper, I&rsquo;m expecting to learn other metrics and means for
+evaluating cache systems beyond miss ratio - they might come in handy when I&rsquo;m
+carrying out evaluations for my own systems. And third, the next paper I&rsquo;ll work
+through is
+<a href="https://www.usenix.org/conference/nsdi21/presentation/yang-juncheng">Segcache</a>;
+it&rsquo;s written by the same authors, so I&rsquo;m treating this paper as an extended
+&lsquo;motivation&rsquo; section for segcache, or to put it differently, this paper is the
+&ldquo;why&rdquo; and the segcache one is the &ldquo;how&rdquo;.</p>
+<p>Back to the paper. The goal of the authors is to &ldquo;significantly further the
+understanding of real-world cache workloads by collecting production traces from
+153 in-memory cache clusters at Twitter, sifting through over 80 TB of data, and
+sometimes interpreting the workloads in the context of the business logic behind
+them&rdquo;.</p>
+<p>In brief, here are my key take-aways:</p>
+<h2 class="heading" id="ttl-usage-is-prevalent">
+  TTL Usage Is Prevalent:
+  <a href="#ttl-usage-is-prevalent">#</a>
+</h2>
+<p>TTLs are prevalent in the &ldquo;real world&rdquo; yet often ignored in academic research.</p>
+<p>Programmers tend to use TTLs for 3 purposes:</p>
+<ul>
+<li>Bounding inconsistency: With TTLs, programmers ensure that cached inconsistent
+versions are not kept around forever whenever writes/updates fail and once
+they expire, the current version will be retrieved and the cache will be
+consistent with the source of truth such as the database. Usually, updating
+the cache tends to be on a best-effort basis since adding retries slows stuff
+down</li>
+<li>Implicit Deletion: Certain objects such as rate limiters are only valid within
+a given time period. TTLs relieve clients the burden of having to issue an
+explicit delete operation</li>
+<li>Periodic Refresh: I&rsquo;m guessing this usage is specific to Twitter - certain
+kinds of data (e.g. recommending who to follow based on your most recent
+activity) needs to be as fresh possible but computing it is expensive -
+setting TTLs to certain values ensures balancing of freshness and efficient
+usage of computational resources. Maybe I&rsquo;m missing something but I&rsquo;m curious
+why coordinating freshness and compute usage couldn&rsquo;t be pushed to the
+database/map-reduce system.</li>
+</ul>
+<p>Why should system researchers and even industry pay attention to TTLs? Glad you
+asked: objects that have expired but are yet to be evicted take up memory that
+might otherwise be used to cache other objects. In fact, as the authors note:
+&ldquo;efficiently removing expired objects from cache needs to be prioritized over
+cache eviction&rdquo;. Therefore it&rsquo;s worth exploring efficient algorithms &amp;
+data-structures for organizing and expiring TTL-bound objects.</p>
+<h2 class="heading" id="write-heavy-workloads-are-common">
+  Write-Heavy Workloads are Common
+  <a href="#write-heavy-workloads-are-common">#</a>
+</h2>
+<p>Cache usage is not purely read-heavy, for certain settings, writes encompass a
+significant chunk of the workload. On a similar note, caches aren&rsquo;t just used as
+stores for database results, they&rsquo;re also used for transient data (rate
+limiters, deduplication etc) and for computation and stream processing.</p>
+<h2 class="heading" id="fifo-is-better-than-lru">
+  FIFO is better than LRU
+  <a href="#fifo-is-better-than-lru">#</a>
+</h2>
+<p>We&rsquo;ve seen that we need to pay attention to TTLs. That doesn&rsquo;t mean we ignore
+cache eviction algorithms entirely. LRU is usually the go-to - easy to
+understand and widely implemented. What about FIFO? Now, unless the cache size
+is very very very small, the authors observe that FIFO&rsquo;s performance (miss
+ratio) is quite similar to LRU. What makes FIFO worth opting for is that it&rsquo;s
+easier to implement, it&rsquo;s faster, more amenable to concurrent access and
+requires tracking and updating less metadata size per object. In my previous
+post on <a href="https://bnm3k.github.io/blog/anti-caching">Anti-Caching</a>, we saw how
+LRU overhead has to be accounted for and worked around. Juncheng Yang and co.
+have a better proposal, ditch LRU entirely (if your cache size is large enough
+for your workload) and switch to FIFO.</p>
+<p>Speaking of object metadata sizes:</p>
+<h2 class="heading" id="object-size">
+  Object Size
+  <a href="#object-size">#</a>
+</h2>
+<p>Majority of objects tend to be small. With lots of tiny objects getting cached,
+the size of the metadata kept around for each object starts adding up. Therefore
+it&rsquo;s worth exploring methods for minimizing object metadata overhead. For
+example, given that Clock Replacement approximates LRU&rsquo;s behaviour, some systems
+opt for clock since it requires less metadata to keep and around and update per
+object.</p>
+<h2 class="heading" id="key-size-vs-value-size">
+  Key Size vs Value Size
+  <a href="#key-size-vs-value-size">#</a>
+</h2>
+<p>On the same note, the authors observe that &ldquo;compared to value size, key size can
+be large in some workloads. For 60% of the workloads, the mean key size and mean
+value size are in the same order of magnitude&rdquo;. Also programmers tend to prepend
+namespaces to key IDs, eg <code>NS1:NS2:...:id</code>. Both observations mean it&rsquo;s worth
+exploring key compression methods. I would consider
+<a href="https://dl.acm.org/doi/10.14778/3407790.3407851">FSST</a> for key compression -
+it&rsquo;s a lightweight string-specific compression scheme that supports efficient
+equality checks.</p>
+<h2 class="heading" id="memory-fragmentation--object-size-distribution">
+  Memory Fragmentation &amp; Object Size Distribution
+  <a href="#memory-fragmentation--object-size-distribution">#</a>
+</h2>
+<p>A key consideration of caching is to use memory efficiently - if we had infinite
+memory, then we wouldn&rsquo;t have to worry about eviction or even expiring TTL-bound
+objects. Sadly, as any economist would tell you, resources are scarce and so is
+memory.</p>
+<p>Relying purely on heap memory allocators such as Jemalloc &ldquo;can cause large and
+unbounded external memory fragmentation&rdquo;. As such, some caches use custom memory
+management that are tuned better for their workloads. For example, Twitter&rsquo;s
+caches used slab memory allocators - objects are categorized into various
+classes based on their size and objects within the same size class occupy the
+same set of slabs. If object size distribution remains static across some given
+period, this approach works quite well and minimizes fragmentation. However, the
+authors observe that this isn&rsquo;t always the case. For example, tweets from German
+users tend to be larger in size than tweets from Japanese users (is Japanese
+language more succinct? idk). Therefore at certain hours the consequent values
+cached tend to be larger than at other times. Now, if more slabs are locked into
+a given class size and we don&rsquo;t have a way to track object size distribution
+changes and migrate slabs across size classes, then we end up with poor usage of
+memory. This problem has been identified and addressed to some extent in
+industry - the question that remains is, can we do better?</p>
+<h2 class="heading" id="request-rates-and-hot-keys">
+  Request Rates and Hot Keys
+  <a href="#request-rates-and-hot-keys">#</a>
+</h2>
+<p>Cache request rates spiking does not necessarily mean it&rsquo;s related to hot keys
+(a common assumption which in turn informs cache designs and usage). It might be
+caused by other factors, such as a bug or user change behaviour.</p>
+<h2 class="heading" id="miss-ratio-stability">
+  Miss Ratio Stability
+  <a href="#miss-ratio-stability">#</a>
+</h2>
+<p>From the paper: &ldquo;a cache with a low miss ratio most of the time, but sometimes a
+high miss ratio is less useful than a cache with a slightly higher but stable
+miss ratio&rdquo;. Also, &ldquo;extremely low miss ratios tend to be less robust, which
+means the corresponding backends have to be provisioned with more margins&rdquo;. All
+this is to say, cache systems that are predictable make work easier for
+operators and it&rsquo;s worth paying attention to the live production aspects of
+caches, not just the theoretical bits.</p>
+<p>That&rsquo;s it for now, do stay tuned for my overview of the segcache paper.</p>
+
+    
+  </div>
+
+  
+
+
+  
+
+  
+  
+
+<div class="single-pagination">
+    <hr />
+
+    <div class="flex">
+
+        <div class="single-pagination-prev">
+            
+            <div class="single-pagination-container-prev">
+                <div class="single-pagination-text">←</div>
+                <div class="single-pagination-text">
+                    <a href="/blog/two-tree/">
+                        Tiered Storage via 2-Tree
+                    </a>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="single-pagination-next">
+            
+            <div class="single-pagination-container-next">
+                <div class="single-pagination-text">
+                    <a href="/blog/lru-vs-fifo/">
+                        LRU vs FIFO (with Lazy Promotion and Quick Demotion)
+                    </a>
+                </div>
+                <div class="single-pagination-text">→</div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <hr />
+</div>
+
+
+
+  
+
+  
+
+  
+  <div class="back-to-top">
+    <a href="#top">
+      back to top
+    </a>
+  </div>
+  
+
+</div>
+
+
+      </main>
+    </div>
+
+    <footer>
+      
+
+    
+    
+    
+    <p>&hellip;</p>
+    
+
+
+    </footer>
+
+    
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
+</html>
