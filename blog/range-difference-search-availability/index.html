@@ -1,259 +1,37 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Generalized Range Difference, Recursion &amp; Search Availability in PostgreSQL | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/range-difference-search-availability/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/range-difference-search-availability/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Generalized Range Difference, Recursion & Search Availability in PostgreSQL">
-  <meta property="og:description" content="We’re building a scheduling app. Users mark booked slots, represented in Postgres using time or date-range data types. Let’s see how we can find all the freely available slots efficiently">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2020-06-07T00:00:00+00:00">
-    <meta property="article:modified_time" content="2020-06-07T00:00:00+00:00">
-    <meta property="article:tag" content="PostgreSQL">
-    <meta property="article:tag" content="SQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/range-difference-search-availability/">Generalized Range Difference, Recursion &amp; Search Availability in PostgreSQL</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Generalized Range Difference, Recursion &amp; Search Availability in PostgreSQL</h1>
-    
-    <p class="single-summary">We&rsquo;re building a scheduling app. Users mark booked slots, represented in Postgres using time or date-range data types. Let&rsquo;s see how we can find all the freely available slots efficiently</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2020-06-07T00:00:00&#43;00:00">June 7, 2020</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      9 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Amongst the interesting data-types offered in Postgres are the Range Types, such
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Generalized Range Difference, Recursion & Search Availability in PostgreSQL | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/range-difference-search-availability/><meta property="og:url" content="https://bnm3k.github.io/blog/range-difference-search-availability/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Generalized Range Difference, Recursion & Search Availability in PostgreSQL"><meta property="og:description" content="We’re building a scheduling app. Users mark booked slots, represented in Postgres using time or date-range data types. Let’s see how we can find all the freely available slots efficiently"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-06-07T00:00:00+00:00"><meta property="article:modified_time" content="2020-06-07T00:00:00+00:00"><meta property="article:tag" content="PostgreSQL"><meta property="article:tag" content="SQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/range-difference-search-availability/>Generalized Range Difference, Recursion & Search Availability in PostgreSQL</a></div><div><div class=single-intro-container><h1 class=single-title>Generalized Range Difference, Recursion & Search Availability in PostgreSQL</h1><p class=single-summary>We&rsquo;re building a scheduling app. Users mark booked slots, represented in Postgres using time or date-range data types. Let&rsquo;s see how we can find all the freely available slots efficiently</p><p class=single-readtime><time datetime=2020-06-07T00:00:00+00:00>June 7, 2020</time>
+&nbsp; · &nbsp;
+9 min read</p></div><div class=single-content><p>Amongst the interesting data-types offered in Postgres are the Range Types, such
 as the daterange and int4range. If you haven&rsquo;t encountered them yet, Postgres'
-own <a href="www.postgresql.org/docs/current/rangetypes.html">documentation</a> is a great
+own <a href=www.postgresql.org/docs/current/rangetypes.html>documentation</a> is a great
 place to start. Postgres also
-<a href="www.postgresql.org/docs/current/functions-range.html">offers</a> range-specific
+<a href=www.postgresql.org/docs/current/functions-range.html>offers</a> range-specific
 functions and operators that enrich the use of ranges. One of these operators is
 the difference operator, &lsquo;<code>-</code>&rsquo; which uses the minus symbol and is better
-demonstrated with sql code:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> int4range(1, 10) - int4range(5, 15);
-</span></span><span style="display:flex;"><span><span style="font-style:italic">-- [1,5)
+demonstrated with sql code:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> int4range(1, 10) - int4range(5, 15);
+</span></span><span style=display:flex><span><span style=font-style:italic>-- [1,5)
 </span></span></span></code></pre></div><p>If we think of the int4ranges as sets in the mathematical sense,
 <code>int4range(1, 10)</code> represents the set of all integers greater than or equal to 1
 but less than 10. By default the lower bound is inclusive and the upper bound is
 exclusive. The same&rsquo;s the case with <code>int4range(5, 15)</code>. Therefore, the
 difference operation above results in a range consisting of all integers that
 are in the first range but are not elements of the second range, hence <code>[1,5)</code> -
-the set difference.</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="Image showing intersection between range 1 to 10 and 5 to 15" src="images/image1.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>For most of the cases, range difference operates pretty much as one would expect
+the set difference.</p><p><figure><div><img loading=lazy alt="Image showing intersection between range 1 to 10 and 5 to 15" src=images/image1.png></div></figure></p><p>For most of the cases, range difference operates pretty much as one would expect
 of set differences, even when both ranges are entirely disjoint. However, if the
 second operand is fully contained within the first operand, the range difference
-fails.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> 
-</span></span><span style="display:flex;"><span>    int4range(1, 100) - int4range(10, 20); <span style="font-style:italic">-- ❌
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">--  ERROR: 22000: result of range difference would not be contiguous
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">-- LOCATION:  range_minus, rangetypes.c:993
+fails.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> 
+</span></span><span style=display:flex><span>    int4range(1, 100) - int4range(10, 20); <span style=font-style:italic>-- ❌
+</span></span></span><span style=display:flex><span><span style=font-style:italic>--  ERROR: 22000: result of range difference would not be contiguous
+</span></span></span><span style=display:flex><span><span style=font-style:italic>-- LOCATION:  range_minus, rangetypes.c:993
 </span></span></span></code></pre></div><p>This makes sense since, as the error message indicates, we end up with disjoint
 sets. Without such a restriction, the return value would have been
 <code>[1,10), [20,100)</code> but then, the column in the resulting table would have to
-accomodate more than 1 value at a go, breaking the relational model.</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="Image showing range 10 to 20 as a subset of range 1 to 100" src="images/image2.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Still, a generalized range difference (that handles all cases) is useful for
+accomodate more than 1 value at a go, breaking the relational model.</p><p><figure><div><img loading=lazy alt="Image showing range 10 to 20 as a subset of range 1 to 100" src=images/image2.png></div></figure></p><p>Still, a generalized range difference (that handles all cases) is useful for
 various applications. One chief example is on search availability, as detailed
 in Jonathan Katz&rsquo;s
-<a href="https://info.crunchydata.com/blog/range-types-recursion-how-to-search-availability-with-postgresql">blog post</a>
+<a href=https://info.crunchydata.com/blog/range-types-recursion-how-to-search-availability-with-postgresql>blog post</a>
 for Crunchy Data. In a nutshell, given a set of date/time ranges that indicate
 when an item or a room or a schedule is booked, find all the freely available
 slots within a given range i.e. the &lsquo;gaps&rsquo;. I&rsquo;d suggest you go through Katz&rsquo;s
@@ -266,50 +44,19 @@ of values, the function kept erroring out on date ranges that were directly
 adjacent to each other. This could entirely be attributed to coding errors on my
 part but overally, it prompted me to try working out a different approach that&rsquo;s
 able to handle such edge cases correctly all while maintaining efficiency. Hence
-this post.</p>
-<p>Before getting to my approach for search availability, I&rsquo;d like to point out
+this post.</p><p>Before getting to my approach for search availability, I&rsquo;d like to point out
 that another reader also encountered the same error (regarding adjacent dates)
 and posted it on stack-overflow -
-<a href="https://stackoverflow.com/questions/60274585/recursive-sql-query-with-postgres-ranges-to-find-availability">link</a>.
+<a href=https://stackoverflow.com/questions/60274585/recursive-sql-query-with-postgres-ranges-to-find-availability>link</a>.
 I haven&rsquo;t tried out other folks&rsquo; solutions from the comments yet but I did add
 mine plus a more in-depth description on how (I think) the error in the
 <code>travels_get_available_dates</code> function arises -
-<a href="https://stackoverflow.com/a/62142229">link</a>.</p>
-<p>Okay, here&rsquo;s an overview of my approach. Given a range <code>[A,B]</code> we want to find
-all the freely available slots.</p>
-<ol>
-<li>First, narrow down exclusively to booked slots, that overlap or intersect
-with the search range <code>[A,B]</code>.</li>
-<li>Sort the booked slots from the smallest to the largest</li>
-<li>From there, iterate over the booked slots in ascending order</li>
-<li>With each iteration, the booked slot divides <code>[A,B]</code> into two sections, the
+<a href=https://stackoverflow.com/a/62142229>link</a>.</p><p>Okay, here&rsquo;s an overview of my approach. Given a range <code>[A,B]</code> we want to find
+all the freely available slots.</p><ol><li>First, narrow down exclusively to booked slots, that overlap or intersect
+with the search range <code>[A,B]</code>.</li><li>Sort the booked slots from the smallest to the largest</li><li>From there, iterate over the booked slots in ascending order</li><li>With each iteration, the booked slot divides <code>[A,B]</code> into two sections, the
 freely available chunk, which is in the left, and the remainder chunk for
-further probing as shown in the diagram below</li>
-<li>Gather up all the freely available chunks and on completion, we end up with
-all the freely available chunks!</li>
-</ol>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="Image showing how a booked slot divides up a given range" src="images/image3.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Now, the next hurdle is translating the logic to SQL, which was a bit hard for
+further probing as shown in the diagram below</li><li>Gather up all the freely available chunks and on completion, we end up with
+all the freely available chunks!</li></ol><p><figure><div><img loading=lazy alt="Image showing how a booked slot divides up a given range" src=images/image3.png></div></figure></p><p>Now, the next hurdle is translating the logic to SQL, which was a bit hard for
 me at first since it&rsquo;s imperative (and as we all know, SQL is declarative).
 Moreover, I had the inkling that it might end up being quite inefficient, but
 we&rsquo;ll get to that part later on. Like Katz, my approach relies on recursive
@@ -318,105 +65,72 @@ always found it easier to think of recursive CTEs as iteration just as the
 Postgres documents suggest: we start with the base case as the result table and
 for each &lsquo;iteration&rsquo;, we build a working table which is &lsquo;appended&rsquo; to the result
 table. Iteration stops once the working table is empty i.e there&rsquo;s nothing more
-to add to the final result table.</p>
-<p>For the sake of tinkering and debugging, I shifted from dateranges to int4ranges
+to add to the final result table.</p><p>For the sake of tinkering and debugging, I shifted from dateranges to int4ranges
 since they are much easier to read and inspect. The demo table I used is defined
-as follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> bookings(
-</span></span><span style="display:flex;"><span>    id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    slot int4range <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range,
-</span></span><span style="display:flex;"><span>    exclude <span style="font-weight:bold">using</span> gist (slot <span style="font-weight:bold">with</span> &amp;&amp;)
-</span></span><span style="display:flex;"><span>);
+as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> bookings(
+</span></span><span style=display:flex><span>    id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    slot int4range <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range,
+</span></span><span style=display:flex><span>    exclude <span style=font-weight:700>using</span> gist (slot <span style=font-weight:700>with</span> &amp;&amp;)
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>From there, I inserted 1 million random ranges using a really inneficient Go
 script which I won&rsquo;t post to avoid further embarrassment. And Without further
 ado, here&rsquo;s the SQL code for finding all the available slots within the range
-[1, 100000):</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> <span style="font-weight:bold">recursive</span> selections(available, possible) <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range, int4range(1,100000)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">union</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">case</span> 
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">when</span> already_booked <span style="font-weight:bold">is</span> <span style="font-weight:bold">null</span> 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> possible
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">when</span> possible @&gt; <span style="font-weight:bold">lower</span>(booked) 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> int4range(<span style="font-weight:bold">lower</span>(possible), <span style="font-weight:bold">lower</span>(booked))
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">else</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">end</span> <span style="font-weight:bold">as</span> available,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">case</span> <span style="font-weight:bold">when</span> possible @&gt; <span style="font-weight:bold">upper</span>(booked) 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> int4range(<span style="font-weight:bold">upper</span>(booked), <span style="font-weight:bold">upper</span>(possible))
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">else</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">end</span> <span style="font-weight:bold">as</span> possible
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> selections
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">left</span> <span style="font-weight:bold">outer</span> <span style="font-weight:bold">join</span> <span style="font-weight:bold">lateral</span> ( 
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">select</span> slot <span style="font-weight:bold">as</span> booked <span style="font-weight:bold">from</span> bookings
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">where</span> slot &amp;&amp; selections.possible
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> slot <span style="font-weight:bold">asc</span> <span style="font-weight:bold">limit</span> 1
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> already_booked <span style="font-weight:bold">on</span> <span style="font-style:italic">&#39;t&#39;</span>
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> available
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> selections
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> <span style="font-weight:bold">not</span> isempty(available)
+[1, 100000):</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> <span style=font-weight:700>recursive</span> selections(available, possible) <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range, int4range(1,100000)
+</span></span><span style=display:flex><span><span style=font-weight:700>union</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700>case</span> 
+</span></span><span style=display:flex><span>            <span style=font-weight:700>when</span> already_booked <span style=font-weight:700>is</span> <span style=font-weight:700>null</span> 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> possible
+</span></span><span style=display:flex><span>            <span style=font-weight:700>when</span> possible @&gt; <span style=font-weight:700>lower</span>(booked) 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> int4range(<span style=font-weight:700>lower</span>(possible), <span style=font-weight:700>lower</span>(booked))
+</span></span><span style=display:flex><span>            <span style=font-weight:700>else</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range
+</span></span><span style=display:flex><span>        <span style=font-weight:700>end</span> <span style=font-weight:700>as</span> available,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>case</span> <span style=font-weight:700>when</span> possible @&gt; <span style=font-weight:700>upper</span>(booked) 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> int4range(<span style=font-weight:700>upper</span>(booked), <span style=font-weight:700>upper</span>(possible))
+</span></span><span style=display:flex><span>            <span style=font-weight:700>else</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range
+</span></span><span style=display:flex><span>        <span style=font-weight:700>end</span> <span style=font-weight:700>as</span> possible
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> selections
+</span></span><span style=display:flex><span>    <span style=font-weight:700>left</span> <span style=font-weight:700>outer</span> <span style=font-weight:700>join</span> <span style=font-weight:700>lateral</span> ( 
+</span></span><span style=display:flex><span>        <span style=font-weight:700>select</span> slot <span style=font-weight:700>as</span> booked <span style=font-weight:700>from</span> bookings
+</span></span><span style=display:flex><span>        <span style=font-weight:700>where</span> slot &amp;&amp; selections.possible
+</span></span><span style=display:flex><span>        <span style=font-weight:700>order</span> <span style=font-weight:700>by</span> slot <span style=font-weight:700>asc</span> <span style=font-weight:700>limit</span> 1
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> already_booked <span style=font-weight:700>on</span> <span style=font-style:italic>&#39;t&#39;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> available
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> selections
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> <span style=font-weight:700>not</span> isempty(available)
 </span></span></code></pre></div><p>The non-recursive term, copied below, is straighforward, we start with a single
 row consisting of two columns, <code>available</code> and <code>possible</code>. The value on the
 <code>available</code> column is an &rsquo;empty&rsquo; range since so far we haven&rsquo;t extracted a
 single free slot; the value on the <code>possible</code> column is the entire range within
-which we want to get all the available slots, <code>int4range(1,100000)</code>.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> <span style="font-weight:bold">recursive</span> selections(available, possible) <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range, int4range(1,100000)
+which we want to get all the available slots, <code>int4range(1,100000)</code>.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> <span style=font-weight:700>recursive</span> selections(available, possible) <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range, int4range(1,100000)
 </span></span></code></pre></div><p>To get the first available slot, we first retrieve the lowest range that
 intersects with the <code>possible</code> range (which starts as [1, 100000)) and pair it
 up with the current row in the working table (there&rsquo;ll always be a single row in
-the working table). This is carried out in the join clause:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-style:italic">-- ...
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span><span style="font-weight:bold">from</span> selections
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">left</span> <span style="font-weight:bold">outer</span> <span style="font-weight:bold">join</span> <span style="font-weight:bold">lateral</span> ( 
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> slot <span style="font-weight:bold">as</span> booked <span style="font-weight:bold">from</span> bookings
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> slot &amp;&amp; selections.possible
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> slot <span style="font-weight:bold">asc</span> <span style="font-weight:bold">limit</span> 1
-</span></span><span style="display:flex;"><span>) <span style="font-weight:bold">as</span> already_booked <span style="font-weight:bold">on</span> <span style="font-style:italic">&#39;t&#39;</span>
-</span></span><span style="display:flex;"><span><span style="font-style:italic">-- ...
+the working table). This is carried out in the join clause:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-style:italic>-- ...
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span style=font-weight:700>from</span> selections
+</span></span><span style=display:flex><span><span style=font-weight:700>left</span> <span style=font-weight:700>outer</span> <span style=font-weight:700>join</span> <span style=font-weight:700>lateral</span> ( 
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> slot <span style=font-weight:700>as</span> booked <span style=font-weight:700>from</span> bookings
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> slot &amp;&amp; selections.possible
+</span></span><span style=display:flex><span>    <span style=font-weight:700>order</span> <span style=font-weight:700>by</span> slot <span style=font-weight:700>asc</span> <span style=font-weight:700>limit</span> 1
+</span></span><span style=display:flex><span>) <span style=font-weight:700>as</span> already_booked <span style=font-weight:700>on</span> <span style=font-style:italic>&#39;t&#39;</span>
+</span></span><span style=display:flex><span><span style=font-style:italic>-- ...
 </span></span></span></code></pre></div><p>From there, the <code>already_booked</code> range value is used to split up the <code>possible</code>
 range into two, the <code>available</code> and the remainder which serves as <code>possible</code> in
 the next &lsquo;iteration&rsquo;. The <code>case ... when</code> clauses handle different edge cases
 such as when the <code>already_booked</code> range is entirely within the <code>possible</code> range
 or it extends further to the left or further to the right, as shown in the
-diagram below:</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="Image showing all the different variations a booked slot intersects with a given search range" src="images/image4.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Finally, let&rsquo;s talk about termination. There are two possible approaches that I
-had in mind:</p>
-<ol>
-<li>use <code>where</code> clause for the working table to determine when there are no more
-slots to consider</li>
-<li>use the <code>union</code> clause&hellip;</li>
-</ol>
-<p>As you&rsquo;ve seen in the code-sample above, I opted for the second option. It works
+diagram below:</p><p><figure><div><img loading=lazy alt="Image showing all the different variations a booked slot intersects with a given search range" src=images/image4.png></div></figure></p><p>Finally, let&rsquo;s talk about termination. There are two possible approaches that I
+had in mind:</p><ol><li>use <code>where</code> clause for the working table to determine when there are no more
+slots to consider</li><li>use the <code>union</code> clause&mldr;</li></ol><p>As you&rsquo;ve seen in the code-sample above, I opted for the second option. It works
 out as follows: at some point, when there are no more bookings to probe, the row
 returned from the iterative step will be <code>('empty', 'empty')</code>. On the next
 iteration, the row returned will be <code>('empty', 'empty')</code> again. Now, since
 <code>union</code> in this case discards duplicates, it will discard the second
 <code>('empty', 'empty')</code> and the working table will be empty, at which point the
-iteration/recursion will halt.</p>
-<p>I arrived at this option entirely by accident since I forgot to add the where
+iteration/recursion will halt.</p><p>I arrived at this option entirely by accident since I forgot to add the where
 clause, but somehow it kept on working. When I noticed it, at first I thought it
 was a bug that might result in an infinite loop given the following scenario:
 the SQL engine decides to pluck out the duplicate from the final table rather
@@ -424,50 +138,45 @@ than the working table which then remains non-empty. If this is done over and
 over again, well, we end up with the infinite loop. However, Postgres&rsquo;
 documentation does seem to guarantee that the duplicate row will be plucked out
 from the working table rather than the result table -
-<a href="https://www.postgresql.org/docs/9.1/queries-with.html">link</a>:</p>
-<blockquote>
-<p>&hellip; Evaluate the recursive term, substituting the current contents of the
+<a href=https://www.postgresql.org/docs/9.1/queries-with.html>link</a>:</p><blockquote><p>&mldr; Evaluate the recursive term, substituting the current contents of the
 working table for the recursive self-reference. For UNION (but not UNION ALL),
-discard duplicate rows and rows that duplicate any previous result row&hellip;</p>
-</blockquote>
-<p>Still, for the sake of clarity, I opted for the <code>where clause</code> to make the
+discard duplicate rows and rows that duplicate any previous result row&mldr;</p></blockquote><p>Still, for the sake of clarity, I opted for the <code>where clause</code> to make the
 termination condition explicit. All in all, for reusability, I wrapped it into
 an SQL function. I also shifted to <code>union all</code> since as long as booked slots
 don&rsquo;t overlap, there shouldn&rsquo;t be any non-empty duplicate rows in the result to
-begin with.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">or</span> <span style="font-weight:bold">replace</span> <span style="font-weight:bold">function</span> get_available(int4range)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">returns</span> <span style="font-weight:bold">table</span>(available int4range)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">as</span> <span style="">$$</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">with</span> <span style="font-weight:bold">recursive</span> selections(available, possible) <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range, <span style="">$</span>1
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">case</span> 
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">when</span> already_booked <span style="font-weight:bold">is</span> <span style="font-weight:bold">null</span> 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> possible
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">when</span> possible @&gt; <span style="font-weight:bold">lower</span>(booked) 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> int4range(<span style="font-weight:bold">lower</span>(possible), <span style="font-weight:bold">lower</span>(booked))
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">else</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">end</span> <span style="font-weight:bold">as</span> available,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">case</span> <span style="font-weight:bold">when</span> possible @&gt; <span style="font-weight:bold">upper</span>(booked) 
-</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">then</span> int4range(<span style="font-weight:bold">upper</span>(booked), <span style="font-weight:bold">upper</span>(possible))
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">else</span> <span style="font-style:italic">&#39;empty&#39;</span>::int4range
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">end</span> <span style="font-weight:bold">as</span> possible
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> selections
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">left</span> <span style="font-weight:bold">outer</span> <span style="font-weight:bold">join</span> <span style="font-weight:bold">lateral</span> ( 
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">select</span> slot <span style="font-weight:bold">as</span> booked <span style="font-weight:bold">from</span> bookings
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">where</span> slot &amp;&amp; selections.possible
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> slot <span style="font-weight:bold">asc</span> <span style="font-weight:bold">limit</span> 1
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> already_booked <span style="font-weight:bold">on</span> <span style="font-style:italic">&#39;t&#39;</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> <span style="font-weight:bold">not</span> isempty(possible)
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> 
-</span></span><span style="display:flex;"><span>    available
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> selections
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> <span style="font-weight:bold">not</span> isempty(available)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="">$$</span> <span style="font-weight:bold">language</span> <span style="font-weight:bold">sql</span> <span style="font-weight:bold">stable</span>;
+begin with.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>or</span> <span style=font-weight:700>replace</span> <span style=font-weight:700>function</span> get_available(int4range)
+</span></span><span style=display:flex><span><span style=font-weight:700>returns</span> <span style=font-weight:700>table</span>(available int4range)
+</span></span><span style=display:flex><span><span style=font-weight:700>as</span> <span>$$</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>with</span> <span style=font-weight:700>recursive</span> selections(available, possible) <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range, <span>$</span>1
+</span></span><span style=display:flex><span><span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700>case</span> 
+</span></span><span style=display:flex><span>            <span style=font-weight:700>when</span> already_booked <span style=font-weight:700>is</span> <span style=font-weight:700>null</span> 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> possible
+</span></span><span style=display:flex><span>            <span style=font-weight:700>when</span> possible @&gt; <span style=font-weight:700>lower</span>(booked) 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> int4range(<span style=font-weight:700>lower</span>(possible), <span style=font-weight:700>lower</span>(booked))
+</span></span><span style=display:flex><span>            <span style=font-weight:700>else</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range
+</span></span><span style=display:flex><span>        <span style=font-weight:700>end</span> <span style=font-weight:700>as</span> available,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>case</span> <span style=font-weight:700>when</span> possible @&gt; <span style=font-weight:700>upper</span>(booked) 
+</span></span><span style=display:flex><span>                <span style=font-weight:700>then</span> int4range(<span style=font-weight:700>upper</span>(booked), <span style=font-weight:700>upper</span>(possible))
+</span></span><span style=display:flex><span>            <span style=font-weight:700>else</span> <span style=font-style:italic>&#39;empty&#39;</span>::int4range
+</span></span><span style=display:flex><span>        <span style=font-weight:700>end</span> <span style=font-weight:700>as</span> possible
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> selections
+</span></span><span style=display:flex><span>    <span style=font-weight:700>left</span> <span style=font-weight:700>outer</span> <span style=font-weight:700>join</span> <span style=font-weight:700>lateral</span> ( 
+</span></span><span style=display:flex><span>        <span style=font-weight:700>select</span> slot <span style=font-weight:700>as</span> booked <span style=font-weight:700>from</span> bookings
+</span></span><span style=display:flex><span>        <span style=font-weight:700>where</span> slot &amp;&amp; selections.possible
+</span></span><span style=display:flex><span>        <span style=font-weight:700>order</span> <span style=font-weight:700>by</span> slot <span style=font-weight:700>asc</span> <span style=font-weight:700>limit</span> 1
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> already_booked <span style=font-weight:700>on</span> <span style=font-style:italic>&#39;t&#39;</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> <span style=font-weight:700>not</span> isempty(possible)
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> 
+</span></span><span style=display:flex><span>    available
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> selections
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> <span style=font-weight:700>not</span> isempty(available)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span>$$</span> <span style=font-weight:700>language</span> <span style=font-weight:700>sql</span> <span style=font-weight:700>stable</span>;
 </span></span></code></pre></div><p>Now, for the moment of truth, how does it measure up against Katz&rsquo;s solution. In
 terms of ease of understanding, it&rsquo;s definitely simpler. However, what should
 matter more is its efficiency. Before comparing both, my assumption was that
@@ -484,122 +193,4 @@ factors skewing the results, the chief one being, my laptop&rsquo;s hard disk is
 almost full and I should probably move stuff out to elsewhere. But I&rsquo;m glad that
 my approach wasn&rsquo;t relatively as slow as I&rsquo;d earlier presumed. So if you&rsquo;re
 interested, you can definitely try to benchmark both versions and see what works
-best for you! All comments, suggestions and corrections are welcome.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-joins-p2/">
-                        Back To Basics: The foundation of Joins in SQL
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-grouping-sets/">
-                        SQL Grouping sets, Rollups &amp; Cube
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+best for you! All comments, suggestions and corrections are welcome.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/sql-joins-p2/>Back To Basics: The foundation of Joins in SQL</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/sql-grouping-sets/>SQL Grouping sets, Rollups & Cube</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

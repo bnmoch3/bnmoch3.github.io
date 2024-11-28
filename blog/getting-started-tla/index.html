@@ -1,196 +1,22 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Getting started with TLA&#43; | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/getting-started-tla/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/getting-started-tla/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Getting started with TLA&#43;">
-  <meta property="og:description" content="A tech-oriented personal blog">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2023-01-14T00:00:00+00:00">
-    <meta property="article:modified_time" content="2023-01-14T00:00:00+00:00">
-    <meta property="article:tag" content="Distributed Systems">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/getting-started-tla/">Getting started with TLA&#43;</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Getting started with TLA&#43;</h1>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2023-01-14T00:00:00&#43;00:00">January 14, 2023</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      3 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>I&rsquo;ve been picking up some TLA+. Partly to learn writing my own specifications
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Getting started with TLA+ | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/getting-started-tla/><meta property="og:url" content="https://bnm3k.github.io/blog/getting-started-tla/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Getting started with TLA+"><meta property="og:description" content="A tech-oriented personal blog"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2023-01-14T00:00:00+00:00"><meta property="article:modified_time" content="2023-01-14T00:00:00+00:00"><meta property="article:tag" content="Distributed Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/getting-started-tla/>Getting started with TLA+</a></div><div><div class=single-intro-container><h1 class=single-title>Getting started with TLA+</h1><p class=single-readtime><time datetime=2023-01-14T00:00:00+00:00>January 14, 2023</time>
+&nbsp; · &nbsp;
+3 min read</p></div><div class=single-content><p>I&rsquo;ve been picking up some TLA+. Partly to learn writing my own specifications
 for model-checking, partly to be able to work through the specifications for
 distributed systems that I am interested in. I started off with
-<a href="https://learntla.com/">LearnTLA+</a> by Hillel Wayne. It uses Pluscal instead of
+<a href=https://learntla.com/>LearnTLA+</a> by Hillel Wayne. It uses Pluscal instead of
 TLA+ to introduce formal modelling which can then be transpiled to TLA. Pluscal
 is supposed to be easier for engineers to learn since it&rsquo;s closer to normal
 (imperative) code whereas TLA+ is more <em>mathematical</em>. True, I did find Pluscal
 easier to grok though I found it a bit harder to use it to write my own
 specifications. Almost every hurdle or error I encountered required some
-knowledge of TLA+. Therefore I had to dip my toes into TLA+.</p>
-<p>I started off with the first 8 chapters of the book
-<a href="https://lamport.azurewebsites.net/tla/book.html">Specifying Systems</a> by Leslie
+knowledge of TLA+. Therefore I had to dip my toes into TLA+.</p><p>I started off with the first 8 chapters of the book
+<a href=https://lamport.azurewebsites.net/tla/book.html>Specifying Systems</a> by Leslie
 Lamport. It wasn&rsquo;t as complex as I assumed (except for Chapter 8, which I&rsquo;ll get
 to). I supplemented the book with Lamport&rsquo;s
-<a href="https://lamport.azurewebsites.net/video/videos.html">video course</a> on the same.
+<a href=https://lamport.azurewebsites.net/video/videos.html>video course</a> on the same.
 The videos IMO are certainly the most approachable beginner resource and I&rsquo;d
 recommend them to anyone starting out. They also have mini-exercises that you
 can use to test out your understanding as you go along. With some TLA+ know-how,
@@ -199,183 +25,24 @@ I struggled with in both these three resources all entailed temporal formulas
 specifically for liveness which I&rsquo;ll be looking to getting into next (though as
 Lamport advises, safety properties are more important). The following are some
 notes I took along (mostly for my future review). All credits go to Lamport and
-if there&rsquo;s any mistake it&rsquo;s definitely mine:</p>
-<h2 class="heading" id="some-notes">
-  Some notes
-  <a href="#some-notes">#</a>
-</h2>
-<ul>
-<li><strong>abstraction</strong>: the process of simplification by removing irrelevant details</li>
-<li>&ldquo;The hard part of learning to write TLA+ is learning to think abstractly about
-the system&rdquo; - Brannon Batson</li>
-<li>A good engineer knows how to abstract the essence of a system and suppress the
+if there&rsquo;s any mistake it&rsquo;s definitely mine:</p><h2 class=heading id=some-notes>Some notes
+<a href=#some-notes>#</a></h2><ul><li><strong>abstraction</strong>: the process of simplification by removing irrelevant details</li><li>&ldquo;The hard part of learning to write TLA+ is learning to think abstractly about
+the system&rdquo; - Brannon Batson</li><li>A good engineer knows how to abstract the essence of a system and suppress the
 unimportant details when specifying and designing it. The art of abstraction
-is learned only through experience.</li>
-<li><strong>Specification</strong>: a precise high-level model. Involves specifying the set of
-all possible behaviors representing the correct execution of a system.</li>
-<li>When writing a specification, you must first choose the abstraction: this
+is learned only through experience.</li><li><strong>Specification</strong>: a precise high-level model. Involves specifying the set of
+all possible behaviors representing the correct execution of a system.</li><li>When writing a specification, you must first choose the abstraction: this
 means choosing the variables that represent the system&rsquo;s state and the
-granularity of the steps that change those variables&rsquo; values.</li>
-<li>Basic abstraction underlying TLA+: An execution of a system is represented as
-a sequence of discrete steps.
-<ul>
-<li>step: a change from one state to the next, a pair of successive states</li>
-<li>execution: a sequence of states</li>
-<li>state: an assignment of values to variables</li>
-<li>behavior: a sequence of states. A behavior describes a potential history of
-the universe.</li>
-</ul>
-</li>
-<li>A <strong>State Machine</strong> is described by:
-<ol>
-<li>What the variables are</li>
-<li>Possible initial values of variables (all possible initial states)</li>
-<li>The relation between the state machine&rsquo;s values in the current state and
+granularity of the steps that change those variables&rsquo; values.</li><li>Basic abstraction underlying TLA+: An execution of a system is represented as
+a sequence of discrete steps.<ul><li>step: a change from one state to the next, a pair of successive states</li><li>execution: a sequence of states</li><li>state: an assignment of values to variables</li><li>behavior: a sequence of states. A behavior describes a potential history of
+the universe.</li></ul></li><li>A <strong>State Machine</strong> is described by:<ol><li>What the variables are</li><li>Possible initial values of variables (all possible initial states)</li><li>The relation between the state machine&rsquo;s values in the current state and
 their possible values in the next state (what next states can follow any
-given state)</li>
-</ol>
-</li>
-<li>TLA+ uses &lsquo;ordinary simple math&rsquo; to describe state machines.</li>
-<li>A temporal formula is an assertion about behaviors. A temporal formula
-satisfied by every behavior is called a theorem.</li>
-<li>Action: formula that contains primed and unprimed variables. An action is true
+given state)</li></ol></li><li>TLA+ uses &lsquo;ordinary simple math&rsquo; to describe state machines.</li><li>A temporal formula is an assertion about behaviors. A temporal formula
+satisfied by every behavior is called a theorem.</li><li>Action: formula that contains primed and unprimed variables. An action is true
 or false of a step i.e. an action is a formula (and formulas aren&rsquo;t executed
 per se). An action <code>S</code> is enabled in a state from which it is possible to take
-an <code>S</code> step</li>
-<li>Stuttering steps: steps that leave a variable unchanged</li>
-<li>Invariant: a formula that is true in every reachable state</li>
-<li>Enabling conditions of a formula: Conditions on the first state of a step</li>
-</ul>
-<h2 class="heading" id="references">
-  References
-  <a href="#references">#</a>
-</h2>
-<ul>
-<li>Thinking Above the Code - Leslie Lamport:
-<a href="https://www.youtube.com/watch?v=-4Yp3j_jk8Q">link</a></li>
-<li>Tackling Concurrency Bugs with TLA+ - Hillel Wayne:
-<a href="https://www.youtube.com/watch?v=_9B__0S21y8">video</a></li>
-<li>Learn TLA+ - Hillel Wayne: <a href="https://learntla.com/">link</a></li>
-<li>The TLA+ Video Course:
-<a href="https://lamport.azurewebsites.net/video/videos.html">videos</a></li>
-<li>Specifying Systems - Leslie Lamport:
-<a href="https://lamport.azurewebsites.net/tla/book.html">book</a></li>
-</ul>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/end-to-end-arguments-in-system-design/">
-                        End-to-End Arguments in System Design
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/sqlite-benchmarking-writes/">
-                        Benchmarking SQLite inserts
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+an <code>S</code> step</li><li>Stuttering steps: steps that leave a variable unchanged</li><li>Invariant: a formula that is true in every reachable state</li><li>Enabling conditions of a formula: Conditions on the first state of a step</li></ul><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ul><li>Thinking Above the Code - Leslie Lamport:
+<a href="https://www.youtube.com/watch?v=-4Yp3j_jk8Q">link</a></li><li>Tackling Concurrency Bugs with TLA+ - Hillel Wayne:
+<a href="https://www.youtube.com/watch?v=_9B__0S21y8">video</a></li><li>Learn TLA+ - Hillel Wayne: <a href=https://learntla.com/>link</a></li><li>The TLA+ Video Course:
+<a href=https://lamport.azurewebsites.net/video/videos.html>videos</a></li><li>Specifying Systems - Leslie Lamport:
+<a href=https://lamport.azurewebsites.net/tla/book.html>book</a></li></ul></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/end-to-end-arguments-in-system-design/>End-to-End Arguments in System Design</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/sqlite-benchmarking-writes/>Benchmarking SQLite inserts</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

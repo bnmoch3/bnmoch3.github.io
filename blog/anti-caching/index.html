@@ -1,456 +1,83 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Anti-Caching | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/anti-caching/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/anti-caching/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Anti-Caching">
-  <meta property="og:description" content="Track hot/cold data at tuple-level granularity. Evict LRU cold data in blocks.">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2024-06-05T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-06-05T00:00:00+00:00">
-    <meta property="article:tag" content="Database Internals">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/anti-caching/">Anti-Caching</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Anti-Caching</h1>
-    
-    <p class="single-summary">Track hot/cold data at tuple-level granularity. Evict LRU cold data in blocks.</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-06-05T00:00:00&#43;00:00">June 5, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      8 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <h2 class="heading" id="overview">
-  Overview
-  <a href="#overview">#</a>
-</h2>
-<p>In main-memory databases, when the database size exceeds the main memory size,
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Anti-Caching | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/anti-caching/><meta property="og:url" content="https://bnm3k.github.io/blog/anti-caching/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Anti-Caching"><meta property="og:description" content="Track hot/cold data at tuple-level granularity. Evict LRU cold data in blocks."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2024-06-05T00:00:00+00:00"><meta property="article:modified_time" content="2024-06-05T00:00:00+00:00"><meta property="article:tag" content="Database Internals"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/anti-caching/>Anti-Caching</a></div><div><div class=single-intro-container><h1 class=single-title>Anti-Caching</h1><p class=single-summary>Track hot/cold data at tuple-level granularity. Evict LRU cold data in blocks.</p><p class=single-readtime><time datetime=2024-06-05T00:00:00+00:00>June 5, 2024</time>
+&nbsp; · &nbsp;
+8 min read</p></div><div class=single-content><h2 class=heading id=overview>Overview
+<a href=#overview>#</a></h2><p>In main-memory databases, when the database size exceeds the main memory size,
 we need to deploy some buffering strategy that caches the current working set in
 memory while the rest of the database is stored on disk. There are two
-approaches we can use:</p>
-<ol>
-<li>Traditional DB buffer pools</li>
-<li>Let the OS handle it via virtual memory</li>
-</ol>
-<p>Both approaches impose a high overhead for main-memory databases. Letting the OS
+approaches we can use:</p><ol><li>Traditional DB buffer pools</li><li>Let the OS handle it via virtual memory</li></ol><p>Both approaches impose a high overhead for main-memory databases. Letting the OS
 handle might be better than traditional DB buffer pools since its overhead only
 kicks in when the working set exceeds the memory size; with the latter, the
-overhead is constantly there regardless of the current db size.</p>
-<p>In the paper
-<a href="https://www.vldb.org/pvldb/vol6/p1942-debrabant.pdf">&ldquo;Anti-Caching: A New Approach to Database Management System Architecture&rdquo;</a>,
+overhead is constantly there regardless of the current db size.</p><p>In the paper
+<a href=https://www.vldb.org/pvldb/vol6/p1942-debrabant.pdf>&ldquo;Anti-Caching: A New Approach to Database Management System Architecture&rdquo;</a>,
 DeBrabant, Pavlo et al propose <strong>Anti-Caching</strong> as a low-overhead alternative
 for keeping hot data in memory while cold data is evicted/anti-cached to disk.
-From their paper:</p>
-<blockquote>
-<p>To overcome these problems, we present a new architecture for main memory
+From their paper:</p><blockquote><p>To overcome these problems, we present a new architecture for main memory
 DBMSs that we call anti-caching. In a DBMS with anti-caching, when memory is
 exhausted, the DBMS gathers the &ldquo;coldest&rdquo; tuples and writes them to disk with
 minimal translation from their main memory format, thereby freeing up space
-for more recently accessed tuples&hellip; Rather than starting with data on disk
+for more recently accessed tuples&mldr; Rather than starting with data on disk
 and reading hot data into the cache, data starts in memory and cold data is
-evicted to the anti-cache on disk.</p>
-</blockquote>
-<p>The key features of anti-caching are as follows:</p>
-<ul>
-<li>A database consists of tables (and indices) and each table consists of tuples</li>
-<li><strong>Fine-Grained Eviction</strong>: Residency (whether an item is kept in-memory or
-evicted) is determined at the tuple level rather than at page/block level</li>
-<li>The tuples are stored in a doubly-linked list.</li>
-<li>As queries are executed, the tuples accessed by a query are moved to the tail.</li>
-<li>Therefore, over a period of time, tuples at the head of the list comprise the
+evicted to the anti-cache on disk.</p></blockquote><p>The key features of anti-caching are as follows:</p><ul><li>A database consists of tables (and indices) and each table consists of tuples</li><li><strong>Fine-Grained Eviction</strong>: Residency (whether an item is kept in-memory or
+evicted) is determined at the tuple level rather than at page/block level</li><li>The tuples are stored in a doubly-linked list.</li><li>As queries are executed, the tuples accessed by a query are moved to the tail.</li><li>Therefore, over a period of time, tuples at the head of the list comprise the
 least-recently used (LRU) set while those at the tail comprise the
-most-recently used (MRU) set. This forms an LRU chain.</li>
-<li>As long as all of the database fits the memory size, the only overhead imposed
+most-recently used (MRU) set. This forms an LRU chain.</li><li>As long as all of the database fits the memory size, the only overhead imposed
 so far is the moving of accessed tuples to the tail. This overhead can be
 minimized by using a sample of the queries e.g. 1% of queries executed within
-a given period.</li>
-<li>Once the database reaches a certain memory threshold, the LRU tuples from each
+a given period.</li><li>Once the database reaches a certain memory threshold, the LRU tuples from each
 tables are gathered into blocks to minimize IO costs and moved to disk
 (anti-caching). Their block format is similar to their in-memory format - this
-minimizes the serialization/deserialization cost.</li>
-<li>Throughout the lifetime of a database, a tuple is never copied, it is either
+minimizes the serialization/deserialization cost.</li><li>Throughout the lifetime of a database, a tuple is never copied, it is either
 in-memory or on-disk. This is contrast with traditional databases whereby the
 same tuple might be represented at both levels (double-buffering) hence the
 need to keep both representations consistent. To rephrase it differently, with
 anti-caching, main memory is the primary storage device/source of truth as to
 what a tuple&rsquo;s state is and before a tuple is read or modified it must be
-added into the LRU chain - the disk only serves as the &lsquo;anti-cache&rsquo;.</li>
-</ul>
-<p>For anti-caching to be applied, the following assumptions must be true:</p>
-<ul>
-<li>Queries&rsquo; working sets (tuple&rsquo;s accessed) must fit in main-memory. The working
+added into the LRU chain - the disk only serves as the &lsquo;anti-cache&rsquo;.</li></ul><p>For anti-caching to be applied, the following assumptions must be true:</p><ul><li>Queries&rsquo; working sets (tuple&rsquo;s accessed) must fit in main-memory. The working
 sets can change though as tuples are added or updated. A different way of
 stating this is that working sets should be skewed - at any given time only a
-small fraction of the entire dataset is accessed.</li>
-<li>The metadata used to track evicted tuples should fit in main-memory.</li>
-<li>Lastly, all indexes (primary keys and secondary) must also fit in main-memory.</li>
-</ul>
-<p>Let&rsquo;s dive a bit deeper into the anti-caching approach:</p>
-<h2 class="heading" id="storage-manager">
-  Storage Manager
-  <a href="#storage-manager">#</a>
-</h2>
-<p>During schema creation, a table can either be configured as <em>evictable</em> or
+small fraction of the entire dataset is accessed.</li><li>The metadata used to track evicted tuples should fit in main-memory.</li><li>Lastly, all indexes (primary keys and secondary) must also fit in main-memory.</li></ul><p>Let&rsquo;s dive a bit deeper into the anti-caching approach:</p><h2 class=heading id=storage-manager>Storage Manager
+<a href=#storage-manager>#</a></h2><p>During schema creation, a table can either be configured as <em>evictable</em> or
 <em>non-evictable</em>. Ideally, only small look-up tables that are frequently accessed
 should be marked as non-evictable. These will reside entirely in main memory
-throughout the lifetime of the database.</p>
-<p>If a table is marked as evictable, the following data-structures are set up for
-it:</p>
-<ol>
-<li><strong>LRU Chain</strong>: an in-memory doubly-linked list of hot tuples
-<ul>
-<li>whenever tuples are accessed (reads or updates), they&rsquo;re moved to the tail</li>
-<li>evictions start at the head</li>
-</ul>
-</li>
-<li><strong>Block table</strong>: a hash table that stores evicted blocks of cold tuples.
-<ul>
-<li>The keys are the block IDs and the values are the blocks.</li>
-<li>Keys are kept in-memory and the values (blocks) are disk resident.</li>
-<li>Each block has the same size e.g 8KB</li>
-<li>All tuples within a block are from the same table</li>
-<li>OS/ file-system caching of blocks is disabled.</li>
-</ul>
-</li>
-<li><strong>Evicted Table</strong>: In-memory table that maps evicted tuples to the block they
+throughout the lifetime of the database.</p><p>If a table is marked as evictable, the following data-structures are set up for
+it:</p><ol><li><strong>LRU Chain</strong>: an in-memory doubly-linked list of hot tuples<ul><li>whenever tuples are accessed (reads or updates), they&rsquo;re moved to the tail</li><li>evictions start at the head</li></ul></li><li><strong>Block table</strong>: a hash table that stores evicted blocks of cold tuples.<ul><li>The keys are the block IDs and the values are the blocks.</li><li>Keys are kept in-memory and the values (blocks) are disk resident.</li><li>Each block has the same size e.g 8KB</li><li>All tuples within a block are from the same table</li><li>OS/ file-system caching of blocks is disabled.</li></ul></li><li><strong>Evicted Table</strong>: In-memory table that maps evicted tuples to the block they
 reside in plus respective offsets within the block. Indices either store a
-pointer to the tuple in the LRU chain or to an entry in the evicted table.</li>
-</ol>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="storage manager" src="/assets/images/larger_than_mem/anticaching/storage_manager.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>The alternative to a doubly-linked list for the LRU chain is a single-linked
+pointer to the tuple in the LRU chain or to an entry in the evicted table.</li></ol><p><figure><div><img loading=lazy alt="storage manager" src=/assets/images/larger_than_mem/anticaching/storage_manager.svg></div></figure></p><p>The alternative to a doubly-linked list for the LRU chain is a single-linked
 list. In both, popping the LRU tuple is O(1). Adding a tuple to the tail is also
 O(1). However a doubly-linked list allows for both forward and reverse
 iteration. This allows for queries to start at the tail where the hot tuples
 reside. This is in contrast with single-linked lists where queries would have to
 start with the head (LRU entries). Hence the faster execution as demonstrated in
-the plot below.</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="figure 10" src="/assets/images/larger_than_mem/anticaching/figure_10_doubly_linked_list_vs.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Also, as already mentioned, updating the LRU chain imposes some overhead. As
+the plot below.</p><p><figure><div><img loading=lazy alt="figure 10" src=/assets/images/larger_than_mem/anticaching/figure_10_doubly_linked_list_vs.png></div></figure></p><p>Also, as already mentioned, updating the LRU chain imposes some overhead. As
 such, anti-caching uses what the authors call <em>aLRU</em>; with aLRU, only the
-accesses from a sample of the queries (1%) are used to update the chain.</p>
-<h2 class="heading" id="anti-caching-cold-data-block-eviction">
-  Anti-Caching Cold Data (Block Eviction)
-  <a href="#anti-caching-cold-data-block-eviction">#</a>
-</h2>
-<p>There are two key considerations when determining which data to evict:</p>
-<ol>
-<li>The tables to evict data from</li>
-<li>Amount of data to evict per given table</li>
-</ol>
-<p>These are handled as follows: &ldquo;The amount of data accessed at each table is
+accesses from a sample of the queries (1%) are used to update the chain.</p><h2 class=heading id=anti-caching-cold-data-block-eviction>Anti-Caching Cold Data (Block Eviction)
+<a href=#anti-caching-cold-data-block-eviction>#</a></h2><p>There are two key considerations when determining which data to evict:</p><ol><li>The tables to evict data from</li><li>Amount of data to evict per given table</li></ol><p>These are handled as follows: &ldquo;The amount of data accessed at each table is
 monitored, and the amount of data evicted from each table is inversely
 proportional to the amount of data accessed in the table since the last
-eviction&rdquo;.</p>
-<p>In graphic form:</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="table eviction" src="/assets/images/larger_than_mem/anticaching/table_eviction.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>From there, the cold tuples are popped from the head of the LRU chain and moved
+eviction&rdquo;.</p><p>In graphic form:</p><p><figure><div><img loading=lazy alt="table eviction" src=/assets/images/larger_than_mem/anticaching/table_eviction.svg></div></figure></p><p>From there, the cold tuples are popped from the head of the LRU chain and moved
 into a block buffer. The evicted table is updated and the blocks are written to
-disk sequentially.</p>
-<h2 class="heading" id="retrieving-data-from-the-anti-cache">
-  Retrieving data from the anti-cache
-  <a href="#retrieving-data-from-the-anti-cache">#</a>
-</h2>
-<p>If a query accesses evicted data, the executor places the query in a pre-pass
+disk sequentially.</p><h2 class=heading id=retrieving-data-from-the-anti-cache>Retrieving data from the anti-cache
+<a href=#retrieving-data-from-the-anti-cache>#</a></h2><p>If a query accesses evicted data, the executor places the query in a pre-pass
 phase then tracks which specific tuples from the block table that the query
 accesses before rolling back any changes it might have made. From there, the
 system fetches the required blocks and merges the tuples back into the LRU chain
 before re-executing the query. This process is summarized in the state diagram
-blow (retrieved from the paper):</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="figure 5" src="/assets/images/larger_than_mem/anticaching/figure_5.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>When merging back evicted tuples, there are two strategies:</p>
-<ul>
-<li><strong>Block-Merging</strong>: Merge all the tuples in a block back into the LRU chain and
-discard the block:
-<ul>
-<li>This is the simplest approach though it also has the highest overhead</li>
-<li>The specific tuples in the block that have been requested are added to the
-tail (i.e. the &lsquo;hot&rsquo; end)</li>
-<li>The rest of the unwanted tuples are added to the head (i.e. the cold end) so
+blow (retrieved from the paper):</p><p><figure><div><img loading=lazy alt="figure 5" src=/assets/images/larger_than_mem/anticaching/figure_5.png></div></figure></p><p>When merging back evicted tuples, there are two strategies:</p><ul><li><strong>Block-Merging</strong>: Merge all the tuples in a block back into the LRU chain and
+discard the block:<ul><li>This is the simplest approach though it also has the highest overhead</li><li>The specific tuples in the block that have been requested are added to the
+tail (i.e. the &lsquo;hot&rsquo; end)</li><li>The rest of the unwanted tuples are added to the head (i.e. the cold end) so
 that they&rsquo;ll be the first to be chucked out during the next rounds of
-eviction.</li>
-</ul>
-</li>
-<li><strong>Tuple-Merging</strong>:
-<ul>
-<li>When retrieving a block, only merge the requested tuples into the LRU chain</li>
-<li>It&rsquo;s relatively more complicated though is more efficient since we aren&rsquo;t
+eviction.</li></ul></li><li><strong>Tuple-Merging</strong>:<ul><li>When retrieving a block, only merge the requested tuples into the LRU chain</li><li>It&rsquo;s relatively more complicated though is more efficient since we aren&rsquo;t
 merging back unwanted tuples that&rsquo;ll increase the need to carry out more
-evictions in future</li>
-<li>The block on disk is left as is, i.e. it is not updated. However, we ensure
+evictions in future</li><li>The block on disk is left as is, i.e. it is not updated. However, we ensure
 that the evicted table and any data structure that pointed to the merged
-tuples are updated to reflect the fact that they are back in main-memory.</li>
-<li>The system also keeps track of the number of &lsquo;holes&rsquo; per every block. Once
+tuples are updated to reflect the fact that they are back in main-memory.</li><li>The system also keeps track of the number of &lsquo;holes&rsquo; per every block. Once
 the number of holes exceed a certain threshold e.g. 50% of the block, the
-block is merged with other such blocks.</li>
-</ul>
-</li>
-</ul>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="figure 8" src="/assets/images/larger_than_mem/anticaching/figure_8_merge_strategies.png" >
-    </div>
-
-    
-</figure>
-</p>
-<h2 class="heading" id="possible-further-experiments-switch-lru-for-clock-or-clock-pro">
-  Possible Further Experiments: Switch LRU for Clock? or Clock-Pro?
-  <a href="#possible-further-experiments-switch-lru-for-clock-or-clock-pro">#</a>
-</h2>
-<p>The whole paper is worth a read, especially the experiments and benchmark
-results section. There are two things I&rsquo;d love to explore:</p>
-<p>One, switch LRU eviction to clock/second-chance eviction. LRU requires using a
+block is merged with other such blocks.</li></ul></li></ul><p><figure><div><img loading=lazy alt="figure 8" src=/assets/images/larger_than_mem/anticaching/figure_8_merge_strategies.png></div></figure></p><h2 class=heading id=possible-further-experiments-switch-lru-for-clock-or-clock-pro>Possible Further Experiments: Switch LRU for Clock? or Clock-Pro?
+<a href=#possible-further-experiments-switch-lru-for-clock-or-clock-pro>#</a></h2><p>The whole paper is worth a read, especially the experiments and benchmark
+results section. There are two things I&rsquo;d love to explore:</p><p>One, switch LRU eviction to clock/second-chance eviction. LRU requires using a
 list and imposes a maintenance overhead (which the authors mitigate by only
 using a sample of the accesses). Clock on the other hand gives us a bit of
 freedom with the data structure we can use to hold tuples in memory since we
@@ -458,136 +85,16 @@ only have to keep a single reference bit per tuple and a separate ring data
 structure to hold pointers to the tuples. There&rsquo;s also the clock hand that
 resets the reference bits or evicts tuples whenever an eviction has to be
 carried out. It&rsquo;s worth pointing out that clock is an approximation of LRU so
-switching to clock shouldn&rsquo;t change the overall expected behaviour that much.</p>
-<p>Two: maybe don&rsquo;t eagerly merge unevicted tuples. That is, in between the LRU
+switching to clock shouldn&rsquo;t change the overall expected behaviour that much.</p><p>Two: maybe don&rsquo;t eagerly merge unevicted tuples. That is, in between the LRU
 chain and the block table, have a &rsquo;lukewarm&rsquo; or &rsquo;test&rsquo; section. From there,
 tuple&rsquo;s getting hotter are added into the proper chain and the rest are evicted
 as blocks. This does add some significant complexity but if we go ahead with
 using Clock, we might as well upgrade to
-<a href="https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/general/full_papers/jiang/jiang_html/html.html">Clock Pro</a>;
+<a href=https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/general/full_papers/jiang/jiang_html/html.html>Clock Pro</a>;
 In Clock Pro, entries are categorized as either hot or cold. New entries (such
 as insertions or those unevicted from the block table) are kept in a test
 period. If they are re-accessed again within that test period, they are upgraded
 to hot; otherwise, they are kept as cold entries and are amongst the first to be
 evicted under memory pressure. Relatadely, least recently used hot entries are
-downgraded to cold but still kept in memory then evicted when necessary.</p>
-<p>Regardless, anti-caching is a simple but effective technique for handling
-larger-than-memory OLTP workloads worth keeping in mind.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/duckdb-arrow-data-types/">
-                        Programmatically creating a DuckDB table from an Arrow schema
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/project-siberia-hot-cold-id/">
-                        Offline (but Faster and more Accurate) Classification of Hot and Cold Data 
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+downgraded to cold but still kept in memory then evicted when necessary.</p><p>Regardless, anti-caching is a simple but effective technique for handling
+larger-than-memory OLTP workloads worth keeping in mind.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/duckdb-arrow-data-types/>Programmatically creating a DuckDB table from an Arrow schema</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/project-siberia-hot-cold-id/>Offline (but Faster and more Accurate) Classification of Hot and Cold Data</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

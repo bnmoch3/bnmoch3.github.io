@@ -1,260 +1,68 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Speeding up unique constraint checks in PostgreSQL... or not | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/pg-unique-constraints/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/pg-unique-constraints/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Speeding up unique constraint checks in PostgreSQL... or not">
-  <meta property="og:description" content="Are exclusion constraints using hash indexes faster than plain old uniqueness checks? Let’s find out">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2020-05-28T00:00:00+00:00">
-    <meta property="article:modified_time" content="2020-05-28T00:00:00+00:00">
-    <meta property="article:tag" content="SQL">
-    <meta property="article:tag" content="PostgreSQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/pg-unique-constraints/">Speeding up unique constraint checks in PostgreSQL... or not</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Speeding up unique constraint checks in PostgreSQL... or not</h1>
-    
-    <p class="single-summary">Are exclusion constraints using hash indexes faster than plain old uniqueness checks? Let&rsquo;s find out</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2020-05-28T00:00:00&#43;00:00">May 28, 2020</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      4 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Using hash indexes over Btree indexes for equality lookups should be faster:
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Speeding up unique constraint checks in PostgreSQL... or not | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/pg-unique-constraints/><meta property="og:url" content="https://bnm3k.github.io/blog/pg-unique-constraints/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Speeding up unique constraint checks in PostgreSQL... or not"><meta property="og:description" content="Are exclusion constraints using hash indexes faster than plain old uniqueness checks? Let’s find out"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2020-05-28T00:00:00+00:00"><meta property="article:modified_time" content="2020-05-28T00:00:00+00:00"><meta property="article:tag" content="SQL"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/pg-unique-constraints/>Speeding up unique constraint checks in PostgreSQL... or not</a></div><div><div class=single-intro-container><h1 class=single-title>Speeding up unique constraint checks in PostgreSQL... or not</h1><p class=single-summary>Are exclusion constraints using hash indexes faster than plain old uniqueness checks? Let&rsquo;s find out</p><p class=single-readtime><time datetime=2020-05-28T00:00:00+00:00>May 28, 2020</time>
+&nbsp; · &nbsp;
+4 min read</p></div><div class=single-content><p>Using hash indexes over Btree indexes for equality lookups should be faster:
 O(1) vs O(log n). And as expected, various benchmarks confirm this. However,
 when it comes to enforcing uniqueness for a given column, hash indexes don&rsquo;t
-perform quite as well.</p>
-<p>Here&rsquo;s the standard way of adding a uniqueness constraint to a column:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> item(
-</span></span><span style="display:flex;"><span>    id int <span style="font-weight:bold">unique</span>,
-</span></span><span style="display:flex;"><span>    name text
-</span></span><span style="display:flex;"><span>);
+perform quite as well.</p><p>Here&rsquo;s the standard way of adding a uniqueness constraint to a column:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> item(
+</span></span><span style=display:flex><span>    id int <span style=font-weight:700>unique</span>,
+</span></span><span style=display:flex><span>    name text
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>On my computer, it takes 5.563 seconds to insert a million sequentially ordered
 IDs. It takes 7.533 seconds to add a million randomly ordered IDs. Without any
 constraint on the <code>id</code> column, it takes roughly 2 seconds to insert a million
-items regardless of whether they are ordered sequentially or randomly.</p>
-<p>Postgres provides another round-about way of adding a uniqueness constraint to a
+items regardless of whether they are ordered sequentially or randomly.</p><p>Postgres provides another round-about way of adding a uniqueness constraint to a
 column - <em>exclusion constraints</em>. Postgres'
-<a href="https://www.postgresql.org/docs/12/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION">documentation</a>
-defines exclusion constraints as follows:</p>
-<blockquote>
-<p>Exclusion constraints ensure that if any two rows are compared on the
+<a href=https://www.postgresql.org/docs/12/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION>documentation</a>
+defines exclusion constraints as follows:</p><blockquote><p>Exclusion constraints ensure that if any two rows are compared on the
 specified columns or expressions using the specified operators, at least one
-of these operator comparisons will return false or null.</p>
-</blockquote>
-<p>For our case, enforcing uniqueness, the above statement could be restated in
+of these operator comparisons will return false or null.</p></blockquote><p>For our case, enforcing uniqueness, the above statement could be restated in
 this way: Suppose we only consider a single column and provide one operator for
 the exclusion constraint (such as the equals operator &lsquo;=&rsquo; for uniqueness). Then,
 when inserting or updating a row, the comparison with all other pre-existing
 rows should result in false, (or null since sql has three-valued logic).
-Otherwise, it will be excluded.</p>
-<p>This is easier demonstrated with actual sql:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> item(
-</span></span><span style="display:flex;"><span>    id int,
-</span></span><span style="display:flex;"><span>    name text,
-</span></span><span style="display:flex;"><span>    exclude (id <span style="font-weight:bold">with</span> =)
-</span></span><span style="display:flex;"><span>);
+Otherwise, it will be excluded.</p><p>This is easier demonstrated with actual sql:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> item(
+</span></span><span style=display:flex><span>    id int,
+</span></span><span style=display:flex><span>    name text,
+</span></span><span style=display:flex><span>    exclude (id <span style=font-weight:700>with</span> =)
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>Better yet, Postgres allows us to speed up the exclusion check using an index as
-follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> item(
-</span></span><span style="display:flex;"><span>    id int,
-</span></span><span style="display:flex;"><span>    name text,
-</span></span><span style="display:flex;"><span>    exclude <span style="font-weight:bold">using</span> hash (id <span style="font-weight:bold">with</span> =)
-</span></span><span style="display:flex;"><span>);
+follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> item(
+</span></span><span style=display:flex><span>    id int,
+</span></span><span style=display:flex><span>    name text,
+</span></span><span style=display:flex><span>    exclude <span style=font-weight:700>using</span> hash (id <span style=font-weight:700>with</span> =)
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>Now, when using a unique constraint, Postgres&rsquo; documentation states that it
 &ldquo;will automatically create a unique B-tree index on the column or group of
 columns listed in the constraint&rdquo;. Given that the exclusion constraint above is
 using hash index, I expected it to be faster. However, inserting a million
 sequential ID&rsquo;s took 9.192 seconds, which is almost twice as slow as relying on
 the plain old unique constraint. Inserting randomly ordered IDs took 8.443
-seconds.</p>
-<p>At first, I presumed it has something to do with the way the underlying hash
+seconds.</p><p>At first, I presumed it has something to do with the way the underlying hash
 indexes are structured, but even when using btree, it took roughly the same
 amount of time as the hash index exclusion constraint. The btree though was way
 much slower when inserting randomly ordered IDs, taking 12.058 seconds. My
 current presumption is that Postgres developers have put a lot of work into
 optimizing the standard unique constraint, since it&rsquo;s expected that the users
 will opt for it over exclusion constraints, which are better left for more
-interesting stuff, like overlapping intervals.</p>
-<p>Other than being slower, by relying on exclusion constraints to enforce
+interesting stuff, like overlapping intervals.</p><p>Other than being slower, by relying on exclusion constraints to enforce
 uniqueness, we also lose the ability to have the column be referenced by foreign
 keys in other tables. This is because in Postgres, only unique columns and
 primary key columns can be referenced. For example, the second table definition
-below fails:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> item(
-</span></span><span style="display:flex;"><span>    id int,
-</span></span><span style="display:flex;"><span>    name text,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">constraint</span> unique_book_id_hash exclude <span style="font-weight:bold">using</span> hash (id <span style="font-weight:bold">with</span> =)
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> orders(
-</span></span><span style="display:flex;"><span>    id int,
-</span></span><span style="display:flex;"><span>    item_id int <span style="font-weight:bold">references</span> item(id) <span style="font-style:italic">-- ❌
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>);
-</span></span></code></pre></div><h2 class="heading" id="string-keys">
-  String keys
-  <a href="#string-keys">#</a>
-</h2>
-<p>So far though, if you&rsquo;ve noticed, I&rsquo;ve been using integers. Before making any
+below fails:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> item(
+</span></span><span style=display:flex><span>    id int,
+</span></span><span style=display:flex><span>    name text,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>constraint</span> unique_book_id_hash exclude <span style=font-weight:700>using</span> hash (id <span style=font-weight:700>with</span> =)
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> orders(
+</span></span><span style=display:flex><span>    id int,
+</span></span><span style=display:flex><span>    item_id int <span style=font-weight:700>references</span> item(id) <span style=font-style:italic>-- ❌
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>);
+</span></span></code></pre></div><h2 class=heading id=string-keys>String keys
+<a href=#string-keys>#</a></h2><p>So far though, if you&rsquo;ve noticed, I&rsquo;ve been using integers. Before making any
 further conclusions and dismissing hash indexes entirely, it&rsquo;s only fair that
 they&rsquo;re measured up in the one area where they excel quite well, comparing
 lengthy strings. And as expected, they do truly shine here. I began with UUID&rsquo;s
@@ -267,146 +75,16 @@ finally 16.24 seconds to insert the third set - quite impressive. I&rsquo;ll be 
 to try comparing both with random strings of different lengths but I expect
 similar results. And yeah, that&rsquo;s definitely one way to speed up uniqueness
 constraint checks if the column&rsquo;s type is a string, rather than an integer and
-it won&rsquo;t be referenced elsewhere in the database.</p>
-<h2 class="heading" id="addendum">
-  Addendum
-  <a href="#addendum">#</a>
-</h2>
-<p>After writing up this post, I searched online to check how others are using this
+it won&rsquo;t be referenced elsewhere in the database.</p><h2 class=heading id=addendum>Addendum
+<a href=#addendum>#</a></h2><p>After writing up this post, I searched online to check how others are using this
 method and what issues they&rsquo;ve come across. Here&rsquo;s one important consideration I
 came across to keep in mind. It&rsquo;s from the discussion &lsquo;Postgres hash index with
 unique constraint&rsquo; on StackOverflow
-(<a href="https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint">link</a>).
+(<a href=https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint>link</a>).
 Using exclusion constraints to enforce uniqueness does not work with upserts
-(i.e. insert &hellip; on conflict do <em>action</em>) since, to quote the user
-<a href="https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint#comment104844932_57288579">jbg</a>:
+(i.e. insert &mldr; on conflict do <em>action</em>) since, to quote the user
+<a href=https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint#comment104844932_57288579>jbg</a>:
 &ldquo;there could be multiple rows that conflicted when using an exclusion constraint
 (even though in this specific case it would always be one row), in which case it
-wouldn&rsquo;t be clear which conflicting row should be updated&rdquo;.</p>
-<h2 class="heading" id="references">
-  References
-  <a href="#references">#</a>
-</h2>
-<ol>
-<li><a href="https://www.postgresql.org/docs/12/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS">Postgres documentation, Constraints</a></li>
-<li><a href="http://amitkapila16.blogspot.com/2017/03/hash-indexes-are-faster-than-btree.html">Hash indexes are faster than Btree indexes?</a></li>
-<li><a href="https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint">Postgres hash index with unique constraint</a></li>
-</ol>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-gotcha-now/">
-                        SQL gotcha: now() vs &#39;now&#39;
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/go-btree-data-structure/">
-                        Go data-structure tricks: google/Btree
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+wouldn&rsquo;t be clear which conflicting row should be updated&rdquo;.</p><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li><a href=https://www.postgresql.org/docs/12/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS>Postgres documentation, Constraints</a></li><li><a href=http://amitkapila16.blogspot.com/2017/03/hash-indexes-are-faster-than-btree.html>Hash indexes are faster than Btree indexes?</a></li><li><a href=https://stackoverflow.com/questions/44274080/postgres-hash-index-with-unique-constraint>Postgres hash index with unique constraint</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/sql-gotcha-now/>SQL gotcha: now() vs 'now'</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/go-btree-data-structure/>Go data-structure tricks: google/Btree</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

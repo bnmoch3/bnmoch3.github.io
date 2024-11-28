@@ -1,193 +1,15 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    DuckDB JIT Compiled UDFs with Numba | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/duckdb-jit-udfs-numba/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/duckdb-jit-udfs-numba/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="DuckDB JIT Compiled UDFs with Numba">
-  <meta property="og:description" content="JIT compiling your vectorized UDFs with Numba. Plus pure SQL is plenty fast if you can figure out how to write it">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2024-04-04T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-04-04T00:00:00+00:00">
-    <meta property="article:tag" content="DuckDB">
-    <meta property="article:tag" content="Python">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/duckdb-jit-udfs-numba/">DuckDB JIT Compiled UDFs with Numba</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">DuckDB JIT Compiled UDFs with Numba</h1>
-    
-    <p class="single-summary">JIT compiling your vectorized UDFs with Numba. Plus pure SQL is plenty fast if you can figure out how to write it</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-04-04T00:00:00&#43;00:00">April 4, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      11 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>DuckDB&rsquo;s Python API supports extending its core functionality with user-defined
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>DuckDB JIT Compiled UDFs with Numba | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/duckdb-jit-udfs-numba/><meta property="og:url" content="https://bnm3k.github.io/blog/duckdb-jit-udfs-numba/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="DuckDB JIT Compiled UDFs with Numba"><meta property="og:description" content="JIT compiling your vectorized UDFs with Numba. Plus pure SQL is plenty fast if you can figure out how to write it"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-04-04T00:00:00+00:00"><meta property="article:modified_time" content="2024-04-04T00:00:00+00:00"><meta property="article:tag" content="DuckDB"><meta property="article:tag" content="Python"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/duckdb-jit-udfs-numba/>DuckDB JIT Compiled UDFs with Numba</a></div><div><div class=single-intro-container><h1 class=single-title>DuckDB JIT Compiled UDFs with Numba</h1><p class=single-summary>JIT compiling your vectorized UDFs with Numba. Plus pure SQL is plenty fast if you can figure out how to write it</p><p class=single-readtime><time datetime=2024-04-04T00:00:00+00:00>April 4, 2024</time>
+&nbsp; · &nbsp;
+11 min read</p></div><div class=single-content><p>DuckDB&rsquo;s Python API supports extending its core functionality with user-defined
 functions (UDFs). This comes quite in handy when we&rsquo;ve got use-cases for which
 DuckDB does not provide built-in functions. To demonstrate the utility of UDFs,
 I&rsquo;ll pick a rather contrived problem: we&rsquo;ve got a list of pairs of geographical
 points (latitude, longitude) and we need to compute the
-<a href="https://en.wikipedia.org/wiki/Haversine_formula">haversine distance</a> between
-all the pairs then get the average distance.</p>
-<p>Here&rsquo;s the schema of the table:</p>
-<pre tabindex="0"><code>&gt; create table points from select * from &#39;data/points.parquet&#39;;
+<a href=https://en.wikipedia.org/wiki/Haversine_formula>haversine distance</a> between
+all the pairs then get the average distance.</p><p>Here&rsquo;s the schema of the table:</p><pre tabindex=0><code>&gt; create table points from select * from &#39;data/points.parquet&#39;;
 &gt; describe points;
 ┌─────────────┬─────────────┬─────────┬─────────┬─────────┬───────┐
 │ column_name │ column_type │  null   │   key   │ default │ extra │
@@ -199,80 +21,66 @@ all the pairs then get the average distance.</p>
 │ y1          │ DOUBLE      │ YES     │         │         │       │
 └─────────────┴─────────────┴─────────┴─────────┴─────────┴───────┘
 </code></pre><p><code>(x0,y0)</code> is the start and <code>(x1,y1)</code> is the end. The x values are longitudes and
-the y values are latitudes.</p>
-<h2 class="heading" id="python-native-udfs">
-  Python-Native UDFs
-  <a href="#python-native-udfs">#</a>
-</h2>
-<p>Since DuckDB does not have a built-in haversine function, we&rsquo;ll have to define
-one ourselves:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">math</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> _calc_haversine_dist(x0, y0, x1, y1):
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># x -&gt; longitude</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># y -&gt; latitude</span>
-</span></span><span style="display:flex;"><span>    EARTH_RADIUS = 6372.8  <span style="font-style:italic"># km</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    p0_latitude = math.radians(y0)
-</span></span><span style="display:flex;"><span>    p1_latitude = math.radians(y1)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    delta_latitude = math.radians(y0 - y1)
-</span></span><span style="display:flex;"><span>    delta_longitude = math.radians(x0 - x1)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    central_angle_inner = (math.sin(delta_latitude / 2.0)) ** 2 + math.cos(
-</span></span><span style="display:flex;"><span>        p0_latitude
-</span></span><span style="display:flex;"><span>    ) * math.cos(p1_latitude) * (math.sin(delta_longitude / 2.0) ** 2)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    central_angle = 2.0 * math.asin(math.sqrt(central_angle_inner))
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    distance = EARTH_RADIUS * central_angle
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> distance
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">duckdb</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> <span style="font-weight:bold">duckdb.typing</span> <span style="font-weight:bold">import</span> DOUBLE
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>conn = duckdb.connect(<span style="font-style:italic">&#34;points.db&#34;</span>)
-</span></span><span style="display:flex;"><span>conn.create_function(
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;haversine_dist&#34;</span>,
-</span></span><span style="display:flex;"><span>    _calc_haversine_dist,
-</span></span><span style="display:flex;"><span>    [DOUBLE, DOUBLE, DOUBLE, DOUBLE],
-</span></span><span style="display:flex;"><span>    DOUBLE,
-</span></span><span style="display:flex;"><span>    type=<span style="font-style:italic">&#34;native&#34;</span>,
-</span></span><span style="display:flex;"><span>    side_effects=<span style="font-weight:bold">False</span>,
-</span></span><span style="display:flex;"><span>)
+the y values are latitudes.</p><h2 class=heading id=python-native-udfs>Python-Native UDFs
+<a href=#python-native-udfs>#</a></h2><p>Since DuckDB does not have a built-in haversine function, we&rsquo;ll have to define
+one ourselves:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>math</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>def</span> _calc_haversine_dist(x0, y0, x1, y1):
+</span></span><span style=display:flex><span>    <span style=font-style:italic># x -&gt; longitude</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic># y -&gt; latitude</span>
+</span></span><span style=display:flex><span>    EARTH_RADIUS = 6372.8  <span style=font-style:italic># km</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    p0_latitude = math.radians(y0)
+</span></span><span style=display:flex><span>    p1_latitude = math.radians(y1)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    delta_latitude = math.radians(y0 - y1)
+</span></span><span style=display:flex><span>    delta_longitude = math.radians(x0 - x1)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    central_angle_inner = (math.sin(delta_latitude / 2.0)) ** 2 + math.cos(
+</span></span><span style=display:flex><span>        p0_latitude
+</span></span><span style=display:flex><span>    ) * math.cos(p1_latitude) * (math.sin(delta_longitude / 2.0) ** 2)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    central_angle = 2.0 * math.asin(math.sqrt(central_angle_inner))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    distance = EARTH_RADIUS * central_angle
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> distance
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>duckdb</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> <span style=font-weight:700>duckdb.typing</span> <span style=font-weight:700>import</span> DOUBLE
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>conn = duckdb.connect(<span style=font-style:italic>&#34;points.db&#34;</span>)
+</span></span><span style=display:flex><span>conn.create_function(
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;haversine_dist&#34;</span>,
+</span></span><span style=display:flex><span>    _calc_haversine_dist,
+</span></span><span style=display:flex><span>    [DOUBLE, DOUBLE, DOUBLE, DOUBLE],
+</span></span><span style=display:flex><span>    DOUBLE,
+</span></span><span style=display:flex><span>    type=<span style=font-style:italic>&#34;native&#34;</span>,
+</span></span><span style=display:flex><span>    side_effects=<span style=font-weight:700>False</span>,
+</span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p>There are two kinds of UDFs: scalar UDFs which produce single values that are
 filled into a column, and table UDFs that produce rows which are gathered into a
-table. The one defined just above is a scalar UDF.</p>
-<p>From there we can use it within SQL, invoking it just like we would for any
-built-in function:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> 
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">avg</span>(haversine_dist(x0,y0,x1,y1)) <span style="font-weight:bold">as</span> avg_dist
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> points
-</span></span></code></pre></div><h2 class="heading" id="speeding-up-python-native-udfs-with-numba">
-  Speeding up Python-Native UDFs with Numba
-  <a href="#speeding-up-python-native-udfs-with-numba">#</a>
-</h2>
-<p>Unfortunately, its performance leaves a lot to be desired, that is compared to a
+table. The one defined just above is a scalar UDF.</p><p>From there we can use it within SQL, invoking it just like we would for any
+built-in function:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> 
+</span></span><span style=display:flex><span>  <span style=font-weight:700>avg</span>(haversine_dist(x0,y0,x1,y1)) <span style=font-weight:700>as</span> avg_dist
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> points
+</span></span></code></pre></div><h2 class=heading id=speeding-up-python-native-udfs-with-numba>Speeding up Python-Native UDFs with Numba
+<a href=#speeding-up-python-native-udfs-with-numba>#</a></h2><p>Unfortunately, its performance leaves a lot to be desired, that is compared to a
 custom script. A good piece of advice is to profile the code and figure out
 where the bottleneck is. I&rsquo;ll skip this advice and simply assume that it&rsquo;s slow
 because of the quote-unquote python interpreter overhead, particularly at
-<code>_calc_haversine_dist</code>.</p>
-<p>Luckily, we&rsquo;ve got a tool that can speed up computation-heavy procedures in
-Python: <a href="https://numba.readthedocs.io/en/stable/">Numba</a>. From its docs, Numba
+<code>_calc_haversine_dist</code>.</p><p>Luckily, we&rsquo;ve got a tool that can speed up computation-heavy procedures in
+Python: <a href=https://numba.readthedocs.io/en/stable/>Numba</a>. From its docs, Numba
 is described as &lsquo;a just-in-time compiler for Python that works best on code that
-uses NumPy arrays and functions, and loops&rsquo;.</p>
-<p>Let&rsquo;s apply it to <code>_calc_haversine_dist</code> and see if it&rsquo;s up to the task:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">from</span> <span style="font-weight:bold">numba</span> <span style="font-weight:bold">import</span> jit
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>_calc_haversine_dist_py_jit = jit(nopython=<span style="font-weight:bold">True</span>, nogil=<span style="font-weight:bold">True</span>, parallel=<span style="font-weight:bold">False</span>)(
-</span></span><span style="display:flex;"><span>    _calc_haversine_dist
-</span></span><span style="display:flex;"><span>)
+uses NumPy arrays and functions, and loops&rsquo;.</p><p>Let&rsquo;s apply it to <code>_calc_haversine_dist</code> and see if it&rsquo;s up to the task:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>from</span> <span style=font-weight:700>numba</span> <span style=font-weight:700>import</span> jit
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>_calc_haversine_dist_py_jit = jit(nopython=<span style=font-weight:700>True</span>, nogil=<span style=font-weight:700>True</span>, parallel=<span style=font-weight:700>False</span>)(
+</span></span><span style=display:flex><span>    _calc_haversine_dist
+</span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p>In almost all usages of Numba that you&rsquo;ll see out there, <code>jit</code> is applied as a
 decorator - my non-standard usage of invoking it as a function is to make it
 clear that we&rsquo;re creating a new jit-compiled function. Also I&rsquo;ll be reusing
 <code>_calc_haversine_dist</code> in other contexts later on so I want to keep the original
-python version as is.</p>
-<p><code>nopython=True</code> prevents Numba from falling back into object mode in cases where
+python version as is.</p><p><code>nopython=True</code> prevents Numba from falling back into object mode in cases where
 Numba does not &lsquo;understand&rsquo; a data type. Since all our inputs and outputs are
 numeric, Numba should be able to handle them natively without any error -
 setting <code>nopython</code> to True is more of a sanity check. <code>nogil=True</code> ensures that
@@ -281,508 +89,205 @@ allowing for actual parallelism. Finally with <code>parallel=False</code>, we do
 Numba to manage parallelism for us - that&rsquo;s left for DuckDB and its query
 executor since it&rsquo;ll have better info on how much resources we need and will
 schedule the operations better given it&rsquo;s cognizant of the upstream operators
-such as <code>avg</code> in our case.</p>
-<p>Does the JIT-compiled alternative provide any performance benefits - let&rsquo;s see
+such as <code>avg</code> in our case.</p><p>Does the JIT-compiled alternative provide any performance benefits - let&rsquo;s see
 the results. As an aside, I carried out all the benchmarks using
-<a href="https://github.com/sharkdp/hyperfine">hyperfine</a> and picked the best time -
+<a href=https://github.com/sharkdp/hyperfine>hyperfine</a> and picked the best time -
 with all the usual benchmarking best practices applied. The dataset has
-10,000,000 entries.</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/py_native.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Unfortunately, the performance benefit is negligible (26.7 seconds for no JIT vs
+10,000,000 entries.</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/py_native.svg></div></figure></p><p>Unfortunately, the performance benefit is negligible (26.7 seconds for no JIT vs
 23.443 with JIT). As explained in the DuckDB documentation [1], usage of
 Python-native UDFs incurs the overhead of translating DuckDB values into Python
 objects and vice versa. That is why the JIT scalar version doesn&rsquo;t improve
-performance much.</p>
-<h2 class="heading" id="vectorized-jit-udfs">
-  Vectorized JIT UDFs
-  <a href="#vectorized-jit-udfs">#</a>
-</h2>
-<p>To mitigate against this overhead, DuckDB offers a third kind of UDFs -
+performance much.</p><h2 class=heading id=vectorized-jit-udfs>Vectorized JIT UDFs
+<a href=#vectorized-jit-udfs>#</a></h2><p>To mitigate against this overhead, DuckDB offers a third kind of UDFs -
 <em>vectorized UDFs</em>. These take in inputs as vectors and produce outputs as
 vectors. They also allow for zero-copy between the database and client code (no
 translation overhead). Additionally, systems-wise, they benefit from improved
-cache locality.</p>
-<p>For vectorized UDFs, DuckDB uses the <a href="https://arrow.apache.org/">Arrow</a> format
-to provide inputs and take the output.</p>
-<p>Let&rsquo;s convert the haversine UDFs above from scalar into vectorized. I&rsquo;ll skip
+cache locality.</p><p>For vectorized UDFs, DuckDB uses the <a href=https://arrow.apache.org/>Arrow</a> format
+to provide inputs and take the output.</p><p>Let&rsquo;s convert the haversine UDFs above from scalar into vectorized. I&rsquo;ll skip
 non-JIT vectorized functions and head straight to the JIT version since in my
 benchmarks even across other datasets and problems, vectorized non-JIT versions
 ended up performing even worse than their scalar equivalents, sometimes by a
-factor of 5.</p>
-<p>Numba comes with built-in support for Numpy arrays. In order to provide
+factor of 5.</p><p>Numba comes with built-in support for Numpy arrays. In order to provide
 Arrow-based arrays as input, we have to extend Numba&rsquo;s typing layer. Uwe Korn
 provides [3] a different approach for passing Arrow-based arrays to JIT
 functions but I&rsquo;ll skip it for now. Instead, I&rsquo;ll take advantaged of <code>pyarrow</code>&rsquo;s
-Arrow to Numpy zero-copy.</p>
-<p>Let&rsquo;s start with the function:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">numpy</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">np</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>@jit(nopython=<span style="font-weight:bold">True</span>, nogil=<span style="font-weight:bold">True</span>, parallel=<span style="font-weight:bold">False</span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> _calc_haversine_dist_vectorized(x0, y0, x1, y1, out, len_):
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># x -&gt; longitude</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic"># y -&gt; latitude</span>
-</span></span><span style="display:flex;"><span>    EARTH_RADIUS = 6372.8  <span style="font-style:italic"># km</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">for</span> i <span style="font-weight:bold">in</span> range(len_):
-</span></span><span style="display:flex;"><span>        p0_latitude = np.radians(y0[i])
-</span></span><span style="display:flex;"><span>        p1_latitude = np.radians(y1[i])
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        delta_latitude = np.radians(y0[i] - y1[i])
-</span></span><span style="display:flex;"><span>        delta_longitude = np.radians(x0[i] - x1[i])
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        central_angle_inner = np.square(np.sin(delta_latitude / 2.0)) + np.cos(
-</span></span><span style="display:flex;"><span>            p0_latitude
-</span></span><span style="display:flex;"><span>        ) * np.cos(p1_latitude) * np.square(np.sin(delta_longitude / 2.0))
-</span></span><span style="display:flex;"><span>        central_angle = 2.0 * np.arcsin(np.sqrt(central_angle_inner))
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        distance = EARTH_RADIUS * central_angle
-</span></span><span style="display:flex;"><span>        out[i] = distance
+Arrow to Numpy zero-copy.</p><p>Let&rsquo;s start with the function:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>numpy</span> <span style=font-weight:700>as</span> <span style=font-weight:700>np</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>@jit(nopython=<span style=font-weight:700>True</span>, nogil=<span style=font-weight:700>True</span>, parallel=<span style=font-weight:700>False</span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>def</span> _calc_haversine_dist_vectorized(x0, y0, x1, y1, out, len_):
+</span></span><span style=display:flex><span>    <span style=font-style:italic># x -&gt; longitude</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic># y -&gt; latitude</span>
+</span></span><span style=display:flex><span>    EARTH_RADIUS = 6372.8  <span style=font-style:italic># km</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> i <span style=font-weight:700>in</span> range(len_):
+</span></span><span style=display:flex><span>        p0_latitude = np.radians(y0[i])
+</span></span><span style=display:flex><span>        p1_latitude = np.radians(y1[i])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        delta_latitude = np.radians(y0[i] - y1[i])
+</span></span><span style=display:flex><span>        delta_longitude = np.radians(x0[i] - x1[i])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        central_angle_inner = np.square(np.sin(delta_latitude / 2.0)) + np.cos(
+</span></span><span style=display:flex><span>            p0_latitude
+</span></span><span style=display:flex><span>        ) * np.cos(p1_latitude) * np.square(np.sin(delta_longitude / 2.0))
+</span></span><span style=display:flex><span>        central_angle = 2.0 * np.arcsin(np.sqrt(central_angle_inner))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        distance = EARTH_RADIUS * central_angle
+</span></span><span style=display:flex><span>        out[i] = distance
 </span></span></code></pre></div><p>A good rule of thumb whenever one&rsquo;s using numpy is to avoid explicit for-loops
 and rely on numpy&rsquo;s built-in vectorized functions. With Numba though, we&rsquo;re more
 than encouraged to use such for-loops. Numba in turn receives these for-loops
 and compiles them into relatively efficient procedures, taking advantage of all
-the optimizations that LLVM provides.</p>
-<p>As for registering the UDF, the only change we&rsquo;ll make is telling DuckDB that
+the optimizations that LLVM provides.</p><p>As for registering the UDF, the only change we&rsquo;ll make is telling DuckDB that
 we&rsquo;re providing it an &ldquo;arrow&rdquo; type UDF rather than a &ldquo;native&rdquo; one. We&rsquo;ve also
 got to convert the inputs into numpy arrays using the <code>to_numpy</code> method before
-invoking <code>_calc_haversine_dist_vectorized</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">def</span> haversine_dist_udf(x0, y0, x1, y1):
-</span></span><span style="display:flex;"><span>    len_ = len(x0)
-</span></span><span style="display:flex;"><span>    out = np.empty((len_,))
-</span></span><span style="display:flex;"><span>    _calc_haversine_dist_vectorized(
-</span></span><span style="display:flex;"><span>        *tuple(v.to_numpy() <span style="font-weight:bold">for</span> v <span style="font-weight:bold">in</span> (x0, y0, x1, y1)),
-</span></span><span style="display:flex;"><span>        out=out,
-</span></span><span style="display:flex;"><span>        len_=len_,
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> pa.array(out)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>conn.create_function(
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;haversine_dist&#34;</span>,
-</span></span><span style="display:flex;"><span>    haversine_dist_udf,
-</span></span><span style="display:flex;"><span>    [DOUBLE, DOUBLE, DOUBLE, DOUBLE],
-</span></span><span style="display:flex;"><span>    DOUBLE,
-</span></span><span style="display:flex;"><span>    type=<span style="font-style:italic">&#34;arrow&#34;</span>,
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span>conn = duckdb.connect(<span style="font-style:italic">&#34;points.db&#34;</span>)
-</span></span><span style="display:flex;"><span>sql = <span style="font-style:italic">f</span><span style="font-style:italic">&#34;&#34;&#34;
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">select
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">  avg(haversine_dist(x0,y0,x1,y1)) as avg_dist
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">from points
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>res = conn.sql(sql).fetchall()
-</span></span><span style="display:flex;"><span>print(<span style="font-style:italic">f</span><span style="font-style:italic">&#34;avg=</span><span style="font-weight:bold;font-style:italic">{</span>res[0][0]<span style="font-weight:bold;font-style:italic">}</span><span style="font-style:italic">&#34;</span>)
+invoking <code>_calc_haversine_dist_vectorized</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>def</span> haversine_dist_udf(x0, y0, x1, y1):
+</span></span><span style=display:flex><span>    len_ = len(x0)
+</span></span><span style=display:flex><span>    out = np.empty((len_,))
+</span></span><span style=display:flex><span>    _calc_haversine_dist_vectorized(
+</span></span><span style=display:flex><span>        *tuple(v.to_numpy() <span style=font-weight:700>for</span> v <span style=font-weight:700>in</span> (x0, y0, x1, y1)),
+</span></span><span style=display:flex><span>        out=out,
+</span></span><span style=display:flex><span>        len_=len_,
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> pa.array(out)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>conn.create_function(
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;haversine_dist&#34;</span>,
+</span></span><span style=display:flex><span>    haversine_dist_udf,
+</span></span><span style=display:flex><span>    [DOUBLE, DOUBLE, DOUBLE, DOUBLE],
+</span></span><span style=display:flex><span>    DOUBLE,
+</span></span><span style=display:flex><span>    type=<span style=font-style:italic>&#34;arrow&#34;</span>,
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>conn = duckdb.connect(<span style=font-style:italic>&#34;points.db&#34;</span>)
+</span></span><span style=display:flex><span>sql = <span style=font-style:italic>f</span><span style=font-style:italic>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=font-style:italic>select
+</span></span></span><span style=display:flex><span><span style=font-style:italic>  avg(haversine_dist(x0,y0,x1,y1)) as avg_dist
+</span></span></span><span style=display:flex><span><span style=font-style:italic>from points
+</span></span></span><span style=display:flex><span><span style=font-style:italic>&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>res = conn.sql(sql).fetchall()
+</span></span><span style=display:flex><span>print(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;avg=</span><span style=font-weight:700;font-style:italic>{</span>res[0][0]<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>)
 </span></span></code></pre></div><p>The code looks almost C-like: we&rsquo;re &ldquo;allocating&rdquo; the output buffer in the
 <code>np.empty((len,_))</code> line, plus we&rsquo;re passing the length of the arrays as one of
 the parameters. <code>_calc_haversine_dist_vectorized</code> returns a numpy array which is
-zero-copied into an arrow array that DuckDB expects.</p>
-<p>And for the performance, here&rsquo;s what we get:</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/vec_numba.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>A near 9X improvement with the vectorized version taking 2.998 seconds vs the
-26.7 seconds that the native scalar UDF takes!</p>
-<h2 class="heading" id="comparison-with-rust-based-udfs">
-  Comparison with Rust-based UDFs
-  <a href="#comparison-with-rust-based-udfs">#</a>
-</h2>
-<p>I&rsquo;ve <a href="https://bnm3k.github.io/blog/rust-duckdb-py-udf">previously detailed</a> how
+zero-copied into an arrow array that DuckDB expects.</p><p>And for the performance, here&rsquo;s what we get:</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/vec_numba.svg></div></figure></p><p>A near 9X improvement with the vectorized version taking 2.998 seconds vs the
+26.7 seconds that the native scalar UDF takes!</p><h2 class=heading id=comparison-with-rust-based-udfs>Comparison with Rust-based UDFs
+<a href=#comparison-with-rust-based-udfs>#</a></h2><p>I&rsquo;ve <a href=https://bnm3k.github.io/blog/rust-duckdb-py-udf>previously detailed</a> how
 one can implement such vectorized UDFs in Rust and invoke them via FFI. If you
 know enough Rust, the hardest part at least for me is setting up and configuring
 maturin and pyO3 (aka the build and integration steps), plus making sure I can
 import the package in Python (environment stuff). Writing the function should be
-quite straight-forward:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="font-style:italic">// imports ...
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">fn</span> calc_haversine_dist(x0: <span style="">f64</span>, y0: <span style="">f64</span>, x1: <span style="">f64</span>, y1: <span style="">f64</span>) -&gt; <span style="">f64</span> {
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">// x -&gt; longitude
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-style:italic">// y -&gt; latitude
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-weight:bold">const</span> EARTH_RADIUS: <span style="">f64</span> = 6372.8; <span style="font-style:italic">// km
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-weight:bold">let</span> radians = |d| (d * std::<span style="">f64</span>::consts::PI) / 180.0;
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> square = |x| x * x;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> p0_latitude = radians(y0);
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> p1_latitude = radians(y1);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> delta_latitude = (y0 - y1).to_radians();
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> delta_longitude = (x0 - x1).to_radians();
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> central_angle_inner = square((delta_latitude / 2.0).sin())
-</span></span><span style="display:flex;"><span>        + p0_latitude.cos() * p1_latitude.cos() * square((delta_longitude / 2.0).sin());
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> central_angle = 2.0 * central_angle_inner.sqrt().asin();
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> distance = EARTH_RADIUS * central_angle;
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> distance;
-</span></span><span style="display:flex;"><span>}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-style:italic">// register above function into the py module
+quite straight-forward:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-rust data-lang=rust><span style=display:flex><span><span style=font-style:italic>// imports ...
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>
+</span></span><span style=display:flex><span><span style=font-weight:700>fn</span> calc_haversine_dist(x0: <span>f64</span>, y0: <span>f64</span>, x1: <span>f64</span>, y1: <span>f64</span>) -&gt; <span>f64</span> {
+</span></span><span style=display:flex><span>    <span style=font-style:italic>// x -&gt; longitude
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-style:italic>// y -&gt; latitude
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>const</span> EARTH_RADIUS: <span>f64</span> = 6372.8; <span style=font-style:italic>// km
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>let</span> radians = |d| (d * std::<span>f64</span>::consts::PI) / 180.0;
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> square = |x| x * x;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> p0_latitude = radians(y0);
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> p1_latitude = radians(y1);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> delta_latitude = (y0 - y1).to_radians();
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> delta_longitude = (x0 - x1).to_radians();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> central_angle_inner = square((delta_latitude / 2.0).sin())
+</span></span><span style=display:flex><span>        + p0_latitude.cos() * p1_latitude.cos() * square((delta_longitude / 2.0).sin());
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> central_angle = 2.0 * central_angle_inner.sqrt().asin();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> distance = EARTH_RADIUS * central_angle;
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> distance;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-style:italic>// register above function into the py module
 </span></span></span></code></pre></div><p>I&rsquo;m using this method just to see how well the Numba-JIT version compares to the
 Rust-based version. The results are quite pleasing since the Rust-based version
-takes 2.566 seconds vs the 2.998 seconds the the JIT version took:</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/vec_numba_rust.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Now, I do enjoying using Rust every now and then but for quick development,
+takes 2.566 seconds vs the 2.998 seconds the the JIT version took:</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/vec_numba_rust.svg></div></figure></p><p>Now, I do enjoying using Rust every now and then but for quick development,
 Numba does provide some bang for our buck. If there are concerns about having to
 bundle the entirety of Numba as a dependency for other users, Numba can also AOT
 compile the function into a distributable module and be kept as a
-development/build-time dependency.</p>
-<h2 class="heading" id="sql-functions">
-  SQL Functions
-  <a href="#sql-functions">#</a>
-</h2>
-<p>Both the JIT and Rust-based vectorized UDFs provide decent performance but
-there&rsquo;s nothing quite like good old-fashioned SQL.</p>
-<p>StackOverflow user TautrimasPajarskas was kind enough to provide a
-<a href="https://stackoverflow.com/a/72730460">pure SQL-based approach</a> for calculating
+development/build-time dependency.</p><h2 class=heading id=sql-functions>SQL Functions
+<a href=#sql-functions>#</a></h2><p>Both the JIT and Rust-based vectorized UDFs provide decent performance but
+there&rsquo;s nothing quite like good old-fashioned SQL.</p><p>StackOverflow user TautrimasPajarskas was kind enough to provide a
+<a href=https://stackoverflow.com/a/72730460>pure SQL-based approach</a> for calculating
 the haversine distance. Its performance blows all other approaches out of the
-water. Here&rsquo;s the query in all its glory:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> distances <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        2 * 6335
-</span></span><span style="display:flex;"><span>            * asin(sqrt(
-</span></span><span style="display:flex;"><span>                pow(sin((radians(y1) - radians(y0)) / 2), 2)
-</span></span><span style="display:flex;"><span>                + cos(radians(y0))
-</span></span><span style="display:flex;"><span>                * cos(radians(y1))
-</span></span><span style="display:flex;"><span>                * pow(sin((radians(x1) - radians(x0)) / 2), 2)
-</span></span><span style="display:flex;"><span>            )) <span style="font-weight:bold">as</span> dist
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> points
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">avg</span>(dist) <span style="font-weight:bold">as</span> avg_dist
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> distances
-</span></span></code></pre></div><p>On benchmarking, it clocks in at 347.9 milliseconds:</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/pure_sql.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Only issue I had with the pure SQL approach was that the final value veered a
+water. Here&rsquo;s the query in all its glory:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> distances <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        2 * 6335
+</span></span><span style=display:flex><span>            * asin(sqrt(
+</span></span><span style=display:flex><span>                pow(sin((radians(y1) - radians(y0)) / 2), 2)
+</span></span><span style=display:flex><span>                + cos(radians(y0))
+</span></span><span style=display:flex><span>                * cos(radians(y1))
+</span></span><span style=display:flex><span>                * pow(sin((radians(x1) - radians(x0)) / 2), 2)
+</span></span><span style=display:flex><span>            )) <span style=font-weight:700>as</span> dist
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> points
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>avg</span>(dist) <span style=font-weight:700>as</span> avg_dist
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> distances
+</span></span></code></pre></div><p>On benchmarking, it clocks in at 347.9 milliseconds:</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/pure_sql.svg></div></figure></p><p>Only issue I had with the pure SQL approach was that the final value veered a
 bit off from all other answers, I&rsquo;m guessing because of DuckDB&rsquo;s re-ordering of
 floating-point operations. To be fair, this isn&rsquo;t their fault per se since SQL
-by definition is not imperative.</p>
-<h2 class="heading" id="export-entire-dataset-to-numpy">
-  Export entire dataset to Numpy
-  <a href="#export-entire-dataset-to-numpy">#</a>
-</h2>
-<p>There is yet another approach. DuckDB&rsquo;s Python API let&rsquo;s as efficiently export
+by definition is not imperative.</p><h2 class=heading id=export-entire-dataset-to-numpy>Export entire dataset to Numpy
+<a href=#export-entire-dataset-to-numpy>#</a></h2><p>There is yet another approach. DuckDB&rsquo;s Python API let&rsquo;s as efficiently export
 the entire dataset into numpy. From there we can carry out the whole computation
 at the client&rsquo;s side. The performance isn&rsquo;t quite bad as we&rsquo;ll see but I often
-hesitate relying on such approaches for a couple of reasons [1]:</p>
-<ul>
-<li>Performance and Resource Usage: DuckDB can adjust its execution strategy based
+hesitate relying on such approaches for a couple of reasons [1]:</p><ul><li>Performance and Resource Usage: DuckDB can adjust its execution strategy based
 on the metadata it keeps around. If the dataset is small, DuckDB will use
 fewer threads. If the dataset can&rsquo;t fit entirely in memory, DuckDB will
 definitely do a better job buffering the needed working set in memory than I
-can.</li>
-<li>Integration with SQL: while average is a simple operation that can be done in
+can.</li><li>Integration with SQL: while average is a simple operation that can be done in
 the client&rsquo;s side, for more complex upstream operations such as window
 queries, CTEs or joins, I&rsquo;d prefer to keep everything within SQL via UDFs and
-have DuckDB figure out the execution</li>
-</ul>
-<p>With that being said, let&rsquo;s see how we can leverage Numba for computation. Numba
+have DuckDB figure out the execution</li></ul><p>With that being said, let&rsquo;s see how we can leverage Numba for computation. Numba
 does provide a means for parallelization (which earlier on I had to ensure is
 off with the <code>parallel=False</code> parameter). By default, it will use a simple
 built-in <code>workqueue</code> for the threading layer but if OpenMP is present, it&rsquo;ll use
-that instead. I opted for OpenMP since it&rsquo;s faster.</p>
-<p>First, let&rsquo;s export all the points into numpy via the <code>fetchnumpy</code> method:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sql = <span style="font-style:italic">f</span><span style="font-style:italic">&#34;&#34;&#34;
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">select x0,y0,x1,y1
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">from points
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>as_np = duckdb.sql(sql).fetchnumpy()
-</span></span></code></pre></div><p>Next let&rsquo;s set up the functions:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">from</span> <span style="font-weight:bold">numba</span> <span style="font-weight:bold">import</span> float64, vectorize, jit, threading_layer
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>spec = [float64(float64, float64, float64, float64)]
-</span></span><span style="display:flex;"><span>get_dist_parallel = vectorize(spec, nopython=<span style="font-weight:bold">True</span>, target=<span style="font-style:italic">&#34;parallel&#34;</span>)(
-</span></span><span style="display:flex;"><span>    _calc_haversine_dist
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>@jit(nopython=<span style="font-weight:bold">True</span>, nogil=<span style="font-weight:bold">True</span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> get_avg(nums):
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> np.mean(nums)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">def</span> calc(args) -&gt; float:
-</span></span><span style="display:flex;"><span>    dists = get_dist_parallel(*args)
-</span></span><span style="display:flex;"><span>    avg = get_avg(dists)
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> avg
-</span></span></code></pre></div><p>Now for the computation:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>args = tuple(as_np[c] <span style="font-weight:bold">for</span> c <span style="font-weight:bold">in</span> (<span style="font-style:italic">&#34;x0&#34;</span>, <span style="font-style:italic">&#34;y0&#34;</span>, <span style="font-style:italic">&#34;x1&#34;</span>, <span style="font-style:italic">&#34;y1&#34;</span>))
-</span></span><span style="display:flex;"><span>res = calc(args)
-</span></span><span style="display:flex;"><span>print(res)
+that instead. I opted for OpenMP since it&rsquo;s faster.</p><p>First, let&rsquo;s export all the points into numpy via the <code>fetchnumpy</code> method:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>sql = <span style=font-style:italic>f</span><span style=font-style:italic>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=font-style:italic>select x0,y0,x1,y1
+</span></span></span><span style=display:flex><span><span style=font-style:italic>from points
+</span></span></span><span style=display:flex><span><span style=font-style:italic>&#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>as_np = duckdb.sql(sql).fetchnumpy()
+</span></span></code></pre></div><p>Next let&rsquo;s set up the functions:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>from</span> <span style=font-weight:700>numba</span> <span style=font-weight:700>import</span> float64, vectorize, jit, threading_layer
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>spec = [float64(float64, float64, float64, float64)]
+</span></span><span style=display:flex><span>get_dist_parallel = vectorize(spec, nopython=<span style=font-weight:700>True</span>, target=<span style=font-style:italic>&#34;parallel&#34;</span>)(
+</span></span><span style=display:flex><span>    _calc_haversine_dist
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>@jit(nopython=<span style=font-weight:700>True</span>, nogil=<span style=font-weight:700>True</span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>def</span> get_avg(nums):
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> np.mean(nums)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>def</span> calc(args) -&gt; float:
+</span></span><span style=display:flex><span>    dists = get_dist_parallel(*args)
+</span></span><span style=display:flex><span>    avg = get_avg(dists)
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> avg
+</span></span></code></pre></div><p>Now for the computation:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>args = tuple(as_np[c] <span style=font-weight:700>for</span> c <span style=font-weight:700>in</span> (<span style=font-style:italic>&#34;x0&#34;</span>, <span style=font-style:italic>&#34;y0&#34;</span>, <span style=font-style:italic>&#34;x1&#34;</span>, <span style=font-style:italic>&#34;y1&#34;</span>))
+</span></span><span style=display:flex><span>res = calc(args)
+</span></span><span style=display:flex><span>print(res)
 </span></span></code></pre></div><p>Performance-wise, this is faster than using the vectorized UDFs though it&rsquo;s
-still not as fast as the pure-SQL approach.</p>
-<p>If you&rsquo;ve got an Nvidia GPU plus all the relevant drivers and libraries
+still not as fast as the pure-SQL approach.</p><p>If you&rsquo;ve got an Nvidia GPU plus all the relevant drivers and libraries
 installed, Numba also let&rsquo;s you use CUDA quite easily by just changing the
-<code>target</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>get_dist_cuda = vectorize(spec, target=<span style="font-style:italic">&#34;cuda&#34;</span>)(_calc_haversine_dist)
-</span></span><span style="display:flex;"><span>dists = get_dist_cuda(*args)
-</span></span><span style="display:flex;"><span>avg = get_avg(dists)
+<code>target</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>get_dist_cuda = vectorize(spec, target=<span style=font-style:italic>&#34;cuda&#34;</span>)(_calc_haversine_dist)
+</span></span><span style=display:flex><span>dists = get_dist_cuda(*args)
+</span></span><span style=display:flex><span>avg = get_avg(dists)
 </span></span></code></pre></div><p>Performance-wise, in my machine, it&rsquo;s similar to the OpenMP CPU-based version
-(1.803 seconds for CUDA vs 1.715 for OpenMP):</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/export_to_numpy.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>I didn&rsquo;t use GPU-based UDFs for the vectorized functions since I cannot directly
+(1.803 seconds for CUDA vs 1.715 for OpenMP):</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/export_to_numpy.svg></div></figure></p><p>I didn&rsquo;t use GPU-based UDFs for the vectorized functions since I cannot directly
 control the size of chunks DuckDB feeds into the UDFs: the sizes DuckDB defaults
 to work for CPU based vectorized UDFs but are rather small for the GPU
 equivalent ones thereby resulting in high copy overhead to and fro the device
 relative to the time spent on computation. Also there&rsquo;s definitely ways to
-improve the CUDA version for which I&rsquo;ll look into in the future.</p>
-<h2 class="heading" id="conclusion">
-  Conclusion
-  <a href="#conclusion">#</a>
-</h2>
-<p>To sign off, here are all the benchmarking results in one graph.</p>
-<p>
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="chart" src="/assets/images/duckdb_numba_udfs/all.svg" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Here are the raw values for reference:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>entries = {
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Python Native UDF&#34;</span>: 26.701,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Python Native UDF - Numba JIT&#34;</span>: 23.443,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Vectorized UDF Numba JIT&#34;</span>: 2.998,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Vectorized UDF Rust-based&#34;</span>: 2.566,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Pure SQL&#34;</span>: 347.9,  <span style="font-style:italic"># ms</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Export to Numpy - OpenMP&#34;</span>: 1.715,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;Export to Numpy - CUDA&#34;</span>: 1.803,  <span style="font-style:italic"># seconds</span>
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>And here&rsquo;s the <a href="https://github.com/bnm3k/duckdb-udf-numba-jit">code</a>.</p>
-<p>There&rsquo;s of course the bane of SQL - handling NULLs within the UDFs, which I
-skipped in the interest of time and simplicity.</p>
-<h2 class="heading" id="references">
-  References
-  <a href="#references">#</a>
-</h2>
-<ol>
-<li><a href="https://duckdb.org/2023/07/07/python-udf.html">From Waddle to Flying: Quickly expanding DuckDB&rsquo;s functionality with Scalar
-Python UDFs - Pedro Holanda, Thijs Bruineman and Phillip Cloud - DuckDB Team</a></li>
-<li><a href="https://numba.readthedocs.io/en/stable/user/5minguide.html">A ~5 minute guide to Numba - Numba Documentation</a></li>
-<li><a href="https://uwekorn.com/2018/08/03/use-numba-to-work-with-apache-arrow-in-pure-python.html">Use Numba to work with Apache Arrow in pure Python - Uwe Korn</a></li>
-</ol>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/guided-local-search-flp/">
-                        Guided Local Search for the Capacitated Facility Location Problem
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/data-placement-optimization/">
-                        Optimizing Data Placement for Distributed OLAP Systems
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+improve the CUDA version for which I&rsquo;ll look into in the future.</p><h2 class=heading id=conclusion>Conclusion
+<a href=#conclusion>#</a></h2><p>To sign off, here are all the benchmarking results in one graph.</p><p><figure><div><img loading=lazy alt=chart src=/assets/images/duckdb_numba_udfs/all.svg></div></figure></p><p>Here are the raw values for reference:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>entries = {
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Python Native UDF&#34;</span>: 26.701,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Python Native UDF - Numba JIT&#34;</span>: 23.443,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Vectorized UDF Numba JIT&#34;</span>: 2.998,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Vectorized UDF Rust-based&#34;</span>: 2.566,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Pure SQL&#34;</span>: 347.9,  <span style=font-style:italic># ms</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Export to Numpy - OpenMP&#34;</span>: 1.715,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;Export to Numpy - CUDA&#34;</span>: 1.803,  <span style=font-style:italic># seconds</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>And here&rsquo;s the <a href=https://github.com/bnm3k/duckdb-udf-numba-jit>code</a>.</p><p>There&rsquo;s of course the bane of SQL - handling NULLs within the UDFs, which I
+skipped in the interest of time and simplicity.</p><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li><a href=https://duckdb.org/2023/07/07/python-udf.html>From Waddle to Flying: Quickly expanding DuckDB&rsquo;s functionality with Scalar
+Python UDFs - Pedro Holanda, Thijs Bruineman and Phillip Cloud - DuckDB Team</a></li><li><a href=https://numba.readthedocs.io/en/stable/user/5minguide.html>A ~5 minute guide to Numba - Numba Documentation</a></li><li><a href=https://uwekorn.com/2018/08/03/use-numba-to-work-with-apache-arrow-in-pure-python.html>Use Numba to work with Apache Arrow in pure Python - Uwe Korn</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/guided-local-search-flp/>Guided Local Search for the Capacitated Facility Location Problem</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/data-placement-optimization/>Optimizing Data Placement for Distributed OLAP Systems</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

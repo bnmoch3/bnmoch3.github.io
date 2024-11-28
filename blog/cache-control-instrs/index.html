@@ -1,202 +1,22 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    x86 Cache Control Instructions | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/cache-control-instrs/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/cache-control-instrs/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="x86 Cache Control Instructions">
-  <meta property="og:description" content="Wherein the OS and user get more control over the L1,L2 and L3 caches, mostly for performance.">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2024-01-05T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-01-05T00:00:00+00:00">
-    <meta property="article:tag" content="Computer Systems">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/cache-control-instrs/">x86 Cache Control Instructions</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">x86 Cache Control Instructions</h1>
-    
-    <p class="single-summary">Wherein the OS and user get more control over the L1,L2 and L3 caches, mostly for performance.</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-01-05T00:00:00&#43;00:00">January 5, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      5 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Traditionally, the L1, L2 and L3 SRAM caches are meant to be managed solely by
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>x86 Cache Control Instructions | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/cache-control-instrs/><meta property="og:url" content="https://bnm3k.github.io/blog/cache-control-instrs/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="x86 Cache Control Instructions"><meta property="og:description" content="Wherein the OS and user get more control over the L1,L2 and L3 caches, mostly for performance."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-05T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-05T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/cache-control-instrs/>x86 Cache Control Instructions</a></div><div><div class=single-intro-container><h1 class=single-title>x86 Cache Control Instructions</h1><p class=single-summary>Wherein the OS and user get more control over the L1,L2 and L3 caches, mostly for performance.</p><p class=single-readtime><time datetime=2024-01-05T00:00:00+00:00>January 5, 2024</time>
+&nbsp; · &nbsp;
+5 min read</p></div><div class=single-content><p>Traditionally, the L1, L2 and L3 SRAM caches are meant to be managed solely by
 the CPU. After all, from the perspective of the user&rsquo;s program, the abstraction
 available for non-persistent data is that of memory; caches are there purely for
 performance. They could be managed by the user or even the OS, but from
-<a href="https://akkadia.org/drepper/cpumemory.pdf">&lsquo;What Every Programmer Should Know About Memory&rsquo;</a>
-by Ulrich Drepper:</p>
-<blockquote>
-<p>&hellip; the gains of having fast memory would be eaten up completely by the
+<a href=https://akkadia.org/drepper/cpumemory.pdf>&lsquo;What Every Programmer Should Know About Memory&rsquo;</a>
+by Ulrich Drepper:</p><blockquote><p>&mldr; the gains of having fast memory would be eaten up completely by the
 overhead of administering the resources. So, instead of putting the SRAM under
 the control of the OS or user, it becomes a resource which is transparently
-used and administered by the processors.</p>
-</blockquote>
-<p>Recently, I used the <a href="http://www.etallen.com/cpuid.html">cpuid</a> command to
+used and administered by the processors.</p></blockquote><p>Recently, I used the <a href=http://www.etallen.com/cpuid.html>cpuid</a> command to
 retrieve detailed cache and memory details for my system. Contrary to the above
 description, I did come across what seemed to be support for OS and user level
 cache control instructions (some present, most meant for future systems and one
 that&rsquo;s already been deprecated). Here was the cpuid output (slightly formatted,
-non-relevant lines have been filtered out):</p>
-<pre tabindex="0"><code>---------------------------------------------------------
+non-relevant lines have been filtered out):</p><pre tabindex=0><code>---------------------------------------------------------
 CLFLUSH line size                               = 0x8 (8)
 CLFLUSH instruction                             = true
 ---------------------------------------------------------
@@ -227,189 +47,47 @@ right before it&rsquo;s translated into the physical address. Without getting in
 much technical minutiae, a program that&rsquo;s loaded consists of the code segment,
 data segment, the stack region plus more - segmentation therefore entails
 figuring out which segment an address points to. For more details, check the
-<a href="https://en.wikipedia.org/wiki/X86_memory_segmentation">wikipedia page</a>, on x86
-memory segmentation.</p>
-<p>Back to the output above: Most of the the description&rsquo;s are sourced from
-<a href="https://www.felixcloutier.com/x86/">Felix Cloutier&rsquo;s x86 reference</a> which in
-turn is based on Intel&rsquo;s x86 reference:</p>
-<ul>
-<li><code>clflush &lt;address&gt;</code>: Flushes a cache line: &ldquo;Invalidates from every level of
+<a href=https://en.wikipedia.org/wiki/X86_memory_segmentation>wikipedia page</a>, on x86
+memory segmentation.</p><p>Back to the output above: Most of the the description&rsquo;s are sourced from
+<a href=https://www.felixcloutier.com/x86/>Felix Cloutier&rsquo;s x86 reference</a> which in
+turn is based on Intel&rsquo;s x86 reference:</p><ul><li><code>clflush &lt;address></code>: Flushes a cache line: &ldquo;Invalidates from every level of
 the cache hierarchy in the cache coherence domain the cache line that contains
 the linear address specified with the memory operand. If that cache line
 contains modified data at any level of the cache hierarchy, that data is
-written back to memory&rdquo; [1].</li>
-<li><code>cflushopt &lt;address&gt;</code>: similar to clflush but is more optimized, or rather
-cflushopt has less overhead than clflush by providing less guarantees.</li>
-<li><code>cldemote &lt;address&gt;</code>: A performance hint that demotes a cache line from the
+written back to memory&rdquo; [1].</li><li><code>cflushopt &lt;address></code>: similar to clflush but is more optimized, or rather
+cflushopt has less overhead than clflush by providing less guarantees.</li><li><code>cldemote &lt;address></code>: A performance hint that demotes a cache line from the
 level closest to a CPU core to the next lowest one. On usage, it &ldquo;may
 accelerate subsequent accesses to the line by other cores in the same
 coherence domain, especially if the line was written by the core that demotes
 the line&rdquo; [1]. Furthermore &ldquo;Unlike CLFLUSH, CLFLUSHOPT, and CLWB instructions,
-CLDEMOTE is not guaranteed to write back modified data to memory&rdquo; [1].</li>
-<li><code>clwb &lt;address&gt;</code>: Similar to clflush but upon writing back a modified cache
+CLDEMOTE is not guaranteed to write back modified data to memory&rdquo; [1].</li><li><code>clwb &lt;address></code>: Similar to clflush but upon writing back a modified cache
 line to memory, it does not flush it away from any/all of the cache levels -
 so as to speed up any subsequent reads. Upon getting written, the line&rsquo;s state
-is changed to &rsquo;non-modified&rsquo; as per the cache coherency protocol.</li>
-<li><code>clzero</code>: AMD specific instruction that clears out the cache line by setting
+is changed to &rsquo;non-modified&rsquo; as per the cache coherency protocol.</li><li><code>clzero</code>: AMD specific instruction that clears out the cache line by setting
 every byte to zero (as per this
-<a href="https://en.wikichip.org/wiki/x86/clzero">wikichip</a>) entry. It&rsquo;s meant for
-handling certain memory errors.</li>
-<li><code>invd</code>: priviliged instruction that &ldquo;Invalidates (flushes) the processor’s
+<a href=https://en.wikichip.org/wiki/x86/clzero>wikichip</a>) entry. It&rsquo;s meant for
+handling certain memory errors.</li><li><code>invd</code>: priviliged instruction that &ldquo;Invalidates (flushes) the processor’s
 internal caches and issues a special-function bus cycle that directs external
 caches to also flush themselves. Data held in internal caches is not written
 back to main memory&rdquo;. [1]. Unlike most previous commmands listed, this one&rsquo;s
-probably not meant for improving peformance.</li>
-<li><code>wbinvd</code> &amp; <code>wbnoinvd</code>: both are priviliged instructions that write back <em>all</em>
+probably not meant for improving peformance.</li><li><code>wbinvd</code> & <code>wbnoinvd</code>: both are priviliged instructions that write back <em>all</em>
 modified cache lines to memory. wbinvd invalidates the cache lines meaning
 future reads/writes will have to retrieve the value from main memory. wbnoinvd
-does not invalidate the cache line.</li>
-<li><code>prefetchw &lt;address&gt;</code> &amp; <code>prefetchh &lt;address&gt;</code>: a performance hint for
-prefetching a cache line from main memory.</li>
-<li><code>pcommit</code>: For ensuring writes to persistent memory have been committed. It&rsquo;s
+does not invalidate the cache line.</li><li><code>prefetchw &lt;address></code> & <code>prefetchh &lt;address></code>: a performance hint for
+prefetching a cache line from main memory.</li><li><code>pcommit</code>: For ensuring writes to persistent memory have been committed. It&rsquo;s
 been deprecated though. For more details, check out this
-<a href="https://stackoverflow.com/a/41878148">stackoverflow answer</a> and this
-<a href="https://danluu.com/clwb-pcommit/">Dan Luu post</a> where he discusses both clwb
-and pcommit instructions.</li>
-<li>L1D flushing (via writing to the <code>IA32_FLUSH_CMD</code> msr: this feature seems to
+<a href=https://stackoverflow.com/a/41878148>stackoverflow answer</a> and this
+<a href=https://danluu.com/clwb-pcommit/>Dan Luu post</a> where he discusses both clwb
+and pcommit instructions.</li><li>L1D flushing (via writing to the <code>IA32_FLUSH_CMD</code> msr: this feature seems to
 be meant for security mitigation (see this
-<a href="https://www.phoronix.com/news/Paranoid-L1d-Flush-x86-CPU-5.15">discussion</a>).</li>
-</ul>
-<p>As you can see from my cpuid output, most of these cache control instructions
+<a href=https://www.phoronix.com/news/Paranoid-L1d-Flush-x86-CPU-5.15>discussion</a>).</li></ul><p>As you can see from my cpuid output, most of these cache control instructions
 and features are not universally supported yet (at least on consumer-grade
 systems). Their presence though shows that there&rsquo;s a need to give the OS and
 user more control over L1, L2, L3 caching, be it for performance or for security
 reasons. It remains to be seen how commonplace they become. For the time being,
 I&rsquo;ll end with this excerpt from John McCalpin&rsquo;s post titled:
-<a href="https://sites.utexas.edu/jdm4372/2019/02/18/intels-future-cldemote-instruction/">&ldquo;Intel’s future “CLDEMOTE” instruction&rdquo;</a>:</p>
-<blockquote>
-<p>Cache hints are only weakly effective at improving performance, but contribute
+<a href=https://sites.utexas.edu/jdm4372/2019/02/18/intels-future-cldemote-instruction/>&ldquo;Intel’s future “CLDEMOTE” instruction&rdquo;</a>:</p><blockquote><p>Cache hints are only weakly effective at improving performance, but contribute
 to the increasing costs of design, validation, and power. More of the same is
-not an answer — new thinking is required&hellip;</p>
-<p>Continuing to apply “band-aids” to the transparent caching architecture of the
-1980’s will not help move the industry toward the next disruptive innovation.</p>
-</blockquote>
-<h2 class="heading" id="references">
-  References
-  <a href="#references">#</a>
-</h2>
-<ol>
-<li><a href="https://www.felixcloutier.com/x86/">Felix Cloutier&rsquo;s x86 reference</a></li>
-</ol>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/mem-cache-details/">
-                        Retrieving Memory and Cache Organization
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/matrix-mult-and-caching/">
-                        Optimizing CPU &amp; Memory Interaction: Matrix Multiplication
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+not an answer — new thinking is required&mldr;</p><p>Continuing to apply “band-aids” to the transparent caching architecture of the
+1980’s will not help move the industry toward the next disruptive innovation.</p></blockquote><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li><a href=https://www.felixcloutier.com/x86/>Felix Cloutier&rsquo;s x86 reference</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/mem-cache-details/>Retrieving Memory and Cache Organization</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/matrix-mult-and-caching/>Optimizing CPU & Memory Interaction: Matrix Multiplication</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

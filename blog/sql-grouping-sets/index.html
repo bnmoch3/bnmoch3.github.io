@@ -1,314 +1,70 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    SQL Grouping sets, Rollups &amp; Cube | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/sql-grouping-sets/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/sql-grouping-sets/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="SQL Grouping sets, Rollups & Cube">
-  <meta property="og:description" content="Computing multiple Group-bys with less steps">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2023-06-22T00:00:00+00:00">
-    <meta property="article:modified_time" content="2023-06-22T00:00:00+00:00">
-    <meta property="article:tag" content="SQL">
-    <meta property="article:tag" content="DuckDB">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/sql-grouping-sets/">SQL Grouping sets, Rollups &amp; Cube</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">SQL Grouping sets, Rollups &amp; Cube</h1>
-    
-    <p class="single-summary">Computing multiple Group-bys with less steps</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2023-06-22T00:00:00&#43;00:00">June 22, 2023</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      5 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Let&rsquo;s motivate grouping sets with an example. Both the dataset and prompt are
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>SQL Grouping sets, Rollups & Cube | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/sql-grouping-sets/><meta property="og:url" content="https://bnm3k.github.io/blog/sql-grouping-sets/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="SQL Grouping sets, Rollups & Cube"><meta property="og:description" content="Computing multiple Group-bys with less steps"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2023-06-22T00:00:00+00:00"><meta property="article:modified_time" content="2023-06-22T00:00:00+00:00"><meta property="article:tag" content="SQL"><meta property="article:tag" content="DuckDB"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/sql-grouping-sets/>SQL Grouping sets, Rollups & Cube</a></div><div><div class=single-intro-container><h1 class=single-title>SQL Grouping sets, Rollups & Cube</h1><p class=single-summary>Computing multiple Group-bys with less steps</p><p class=single-readtime><time datetime=2023-06-22T00:00:00+00:00>June 22, 2023</time>
+&nbsp; · &nbsp;
+5 min read</p></div><div class=single-content><p>Let&rsquo;s motivate grouping sets with an example. Both the dataset and prompt are
 sourced from
-<a href="https://pgexercises.com/questions/aggregates/fachoursbymonth3.html">pgexercises</a> -
+<a href=https://pgexercises.com/questions/aggregates/fachoursbymonth3.html>pgexercises</a> -
 an excellent resource for learning and practicing Postgres-flavoured SQL. I&rsquo;ll
-also be using DuckDB along the way (it too is Postgres-flavoured).</p>
-<p>We&rsquo;ve got a country club which has a couple of facilities such as tennis courts
+also be using DuckDB along the way (it too is Postgres-flavoured).</p><p>We&rsquo;ve got a country club which has a couple of facilities such as tennis courts
 and pool tables. We&rsquo;re using a database to keep track of members and bookings.
 Members (and guests, at a slightly higher rate) can book facilities. The
 duration for a given booking is kept track of using a <code>starttime</code> and the number
-of half-hour <code>slots</code>.</p>
-<p>We want to know:</p>
-<ul>
-<li>For each facility:
-<ul>
-<li>the number of slots booked for the entire month</li>
-<li>the number of slots booked for the entire year (2012)</li>
-</ul>
-</li>
-<li>The total number of slots booked across the entire country club for that year</li>
-</ul>
-<p>In other words, the result should have the following shape:</p>
-<table>
-  <thead>
-      <tr>
-          <th>Facility</th>
-          <th>Month</th>
-          <th>Slots</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td>Tennis Court 2</td>
-          <td>August</td>
-          <td>483</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td>September</td>
-          <td>588</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td></td>
-          <td>1071</td>
-      </tr>
-      <tr>
-          <td>Badminton Court</td>
-          <td>August</td>
-          <td>459</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td>September</td>
-          <td>579</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td></td>
-          <td>1029</td>
-      </tr>
-      <tr>
-          <td>Total</td>
-          <td></td>
-          <td>2100</td>
-      </tr>
-  </tbody>
-</table>
-<p>As you can observe, we are aggregating across multiple hierarchies or &lsquo;zoom
-levels&rsquo;.</p>
-<p>The most straightforward approach then is to carry out the aggregations
-separately then union them all together:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    facility,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">month</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">as</span> slots
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    facility,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">as</span> slots
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> facility
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">as</span> slots
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> facility
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>
+of half-hour <code>slots</code>.</p><p>We want to know:</p><ul><li>For each facility:<ul><li>the number of slots booked for the entire month</li><li>the number of slots booked for the entire year (2012)</li></ul></li><li>The total number of slots booked across the entire country club for that year</li></ul><p>In other words, the result should have the following shape:</p><table><thead><tr><th>Facility</th><th>Month</th><th>Slots</th></tr></thead><tbody><tr><td>Tennis Court 2</td><td>August</td><td>483</td></tr><tr><td></td><td>September</td><td>588</td></tr><tr><td></td><td></td><td>1071</td></tr><tr><td>Badminton Court</td><td>August</td><td>459</td></tr><tr><td></td><td>September</td><td>579</td></tr><tr><td></td><td></td><td>1029</td></tr><tr><td>Total</td><td></td><td>2100</td></tr></tbody></table><p>As you can observe, we are aggregating across multiple hierarchies or &lsquo;zoom
+levels&rsquo;.</p><p>The most straightforward approach then is to carry out the aggregations
+separately then union them all together:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    facility,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>month</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>as</span> slots
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    facility,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>as</span> slots
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> facility
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>as</span> slots
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> facility
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>
 </span></span></code></pre></div><p>Note that we use <code>union all</code> instead of <code>union</code> since we don&rsquo;t expect (or mind)
-any duplicate rows.</p>
-<p>This query could be made less verbose by using a
-<a href="https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-cte/">CTE</a> -
-again, credits to pgexercises:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        facility,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">month</span>,
-</span></span><span style="display:flex;"><span>        slots
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> facilty,  <span style="font-weight:bold">month</span>, <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">from</span> t <span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> facility, <span style="font-weight:bold">null</span>,  <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">from</span> t <span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> facility
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> <span style="font-weight:bold">null</span>,     <span style="font-weight:bold">null</span>,  <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">from</span> t
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>;
-</span></span></code></pre></div><h2 class="heading" id="rollup">
-  Rollup
-  <a href="#rollup">#</a>
-</h2>
-<p>Better yet, the above query could be simplified by using <code>rollup</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    facility,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">month</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> <span style="font-weight:bold">rollup</span>(facilty, <span style="font-weight:bold">month</span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>
-</span></span></code></pre></div><p>With all three versions, we get the same result:</p>
-<pre tabindex="0"><code>┌─────────────────┬───────────┬────────┐
+any duplicate rows.</p><p>This query could be made less verbose by using a
+<a href=https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-cte/>CTE</a> -
+again, credits to pgexercises:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> t <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        facility,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>month</span>,
+</span></span><span style=display:flex><span>        slots
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> facilty,  <span style=font-weight:700>month</span>, <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>from</span> t <span style=font-weight:700>group</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>
+</span></span><span style=display:flex><span>  <span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> facility, <span style=font-weight:700>null</span>,  <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>from</span> t <span style=font-weight:700>group</span> <span style=font-weight:700>by</span> facility
+</span></span><span style=display:flex><span>  <span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> <span style=font-weight:700>null</span>,     <span style=font-weight:700>null</span>,  <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>from</span> t
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>;
+</span></span></code></pre></div><h2 class=heading id=rollup>Rollup
+<a href=#rollup>#</a></h2><p>Better yet, the above query could be simplified by using <code>rollup</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    facility,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>month</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots)
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> <span style=font-weight:700>rollup</span>(facilty, <span style=font-weight:700>month</span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>
+</span></span></code></pre></div><p>With all three versions, we get the same result:</p><pre tabindex=0><code>┌─────────────────┬───────────┬────────┐
 │    facility     │   month   │ slots  │
 │     varchar     │  varchar  │ int128 │
 ├─────────────────┼───────────┼────────┤
@@ -321,85 +77,24 @@ again, credits to pgexercises:</p>
 │                 │           │   2100 │
 └─────────────────┴───────────┴────────┘
 </code></pre><p>Rollup is used to aggregate across levels in the order they are passed.
-Therefore, with <code>facility, month</code> we get the levels in the following order:</p>
-<ul>
-<li><code>(facility, month)</code>: sum the slots for each facility, month pair</li>
-<li><code>(facility)</code>: sum the slots for each facility</li>
-<li><code>()</code>: sum all slots</li>
-</ul>
-<p>If we switch the order i.e. to <code>(month, facility)</code>, we get a result with the
-following shape:</p>
-<table>
-  <thead>
-      <tr>
-          <th>Facility</th>
-          <th>Month</th>
-          <th>Slots</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td>August</td>
-          <td>Tennis Court 2</td>
-          <td>483</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td>Badminton Court</td>
-          <td>459</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td></td>
-          <td>942</td>
-      </tr>
-      <tr>
-          <td>September</td>
-          <td>Tennis Court 2</td>
-          <td>588</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td>Badminton Court</td>
-          <td>570</td>
-      </tr>
-      <tr>
-          <td></td>
-          <td></td>
-          <td>1158</td>
-      </tr>
-      <tr>
-          <td>Total</td>
-          <td></td>
-          <td>2100</td>
-      </tr>
-  </tbody>
-</table>
-<h2 class="heading" id="grouping-set">
-  Grouping set
-  <a href="#grouping-set">#</a>
-</h2>
-<p>Rollups are in fact syntactic sugar for the more generic <code>grouping sets</code> clause.
-Therefore, <code>group by rollup(facility, month)</code> expands to:</p>
-<pre tabindex="0"><code>group by grouping sets(
+Therefore, with <code>facility, month</code> we get the levels in the following order:</p><ul><li><code>(facility, month)</code>: sum the slots for each facility, month pair</li><li><code>(facility)</code>: sum the slots for each facility</li><li><code>()</code>: sum all slots</li></ul><p>If we switch the order i.e. to <code>(month, facility)</code>, we get a result with the
+following shape:</p><table><thead><tr><th>Facility</th><th>Month</th><th>Slots</th></tr></thead><tbody><tr><td>August</td><td>Tennis Court 2</td><td>483</td></tr><tr><td></td><td>Badminton Court</td><td>459</td></tr><tr><td></td><td></td><td>942</td></tr><tr><td>September</td><td>Tennis Court 2</td><td>588</td></tr><tr><td></td><td>Badminton Court</td><td>570</td></tr><tr><td></td><td></td><td>1158</td></tr><tr><td>Total</td><td></td><td>2100</td></tr></tbody></table><h2 class=heading id=grouping-set>Grouping set
+<a href=#grouping-set>#</a></h2><p>Rollups are in fact syntactic sugar for the more generic <code>grouping sets</code> clause.
+Therefore, <code>group by rollup(facility, month)</code> expands to:</p><pre tabindex=0><code>group by grouping sets(
   (facility, month),
   (facility),
   (),
 )
 </code></pre><p>Grouping sets were added to SQL since with the plain group by, you can only
-specify a single grouping to aggregate across.</p>
-<p>However, as the previous example demonstrates you may need to aggregate across
-multiple kinds of groups in parallel - hence <code>grouping sets</code> in SQL.</p>
-<p>Grouping sets give as more flexibility. For example, if we don&rsquo;t need the year&rsquo;s
-sum we can discard it:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    facility,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">month</span>,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots) <span style="font-weight:bold">as</span> slots
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> <span style="font-weight:bold">grouping</span> <span style="font-weight:bold">sets</span> ((facility, <span style="font-weight:bold">month</span>), (facility))
-</span></span></code></pre></div><p>The result is:</p>
-<pre tabindex="0"><code>┌─────────────────┬───────────┬────────┐
+specify a single grouping to aggregate across.</p><p>However, as the previous example demonstrates you may need to aggregate across
+multiple kinds of groups in parallel - hence <code>grouping sets</code> in SQL.</p><p>Grouping sets give as more flexibility. For example, if we don&rsquo;t need the year&rsquo;s
+sum we can discard it:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    facility,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>month</span>,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots) <span style=font-weight:700>as</span> slots
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> <span style=font-weight:700>grouping</span> <span style=font-weight:700>sets</span> ((facility, <span style=font-weight:700>month</span>), (facility))
+</span></span></code></pre></div><p>The result is:</p><pre tabindex=0><code>┌─────────────────┬───────────┬────────┐
 │    facility     │   month   │ slots  │
 │     varchar     │  varchar  │ int128 │
 ├─────────────────┼───────────┼────────┤
@@ -410,14 +105,10 @@ sum we can discard it:</p>
 │ Badminton Court │ September │    570 │
 │ Badminton Court │           │   1029 │
 └─────────────────┴───────────┴────────┘
-</code></pre><h2 class="heading" id="cube">
-  Cube
-  <a href="#cube">#</a>
-</h2>
-<p>There&rsquo;s also <code>cube</code> which we can use to aggregate across all possible
+</code></pre><h2 class=heading id=cube>Cube
+<a href=#cube>#</a></h2><p>There&rsquo;s also <code>cube</code> which we can use to aggregate across all possible
 permutations of the given columns and expressions (i.e. the powerset). For
-example, from the Postgres docs, <code>group by cube(a,b,c)</code> is equivalent to:</p>
-<pre tabindex="0"><code>grouping sets (
+example, from the Postgres docs, <code>group by cube(a,b,c)</code> is equivalent to:</p><pre tabindex=0><code>grouping sets (
     ( a, b, c ),
     ( a, b    ),
     ( a,    c ),
@@ -427,27 +118,21 @@ example, from the Postgres docs, <code>group by cube(a,b,c)</code> is equivalent
     (       c ),
     (         )
 )
-</code></pre><h2 class="heading" id="grouping-aggregate-function">
-  Grouping aggregate function
-  <a href="#grouping-aggregate-function">#</a>
-</h2>
-<p>As an aside, consider the following case: if a column within that grouping set
+</code></pre><h2 class=heading id=grouping-aggregate-function>Grouping aggregate function
+<a href=#grouping-aggregate-function>#</a></h2><p>As an aside, consider the following case: if a column within that grouping set
 has a null, it cannot be distinguished from the columns outside the group (since
 those are also filled with nulls). Therefore, both Postgres and DuckDB provide
 the <code>grouping</code> function. In duckdb, it also has the alias <code>grouping_id</code>. This
 function takes in a group and returns 0 if that row is in the given group or 1
-otherwise.</p>
-<p>For example, given the following query:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    facility,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">month</span>,
-</span></span><span style="display:flex;"><span>    grouping_id(<span style="font-weight:bold">month</span>) <span style="font-weight:bold">as</span> in_group_month,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">sum</span>(slots)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> bookings_2012
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> <span style="font-weight:bold">grouping</span> <span style="font-weight:bold">sets</span> (facility, <span style="font-weight:bold">month</span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> facility, <span style="font-weight:bold">month</span>
-</span></span></code></pre></div><p>We get:</p>
-<pre tabindex="0"><code>┌─────────────────┬───────────┬────────────────┬────────────┐
+otherwise.</p><p>For example, given the following query:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    facility,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>month</span>,
+</span></span><span style=display:flex><span>    grouping_id(<span style=font-weight:700>month</span>) <span style=font-weight:700>as</span> in_group_month,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>sum</span>(slots)
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> bookings_2012
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> <span style=font-weight:700>grouping</span> <span style=font-weight:700>sets</span> (facility, <span style=font-weight:700>month</span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> facility, <span style=font-weight:700>month</span>
+</span></span></code></pre></div><p>We get:</p><pre tabindex=0><code>┌─────────────────┬───────────┬────────────────┬────────────┐
 │    facility     │   month   │ in_group_month │ sum(slots) │
 │     varchar     │  varchar  │     int64      │   int128   │
 ├─────────────────┼───────────┼────────────────┼────────────┤
@@ -457,143 +142,12 @@ otherwise.</p>
 │                 │ July      │              0 │        387 │
 │                 │ September │              0 │       1158 │
 └─────────────────┴───────────┴────────────────┴────────────┘
-</code></pre><h2 class="heading" id="in-summary">
-  In summary
-  <a href="#in-summary">#</a>
-</h2>
-<p>Do check out the Postgres documentation for more details on <code>grouping sets</code>.
+</code></pre><h2 class=heading id=in-summary>In summary
+<a href=#in-summary>#</a></h2><p>Do check out the Postgres documentation for more details on <code>grouping sets</code>.
 It&rsquo;s quite a neat addition to SQL that saves us from both verbose queries and
-having to merge results client-side for certain kinds of reporting.</p>
-<h2 class="heading" id="references">
-  References
-  <a href="#references">#</a>
-</h2>
-<ol>
-<li>PostgreSQL Exercises - Alisdair Owens:
-<a href="https://pgexercises.com/questions/aggregates/fachoursbymonth3.html">pgexercises</a></li>
-<li>PostgreSQL Documentation - GROUPING SETS, CUBE and ROLLUP:
-<a href="https://www.postgresql.org/docs/15/queries-table-expressions.html#QUERIES-GROUPING-SETS">docs</a></li>
-<li>DuckDB Documentation - GROUPING SETS:
-<a href="https://duckdb.org/docs/sql/query_syntax/grouping_sets">link</a></li>
-<li>PostgreSQL GROUPING SETS:
-<a href="https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-grouping-sets/">Postgres Tutorial</a></li>
-<li>The Art of Postgres - Grouping Sets - Dimitri Fontaine</li>
-</ol>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/range-difference-search-availability/">
-                        Generalized Range Difference, Recursion &amp; Search Availability in PostgreSQL
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-lateral-joins/">
-                        Lateral Joins &amp; Iterators in SQL
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+having to merge results client-side for certain kinds of reporting.</p><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li>PostgreSQL Exercises - Alisdair Owens:
+<a href=https://pgexercises.com/questions/aggregates/fachoursbymonth3.html>pgexercises</a></li><li>PostgreSQL Documentation - GROUPING SETS, CUBE and ROLLUP:
+<a href=https://www.postgresql.org/docs/15/queries-table-expressions.html#QUERIES-GROUPING-SETS>docs</a></li><li>DuckDB Documentation - GROUPING SETS:
+<a href=https://duckdb.org/docs/sql/query_syntax/grouping_sets>link</a></li><li>PostgreSQL GROUPING SETS:
+<a href=https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-grouping-sets/>Postgres Tutorial</a></li><li>The Art of Postgres - Grouping Sets - Dimitri Fontaine</li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/range-difference-search-availability/>Generalized Range Difference, Recursion & Search Availability in PostgreSQL</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/sql-lateral-joins/>Lateral Joins & Iterators in SQL</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

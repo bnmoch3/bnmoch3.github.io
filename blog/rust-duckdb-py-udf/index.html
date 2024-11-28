@@ -1,255 +1,55 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Vectorized DuckDB UDFs with Rust and Python FFI | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/rust-duckdb-py-udf/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/rust-duckdb-py-udf/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Vectorized DuckDB UDFs with Rust and Python FFI">
-  <meta property="og:description" content="Implementing vectorized UDFs in Rust that you can use in DuckDB, with a little help from Arrow">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2024-01-10T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-01-10T00:00:00+00:00">
-    <meta property="article:tag" content="DuckDB">
-    <meta property="article:tag" content="Python">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/rust-duckdb-py-udf/">Vectorized DuckDB UDFs with Rust and Python FFI</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Vectorized DuckDB UDFs with Rust and Python FFI</h1>
-    
-    <p class="single-summary">Implementing vectorized UDFs in Rust that you can use in DuckDB, with a little help from Arrow</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-01-10T00:00:00&#43;00:00">January 10, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      4 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>The title&rsquo;s quite a mouthful but the gist of this post is how to implement
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Vectorized DuckDB UDFs with Rust and Python FFI | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/rust-duckdb-py-udf/><meta property="og:url" content="https://bnm3k.github.io/blog/rust-duckdb-py-udf/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Vectorized DuckDB UDFs with Rust and Python FFI"><meta property="og:description" content="Implementing vectorized UDFs in Rust that you can use in DuckDB, with a little help from Arrow"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-10T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-10T00:00:00+00:00"><meta property="article:tag" content="DuckDB"><meta property="article:tag" content="Python"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/rust-duckdb-py-udf/>Vectorized DuckDB UDFs with Rust and Python FFI</a></div><div><div class=single-intro-container><h1 class=single-title>Vectorized DuckDB UDFs with Rust and Python FFI</h1><p class=single-summary>Implementing vectorized UDFs in Rust that you can use in DuckDB, with a little help from Arrow</p><p class=single-readtime><time datetime=2024-01-10T00:00:00+00:00>January 10, 2024</time>
+&nbsp; · &nbsp;
+4 min read</p></div><div class=single-content><p>The title&rsquo;s quite a mouthful but the gist of this post is how to implement
 Vectorized UDFs in Rust that you can use within DuckDB, specifically its Python
-API.</p>
-<p>Assuming you&rsquo;re already familiar with DuckDB Python UDFs and Rust-Python FFI
+API.</p><p>Assuming you&rsquo;re already familiar with DuckDB Python UDFs and Rust-Python FFI
 (using PyO3), I&rsquo;ll get straight to the implementation. Otherwise, these two
-posts are great starting points:</p>
-<ul>
-<li><a href="https://duckdb.org/2023/07/07/python-udf.html">From Waddle to Flying: Quickly expanding DuckDB&rsquo;s functionality with Scalar Python UDFs - DuckDB Blog</a>:
-goes over how to implement basic UDFs in Python and using them within SQL</li>
-<li><a href="https://dora.carsmos.ai/blog/rust-python/">Rust-Python FFI - Haixuan Xavier Tao
+posts are great starting points:</p><ul><li><a href=https://duckdb.org/2023/07/07/python-udf.html>From Waddle to Flying: Quickly expanding DuckDB&rsquo;s functionality with Scalar Python UDFs - DuckDB Blog</a>:
+goes over how to implement basic UDFs in Python and using them within SQL</li><li><a href=https://dora.carsmos.ai/blog/rust-python/>Rust-Python FFI - Haixuan Xavier Tao
 Haixuan Xavier Tao</a>: goes over how
-to create a rust library that you can call from Python</li>
-</ul>
-<p>We&rsquo;ll be implementing a UDF that takes in a string and returns its length. This
+to create a rust library that you can call from Python</li></ul><p>We&rsquo;ll be implementing a UDF that takes in a string and returns its length. This
 is rather basic on purpose so that it can serve as a template for more complex
-and useful UDFs. This will involve the following steps:</p>
-<ol>
-<li>Set up a mixed python-rust project using
-<a href="https://www.maturin.rs/project_layout">Maturin</a>.</li>
-<li>Implement the function in Rust. Since it&rsquo;s vectorized, it&rsquo;ll take in an
-arrow-based vector of UTF-8 strings and return a vector of U32</li>
-<li>Register the function with <code>pyarrow.compute</code></li>
-<li>Create a wrapper function F that calls the UDF via <code>pyarrow.compute</code></li>
-<li>Register the wrapper with DuckDB via the Python API</li>
-<li>Use the UDF within SQL</li>
-</ol>
-<p>I&rsquo;ll skip the setting up part since the Maturin introductory material is more
+and useful UDFs. This will involve the following steps:</p><ol><li>Set up a mixed python-rust project using
+<a href=https://www.maturin.rs/project_layout>Maturin</a>.</li><li>Implement the function in Rust. Since it&rsquo;s vectorized, it&rsquo;ll take in an
+arrow-based vector of UTF-8 strings and return a vector of U32</li><li>Register the function with <code>pyarrow.compute</code></li><li>Create a wrapper function F that calls the UDF via <code>pyarrow.compute</code></li><li>Register the wrapper with DuckDB via the Python API</li><li>Use the UDF within SQL</li></ol><p>I&rsquo;ll skip the setting up part since the Maturin introductory material is more
 detailed. Other than reading through the rust arrow documentations, it&rsquo;s
-probably the hardest part:</p>
-<p>As for implementation, here&rsquo;s the rust function:</p>
-<ul>
-<li>we&rsquo;re using <a href="https://docs.rs/arrow/latest/arrow/pyarrow/">eyre</a> for error
-handling, as recommended in the Rust-FFI post</li>
-<li>Retrieving the underlying string array should be zero-copy, the rust arrow
-module provides <a href="https://docs.rs/arrow/latest/arrow/pyarrow/">helpers</a> for
-converting back and forth from PyArrow</li>
-<li>Other than that, it&rsquo;s pretty straightforward</li>
-</ul>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="">#[pyfunction]</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">fn</span> get_str_len&lt;&#39;a&gt;(py: <span style="font-weight:bold">Python</span>, a: <span style="">&amp;</span><span style="font-weight:bold">PyAny</span>) -&gt; Result&lt;Py&lt;PyAny&gt;&gt; {
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> arraydata =
-</span></span><span style="display:flex;"><span>        arrow::array::ArrayData::from_pyarrow(a).context(<span style="font-style:italic">&#34;Could not convert arrow data&#34;</span>)?;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">// get string lengths
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-weight:bold">let</span> strs = StringArray::from(arraydata);
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> lengths_arr = {
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">let</span> <span style="font-weight:bold">mut</span> arr_builder = arr::UInt32Builder::with_capacity(strs.len());
-</span></span><span style="display:flex;"><span>        strs.iter().for_each(|v| {
-</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">if</span> <span style="font-weight:bold">let</span> Some(s) = v {
-</span></span><span style="display:flex;"><span>                arr_builder.append_value(s.len() <span style="font-weight:bold">as</span> <span style="">u32</span>);
-</span></span><span style="display:flex;"><span>            } <span style="font-weight:bold">else</span> {
-</span></span><span style="display:flex;"><span>                arr_builder.append_null();
-</span></span><span style="display:flex;"><span>            }
-</span></span><span style="display:flex;"><span>        });
-</span></span><span style="display:flex;"><span>        arr_builder.finish()
-</span></span><span style="display:flex;"><span>    };
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">let</span> output = lengths_arr.to_data();
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    output
-</span></span><span style="display:flex;"><span>        .to_pyarrow(py)
-</span></span><span style="display:flex;"><span>        .context(<span style="font-style:italic">&#34;Could not convert to pyarrow&#34;</span>)
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>Next, add the function to the module so we can call it from Python:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="">#[pymodule]</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">fn</span> udf(_py: <span style="font-weight:bold">Python</span>, m: <span style="">&amp;</span><span style="font-weight:bold">PyModule</span>) -&gt; <span style="font-weight:bold">PyResult</span>&lt;()&gt; {
-</span></span><span style="display:flex;"><span>    m.add_function(wrap_pyfunction!(get_str_len, m)?)?;
-</span></span><span style="display:flex;"><span>    Ok(())
-</span></span><span style="display:flex;"><span>}
+probably the hardest part:</p><p>As for implementation, here&rsquo;s the rust function:</p><ul><li>we&rsquo;re using <a href=https://docs.rs/arrow/latest/arrow/pyarrow/>eyre</a> for error
+handling, as recommended in the Rust-FFI post</li><li>Retrieving the underlying string array should be zero-copy, the rust arrow
+module provides <a href=https://docs.rs/arrow/latest/arrow/pyarrow/>helpers</a> for
+converting back and forth from PyArrow</li><li>Other than that, it&rsquo;s pretty straightforward</li></ul><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-rust data-lang=rust><span style=display:flex><span><span>#[pyfunction]</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>fn</span> get_str_len&lt;&#39;a&gt;(py: <span style=font-weight:700>Python</span>, a: <span>&amp;</span><span style=font-weight:700>PyAny</span>) -&gt; Result&lt;Py&lt;PyAny&gt;&gt; {
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> arraydata =
+</span></span><span style=display:flex><span>        arrow::array::ArrayData::from_pyarrow(a).context(<span style=font-style:italic>&#34;Could not convert arrow data&#34;</span>)?;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>// get string lengths
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>let</span> strs = StringArray::from(arraydata);
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> lengths_arr = {
+</span></span><span style=display:flex><span>        <span style=font-weight:700>let</span> <span style=font-weight:700>mut</span> arr_builder = arr::UInt32Builder::with_capacity(strs.len());
+</span></span><span style=display:flex><span>        strs.iter().for_each(|v| {
+</span></span><span style=display:flex><span>            <span style=font-weight:700>if</span> <span style=font-weight:700>let</span> Some(s) = v {
+</span></span><span style=display:flex><span>                arr_builder.append_value(s.len() <span style=font-weight:700>as</span> <span>u32</span>);
+</span></span><span style=display:flex><span>            } <span style=font-weight:700>else</span> {
+</span></span><span style=display:flex><span>                arr_builder.append_null();
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        });
+</span></span><span style=display:flex><span>        arr_builder.finish()
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>    <span style=font-weight:700>let</span> output = lengths_arr.to_data();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    output
+</span></span><span style=display:flex><span>        .to_pyarrow(py)
+</span></span><span style=display:flex><span>        .context(<span style=font-style:italic>&#34;Could not convert to pyarrow&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Next, add the function to the module so we can call it from Python:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-rust data-lang=rust><span style=display:flex><span><span>#[pymodule]</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>fn</span> udf(_py: <span style=font-weight:700>Python</span>, m: <span>&amp;</span><span style=font-weight:700>PyModule</span>) -&gt; <span style=font-weight:700>PyResult</span>&lt;()&gt; {
+</span></span><span style=display:flex><span>    m.add_function(wrap_pyfunction!(get_str_len, m)?)?;
+</span></span><span style=display:flex><span>    Ok(())
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>Maturin simplifies a lot of the stuff. Once we&rsquo;ve built the library, we can call
-it from python as follows:</p>
-<pre tabindex="0"><code>&gt;&gt;&gt; import udf
+it from python as follows:</p><pre tabindex=0><code>&gt;&gt;&gt; import udf
 &gt;&gt;&gt; import pyarrow as pa
 &gt;&gt;&gt; udf.get_str_len(pa.array([&#34;foo&#34;, &#34;bar&#34;]))
 &lt;pyarrow.lib.UInt32Array object at 0x7fb4406e1d80&gt;
@@ -261,25 +61,23 @@ it from python as follows:</p>
 </code></pre><p>Next, let&rsquo;s register it with <code>pyarrow.compute</code>. Note that we&rsquo;re registering it
 as a vectorized function. The UDF API for pyarrow is still experimental and all
 that&rsquo;s documented so far is for scalar functions, setting up vectorized
-functions remains undocumented:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">udf</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pa</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow.compute</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pc</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>pc.register_vector_function(
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">lambda</span> ctx, x: udf.get_str_len(x),  <span style="font-style:italic"># function</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#34;my_str_len&#34;</span>,  <span style="font-style:italic"># name</span>
-</span></span><span style="display:flex;"><span>    {  <span style="font-style:italic"># doc</span>
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;summary&#34;</span>: <span style="font-style:italic">&#34;gets string length&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;description&#34;</span>: <span style="font-style:italic">&#34;Given a string &#39;x&#39; returns the length of x&#34;</span>,
-</span></span><span style="display:flex;"><span>    },
-</span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;x&#34;</span>: pa.string(),  <span style="font-style:italic"># input</span>
-</span></span><span style="display:flex;"><span>    },
-</span></span><span style="display:flex;"><span>    pa.uint32(), <span style="font-style:italic"># output</span>
-</span></span><span style="display:flex;"><span>)
-</span></span></code></pre></div><p>Finally, let&rsquo;s create a wrapper function and register that with DuckDB:</p>
-<pre tabindex="0"><code>import duckdb
+functions remains undocumented:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>udf</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pyarrow</span> <span style=font-weight:700>as</span> <span style=font-weight:700>pa</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pyarrow.compute</span> <span style=font-weight:700>as</span> <span style=font-weight:700>pc</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>pc.register_vector_function(
+</span></span><span style=display:flex><span>    <span style=font-weight:700>lambda</span> ctx, x: udf.get_str_len(x),  <span style=font-style:italic># function</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;my_str_len&#34;</span>,  <span style=font-style:italic># name</span>
+</span></span><span style=display:flex><span>    {  <span style=font-style:italic># doc</span>
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;summary&#34;</span>: <span style=font-style:italic>&#34;gets string length&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;description&#34;</span>: <span style=font-style:italic>&#34;Given a string &#39;x&#39; returns the length of x&#34;</span>,
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;x&#34;</span>: pa.string(),  <span style=font-style:italic># input</span>
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    pa.uint32(), <span style=font-style:italic># output</span>
+</span></span><span style=display:flex><span>)
+</span></span></code></pre></div><p>Finally, let&rsquo;s create a wrapper function and register that with DuckDB:</p><pre tabindex=0><code>import duckdb
 import duckdb.typing as t
 
 def my_str_len_udf(x: pa.lib.ChunkedArray):
@@ -289,13 +87,11 @@ conn = duckdb.connect(&#34;:memory:&#34;)
 conn.create_function(
     &#34;my_str_len&#34;, my_str_len_udf, [t.VARCHAR], t.UINTEGER, type=&#34;arrow&#34;
 )
-</code></pre><p>We can now use the UDF within SQL:</p>
-<pre tabindex="0"><code>conn.sql(&#34;create table test(s varchar)&#34;)
+</code></pre><p>We can now use the UDF within SQL:</p><pre tabindex=0><code>conn.sql(&#34;create table test(s varchar)&#34;)
 conn.sql(&#34;insert into test values (&#39;foo&#39;), (&#39;bar&#39;), (NULL), (&#39;barx&#39;)&#34;)
 res = conn.sql(&#34;select s, my_str_len(s) as l  from test&#34;)
 print(res)
-</code></pre><p>This outputs:</p>
-<pre tabindex="0"><code>┌─────────┬────────┐
+</code></pre><p>This outputs:</p><pre tabindex=0><code>┌─────────┬────────┐
 │    s    │   l    │
 │ varchar │ uint32 │
 ├─────────┼────────┤
@@ -304,131 +100,8 @@ print(res)
 │ NULL    │   NULL │
 │ barx    │      4 │
 └─────────┴────────┘
-</code></pre><p>DuckDB will call <code>my_str_len</code> with chunks of 2048 strings at a time.</p>
-<p>While this is a decent starting point, there are a couple of details that I need
-to iron out:</p>
-<ul>
-<li>Memory management: Rust manages its memory different from Python - I get the
-inkling I&rsquo;ve missed some detail</li>
-<li>Skip registering the UDF with <code>pyarrow.compute</code>: this part seems unnecessary;
+</code></pre><p>DuckDB will call <code>my_str_len</code> with chunks of 2048 strings at a time.</p><p>While this is a decent starting point, there are a couple of details that I need
+to iron out:</p><ul><li>Memory management: Rust manages its memory different from Python - I get the
+inkling I&rsquo;ve missed some detail</li><li>Skip registering the UDF with <code>pyarrow.compute</code>: this part seems unnecessary;
 registering the udf directly with DuckDB should be feasible, it&rsquo;s just a
-matter of figuring out which parts of the Rust Arrow Library to use</li>
-</ul>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/matrix-mult-and-caching/">
-                        Optimizing CPU &amp; Memory Interaction: Matrix Multiplication
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/facility-location-problem/">
-                        The Facility Location Problem
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+matter of figuring out which parts of the Rust Arrow Library to use</li></ul></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/matrix-mult-and-caching/>Optimizing CPU & Memory Interaction: Matrix Multiplication</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/facility-location-problem/>The Facility Location Problem</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

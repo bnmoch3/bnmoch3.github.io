@@ -1,193 +1,16 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Back To Basics: The foundation of Joins in SQL | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/sql-joins-p2/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/sql-joins-p2/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Back To Basics: The foundation of Joins in SQL">
-  <meta property="og:description" content="Writing SQL joins without using joins at all. A quick history of Database Models, Schemas, Constraints, Cross-products and everything in between">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2020-01-06T00:00:00+00:00">
-    <meta property="article:modified_time" content="2020-01-06T00:00:00+00:00">
-    <meta property="article:tag" content="SQL">
-    <meta property="article:tag" content="PostgreSQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/sql-joins-p2/">Back To Basics: The foundation of Joins in SQL</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Back To Basics: The foundation of Joins in SQL</h1>
-    
-    <p class="single-summary">Writing SQL joins without using joins at all. A quick history of Database Models, Schemas, Constraints, Cross-products and everything in between</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2020-01-06T00:00:00&#43;00:00">January 6, 2020</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      17 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Now, I&rsquo;ve written <a href="/posts/sql-joins-p1/">previously</a> on how, when learning SQL,
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Back To Basics: The foundation of Joins in SQL | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/sql-joins-p2/><meta property="og:url" content="https://bnm3k.github.io/blog/sql-joins-p2/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Back To Basics: The foundation of Joins in SQL"><meta property="og:description" content="Writing SQL joins without using joins at all. A quick history of Database Models, Schemas, Constraints, Cross-products and everything in between"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-01-06T00:00:00+00:00"><meta property="article:modified_time" content="2020-01-06T00:00:00+00:00"><meta property="article:tag" content="SQL"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/sql-joins-p2/>Back To Basics: The foundation of Joins in SQL</a></div><div><div class=single-intro-container><h1 class=single-title>Back To Basics: The foundation of Joins in SQL</h1><p class=single-summary>Writing SQL joins without using joins at all. A quick history of Database Models, Schemas, Constraints, Cross-products and everything in between</p><p class=single-readtime><time datetime=2020-01-06T00:00:00+00:00>January 6, 2020</time>
+&nbsp; · &nbsp;
+17 min read</p></div><div class=single-content><p>Now, I&rsquo;ve written <a href=/posts/sql-joins-p1/>previously</a> on how, when learning SQL,
 I had trouble understanding joins conceptually and even at a much more technical
 level. Usually, joins are presented to learners as is since, after all, SQL is a
 declarative language and the user ought to focus on framing the correct query,
 and let the database engine figure out <em>how</em> to answer it correctly. It&rsquo;s
 tempting to try to figure out the &lsquo;how&rsquo;, worse so as a beginner, and at first I
 wrongly assumed that joins in sql follow a sort of pointer or link when a column
-in a table is declared as a foreign key to primary key in another table.</p>
-<p>I quickly discarded this assumption when I encountered queries that didn&rsquo;t fit
+in a table is declared as a foreign key to primary key in another table.</p><p>I quickly discarded this assumption when I encountered queries that didn&rsquo;t fit
 to it. In the end, I settled on &lsquo;joins as a reduce/fold over tables&rsquo; as detailed
 in the linked post above. However, I was still left with the lingering thought
 that joins have something to do with foreign keys since all the queries I had
@@ -198,62 +21,55 @@ joins are not interlinked in any way with foreign keys; joins are basically
 row-level filters and in fact, any query written using joins can be rewritten
 without them (with a little help from <strong>cross products</strong>). On the other hand,
 foreign keys (as an abstraction) are nothing more than constraints that ensure
-the value in a given column is a primary key, (or unique) in some other table.</p>
-<p>I&rsquo;ll be using an example database in Postgres to demonstrate cross-products and
-build back to a clearer understanding of joins.</p>
-<p>Okay, let&rsquo;s go. Suppose we are building a database for a charity group which
+the value in a given column is a primary key, (or unique) in some other table.</p><p>I&rsquo;ll be using an example database in Postgres to demonstrate cross-products and
+build back to a clearer understanding of joins.</p><p>Okay, let&rsquo;s go. Suppose we are building a database for a charity group which
 wants to keep track of all the volunteers who&rsquo;ve joined and all the activities
 they undertake. We&rsquo;ll keep things simple and introduce other aspects as we go
 on. Activities within the charity can be broken down into what needs to be done
 and where it should be done. Multiple activities can take place in the same
 location so we&rsquo;ll have to separate the two. The &lsquo;what&rsquo; is captured by the
 <strong>task</strong> table and the &lsquo;where&rsquo; is captured by the <strong>venue</strong> table. Again there&rsquo;s
-probably more attributes that we need to capture but this will do for now:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> venue(
-</span></span><span style="display:flex;"><span>    venue_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    place varchar(50)
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> task(
-</span></span><span style="display:flex;"><span>    task_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    venue_id integer <span style="font-weight:bold">references</span> venue(venue_id),
-</span></span><span style="display:flex;"><span>    date date <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    details text
-</span></span><span style="display:flex;"><span>);
-</span></span></code></pre></div><p>And a couple of values to use for queries:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> venue(place)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">values</span>
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;St John&#39;&#39;s Church&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;Apollo Orphanage&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;Red Cross Center&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;Rio Nursing Home&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;Southfield Correctional Center&#39;</span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> task(venue_id, details)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">values</span>
-</span></span><span style="display:flex;"><span>    (2, <span style="font-style:italic">&#39;Donate clothes, play with children&#39;</span>),
-</span></span><span style="display:flex;"><span>    (2, <span style="font-style:italic">&#39;Teach music lessons&#39;</span>),
-</span></span><span style="display:flex;"><span>    (1, <span style="font-style:italic">&#39;Clean compound&#39;</span>),
-</span></span><span style="display:flex;"><span>    (1, <span style="font-style:italic">&#39;Sing christmas carols&#39;</span>),
-</span></span><span style="display:flex;"><span>    (3, <span style="font-style:italic">&#39;Blood donation drive&#39;</span>),
-</span></span><span style="display:flex;"><span>    (4, <span style="font-style:italic">&#39;Cook food&#39;</span>);
+probably more attributes that we need to capture but this will do for now:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> venue(
+</span></span><span style=display:flex><span>    venue_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    place varchar(50)
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> task(
+</span></span><span style=display:flex><span>    task_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    venue_id integer <span style=font-weight:700>references</span> venue(venue_id),
+</span></span><span style=display:flex><span>    date date <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    details text
+</span></span><span style=display:flex><span>);
+</span></span></code></pre></div><p>And a couple of values to use for queries:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>insert</span> <span style=font-weight:700>into</span> venue(place)
+</span></span><span style=display:flex><span><span style=font-weight:700>values</span>
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;St John&#39;&#39;s Church&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;Apollo Orphanage&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;Red Cross Center&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;Rio Nursing Home&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;Southfield Correctional Center&#39;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>insert</span> <span style=font-weight:700>into</span> task(venue_id, details)
+</span></span><span style=display:flex><span><span style=font-weight:700>values</span>
+</span></span><span style=display:flex><span>    (2, <span style=font-style:italic>&#39;Donate clothes, play with children&#39;</span>),
+</span></span><span style=display:flex><span>    (2, <span style=font-style:italic>&#39;Teach music lessons&#39;</span>),
+</span></span><span style=display:flex><span>    (1, <span style=font-style:italic>&#39;Clean compound&#39;</span>),
+</span></span><span style=display:flex><span>    (1, <span style=font-style:italic>&#39;Sing christmas carols&#39;</span>),
+</span></span><span style=display:flex><span>    (3, <span style=font-style:italic>&#39;Blood donation drive&#39;</span>),
+</span></span><span style=display:flex><span>    (4, <span style=font-style:italic>&#39;Cook food&#39;</span>);
 </span></span></code></pre></div><p>Now a typical query is for generating the list of all tasks that potential
 volunteers might want to sign up for. Being a synthetic key, the <em>venue id</em> is
 meaningless to humans so we&rsquo;ll have to retrieve the related location name. We
 can&rsquo;t use joins yet (until we see how they fit in); we&rsquo;ll have to use the
 cross-product. And if you&rsquo;re unfamilar with what cross-products are exactly,
-we&rsquo;ll get to it soon enough.</p>
-<p>To get the cross product of two or more tables, we simply list the tables in the
+we&rsquo;ll get to it soon enough.</p><p>To get the cross product of two or more tables, we simply list the tables in the
 <em>from</em> clause separating each name with a comma: we can think of the comma as
-the cross-product operator:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> *
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task, venue;
+the cross-product operator:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> *
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task, venue;
 </span></span></code></pre></div><p>If you run the query above, you&rsquo;ll get an error since both <em>task</em> and <em>venue</em>
 have a <em>venue_id</em> column hence the query is ambiguous. Just like joins, when it
 comes to cross-products, it&rsquo;s best to specify the exact columns from which
-tables that we require in order to avoid such errors:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> details, date, place
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task, venue;
+tables that we require in order to avoid such errors:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> details, date, place
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task, venue;
 </span></span></code></pre></div><p>However, this query returns 30 rows when we only expect 6 (as we have 6 tasks).
 We even get rows for the &lsquo;Southfield Correctional Center&rsquo; which shouldn&rsquo;t be in
 the result set since no task is allocated there. This is because, given SQL&rsquo;s
@@ -263,49 +79,38 @@ pair it one by one with <strong>all</strong> the rows in T2 and repeat for this 
 the rest of the rows in T1 resulting in a mega-table. Think of it as a for-loop
 within a for-loop. In majority of cases, we don&rsquo;t need all the rows that a
 cross-product returns; on running the following query, we can see which specific
-rows we require from the cross-product:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> t.venue_id, v.venue_id, details, date, place
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t, venue v;
+rows we require from the cross-product:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> t.venue_id, v.venue_id, details, date, place
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t, venue v;
 </span></span></code></pre></div><p>Therefore, to get <em>only</em> the relevant rows where the task is paired up with its
-appropriate location, we use the where clause to filter the rest out:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> details, date, place
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t, venue v
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> t.venue_id = v.venue_id;
+appropriate location, we use the where clause to filter the rest out:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> details, date, place
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t, venue v
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> t.venue_id = v.venue_id;
 </span></span></code></pre></div><p>And this is pretty much how &lsquo;joins&rsquo; (specifically the <strong>inner join</strong>) can be
 carried out without using a join statement, by using cross-product and row-level
-filters!</p>
-<p>It also illustrates a couple of things which were not obvious (at least to me)
-when using join statements:</p>
-<p>One, given how we are using the <strong>task.venue_id</strong> in the <em>where</em> clause to
+filters!</p><p>It also illustrates a couple of things which were not obvious (at least to me)
+when using join statements:</p><p>One, given how we are using the <strong>task.venue_id</strong> in the <em>where</em> clause to
 &lsquo;simulate&rsquo; the join, a foreign key column is just that, a column like any other
 column: when a column stores foreign keys it does not create any sort of
 underlying links and pointers between the two tables, a conceptualization
-mistake I made at first when trying to understand joins and foreign relations.</p>
-<p>In fact, as I was trying to find out whether such &rsquo;links&rsquo; are created in SQL, I
+mistake I made at first when trying to understand joins and foreign relations.</p><p>In fact, as I was trying to find out whether such &rsquo;links&rsquo; are created in SQL, I
 instead learned the opposite: unlike previous database models, the relational
 model (which SQL databases implement) deliberately eschews any form of explicit
-links between collections of data i.e. the tables&hellip;</p>
-<p>Let&rsquo;s pause a bit and take a trip down memory lane. For brevity&rsquo;s sake, let&rsquo;s
+links between collections of data i.e. the tables&mldr;</p><p>Let&rsquo;s pause a bit and take a trip down memory lane. For brevity&rsquo;s sake, let&rsquo;s
 skip the pre-cambrian era where there were no databases and head straight to
 triassic period when the first databases were emerging. One key aspect that
 drove database development and evolution was the question: <em>how should the data
 be represented?</em> Moreover, since data in &lsquo;real life&rsquo; is usually interlinked, how
 should such relationships be outlined. Given the interests of both businesses
 and academia, various data models were proposed in the 70s and 80s to address
-this key issue.</p>
-<p>One of the first models proposed was the <strong>Hierarchical Model</strong>. From Wikipedia,
-we have the following description of this model:</p>
-<blockquote>
-<p>A hierarchical database model is a data model in which the data are organized
+this key issue.</p><p>One of the first models proposed was the <strong>Hierarchical Model</strong>. From Wikipedia,
+we have the following description of this model:</p><blockquote><p>A hierarchical database model is a data model in which the data are organized
 into a tree-like structure. The data are stored as records which are connected
 to one another through links. A record is a collection of fields, with each
 field containing only one value. The type of a record defines which fields the
 record contains. The hierarchical database model mandates that each child
 record has only one parent, whereas each parent record can have one or more
 child records. In order to retrieve data from a hierarchical database the
-whole tree needs to be traversed starting from the root node.</p>
-</blockquote>
-<p>In our charity organization example, using the hierarchical model would entail
+whole tree needs to be traversed starting from the root node.</p></blockquote><p>In our charity organization example, using the hierarchical model would entail
 having the organization as the root. The next level is not as straightforward:
 should the members come next or should the activities come next, or even the
 activity locations. Suppose we have the members at the next level. For each
@@ -321,8 +126,7 @@ the shortcomings of the hierarchical model were soon encountered when developers
 had to model/generate many-to-many relationships or even when they tried to
 carry out joins. (Btw, if you want a more indepth but beginner-friendly tour of
 database models and how <em>history is being repeated again</em> be sure to check out
-chapter 2 of Kleppman&rsquo;s book, <em>Designing Data-Intensive Applications</em>).</p>
-<p>Next, the <strong>Network Model</strong> was proposed. In jest, the thinking probably went
+chapter 2 of Kleppman&rsquo;s book, <em>Designing Data-Intensive Applications</em>).</p><p>Next, the <strong>Network Model</strong> was proposed. In jest, the thinking probably went
 like this: what if we took the hierarchical structure, and simply allowed for
 children nodes to have multiple parents - voila! many-to-many relationships. I
 mean, it&rsquo;s a straight forward solution, one that I could see myself blurting
@@ -334,8 +138,7 @@ that&rsquo;s straightforward and maintenable; for all its shortcomings, at least
 the hierachical model, you had a definite path to the desired record. There were
 other additional factors that held back application and database developers from
 adopting the network model and for a while the hierarchical model remained
-dominant.</p>
-<p>That was until the <strong>relational model</strong> was introduced. It&rsquo;s such a simple and
+dominant.</p><p>That was until the <strong>relational model</strong> was introduced. It&rsquo;s such a simple and
 straightforward model, almost too simple: entities are represented as rows in a
 table, and each column of the table represents an attribute of the given entity,
 basically spreadsheets (air-quotes) on steroids. There are <strong>no</strong> links which
@@ -345,8 +148,7 @@ the developer wants back, (the shape itself conforming to a table), and the
 query processor in the database figures out how to efficiently traverse its
 internal data-structures in order to &lsquo;answer&rsquo; this query correctly. In other
 words, all the developer has to deal with is the abstraction of a table/relation
-and the accompanying guarantees &amp; constraints.</p>
-<p>One thing to note (again) is that unlike the hierarchical and network model, the
+and the accompanying guarantees & constraints.</p><p>One thing to note (again) is that unlike the hierarchical and network model, the
 relational model doesn&rsquo;t really specify explicit links: again, all you have to
 work with are disparate tables. Instead, the relational model provides something
 way more powerful, a <em>schema</em>. The database will enforce this schema come rain
@@ -363,34 +165,29 @@ the database for insertion/updating (e.g. if you&rsquo;re using mongoose for mon
 or the joi library for couchdb in node.js). It&rsquo;s referred to as
 &lsquo;application-level schema&rsquo;. Alternatively, for no-sql databases that don&rsquo;t
 support schemas, the application has to validate the data after reading it from
-the database i.e. &lsquo;schema-on-read&rsquo;.</p>
-<p>Back to SQL and relational databases. When we declare a column as a foreign key
+the database i.e. &lsquo;schema-on-read&rsquo;.</p><p>Back to SQL and relational databases. When we declare a column as a foreign key
 what we are in fact doing is simply adding a constraint at the schema level.
 Zero &rsquo;links&rsquo; are created. Instead the database ensures that for every non-null
 value we add at that column, a corresponding value that it is equal to it exists
 as a primary key in the referenced table. This is referred to as <strong>Referential
 Integrity</strong>. For the sake of being pedantic, referential integrity is more
 general, it does not require the referenced column to be a primary key- the
-exact term we&rsquo;re looking for is <strong>foreign-key constraint</strong>.</p>
-<p>Given that we&rsquo;ve already created the table <em>task</em>, we can tack on foreign-key
-constraint to our table as follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> task
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">add</span> <span style="font-weight:bold">constraint</span> constraint_task_venue_id_fk <span style="font-weight:bold">foreign</span> <span style="font-weight:bold">key</span> (venue_id) <span style="font-weight:bold">references</span> venue (venue_id);
-</span></span></code></pre></div><p>The foreign key constraint can also be added when defining the table.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> task2(
-</span></span><span style="display:flex;"><span>    task_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    venue_id integer <span style="font-weight:bold">references</span> venue(venue_id),
-</span></span><span style="display:flex;"><span>    date date <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    details text
-</span></span><span style="display:flex;"><span>);
+exact term we&rsquo;re looking for is <strong>foreign-key constraint</strong>.</p><p>Given that we&rsquo;ve already created the table <em>task</em>, we can tack on foreign-key
+constraint to our table as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> task
+</span></span><span style=display:flex><span><span style=font-weight:700>add</span> <span style=font-weight:700>constraint</span> constraint_task_venue_id_fk <span style=font-weight:700>foreign</span> <span style=font-weight:700>key</span> (venue_id) <span style=font-weight:700>references</span> venue (venue_id);
+</span></span></code></pre></div><p>The foreign key constraint can also be added when defining the table.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> task2(
+</span></span><span style=display:flex><span>    task_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    venue_id integer <span style=font-weight:700>references</span> venue(venue_id),
+</span></span><span style=display:flex><span>    date date <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    details text
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>As for joins, as we&rsquo;ve seen, they boil down to row-level filters on the
 cross-products of tables and are carried out during query time, NOT during
 insertion or updating. Do note that sql databases carry out joins in a manner
 that&rsquo;s way more efficient than simply creating a mega-table via cross-products
 and filtering. The beauty though is that all these should be, and is abstracted
 away from us. That&rsquo;s all there is to it logically, there are no links or
-pointers added or to be traversed by the database user.</p>
-<p>In addition, SQL provides some niceties when it comes to foreign keys. Suppose
+pointers added or to be traversed by the database user.</p><p>In addition, SQL provides some niceties when it comes to foreign keys. Suppose
 the corresponding primary key is either deleted or modified (modifying a primary
 key is another red flag to be watched out for in the database design, primary
 keys should be as intransigient as possible). The database could be in a state
@@ -398,173 +195,129 @@ where one of the values, the &lsquo;former&rsquo; foreign key, in one of the col
 not belong in its specified domain, i.e. the db is in an inconsistent state,
 which is a big no-no in SQL databases. In order to prevent this scenario, SQL
 requires us to specify what should happen to the corresponding foreign keys when
-one attempts to delete/modify a primary key.</p>
-<p>On deletion we add one of the following keywords to tell the database what
-course of action to take</p>
-<ul>
-<li>
-<p><code>on delete cascade</code>: we&rsquo;ll have the row which the foreign key is part of be
-deleted too</p>
-</li>
-<li>
-<p><code>on delete set null</code>: the foreign key value is set to null</p>
-</li>
-<li>
-<p><code>on delete set default</code>: if we have a reasonable default value, we can have
-the db resort to that value instead of null</p>
-</li>
-<li>
-<p><code>on delete restrict</code>: we can outright prevent anyone from deleting the row
+one attempts to delete/modify a primary key.</p><p>On deletion we add one of the following keywords to tell the database what
+course of action to take</p><ul><li><p><code>on delete cascade</code>: we&rsquo;ll have the row which the foreign key is part of be
+deleted too</p></li><li><p><code>on delete set null</code>: the foreign key value is set to null</p></li><li><p><code>on delete set default</code>: if we have a reasonable default value, we can have
+the db resort to that value instead of null</p></li><li><p><code>on delete restrict</code>: we can outright prevent anyone from deleting the row
 with the primary key if there&rsquo;s any foreign key referencing it. If we don&rsquo;t
 specify any action, postgres defaults to <em>on delete no action</em>. The Postgres
-documentation explains that:</p>
-<blockquote>
-<p>RESTRICT prevents deletion of a referenced row. NO ACTION means that if any
+documentation explains that:</p><blockquote><p>RESTRICT prevents deletion of a referenced row. NO ACTION means that if any
 referencing rows still exist when the constraint is checked, an error is
 raised; this is the default behavior if you do not specify anything. (The
 essential difference between these two choices is that NO ACTION allows the
 check to be deferred until later in the transaction, whereas RESTRICT does
-not.)</p>
-</blockquote>
-</li>
-</ul>
-<p>On Updates, we can also add one of the following keywords:</p>
-<ul>
-<li><code>on update cascade</code>: the foreign-key value is also changed to reflect the
-changes on the primary key</li>
-<li><code>on update set null</code>: same as the deletion case</li>
-<li><code>on update set default</code>: same as the deletion case</li>
-<li><code>on delete restrict</code>: same as the deletion case</li>
-<li><code>on update no action</code>: same as the deletion case</li>
-</ul>
-<p>Therefore, if we wanted to be more explicit in our declaration for the table, we
+not.)</p></blockquote></li></ul><p>On Updates, we can also add one of the following keywords:</p><ul><li><code>on update cascade</code>: the foreign-key value is also changed to reflect the
+changes on the primary key</li><li><code>on update set null</code>: same as the deletion case</li><li><code>on update set default</code>: same as the deletion case</li><li><code>on delete restrict</code>: same as the deletion case</li><li><code>on update no action</code>: same as the deletion case</li></ul><p>Therefore, if we wanted to be more explicit in our declaration for the table, we
 could add the following keywords. One, we want to prevent any deletion of
 locations for archival purposes. We also don&rsquo;t expect the primary key to change
 especially since it&rsquo;s an artificial key, ie it has no meaning to us humans, it&rsquo;s
 simply there to make each row unique. However, if a location were to change in
 some way, eg demolished, and we wanted to capture this data, we could add a
-column in the <em>venue</em> table to indicate so.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> task(
-</span></span><span style="display:flex;"><span>    task_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    venue_id integer,
-</span></span><span style="display:flex;"><span>    date date <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    details text,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">foreign</span> <span style="font-weight:bold">key</span>(venue_id) <span style="font-weight:bold">references</span> venue <span style="font-weight:bold">on</span> <span style="font-weight:bold">delete</span> <span style="font-weight:bold">restrict</span> <span style="font-weight:bold">on</span> <span style="font-weight:bold">update</span> <span style="font-weight:bold">restrict</span>
-</span></span><span style="display:flex;"><span>);
+column in the <em>venue</em> table to indicate so.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> task(
+</span></span><span style=display:flex><span>    task_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    venue_id integer,
+</span></span><span style=display:flex><span>    date date <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    details text,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>foreign</span> <span style=font-weight:700>key</span>(venue_id) <span style=font-weight:700>references</span> venue <span style=font-weight:700>on</span> <span style=font-weight:700>delete</span> <span style=font-weight:700>restrict</span> <span style=font-weight:700>on</span> <span style=font-weight:700>update</span> <span style=font-weight:700>restrict</span>
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>To reiterate, we&rsquo;ve seen how to do joins (inner joins) without using the <em>join</em>
 statement. Surprisingly, when SQL was first specified, it did not have the
 <em>join</em> statement at all, joins had to be carried out using cross-products and
 where clauses. <em>join</em> and its variants were added to SQL in the SQL92
-specification and implemented by database vendors subsequently.</p>
-<p>Using <em>join</em> for the same query above (in which used the cross-product and where
-clause) turns out as so:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> details, date, place
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t <span style="font-weight:bold">join</span> venue v <span style="font-weight:bold">on</span> t.venue_id = v.venue_id;
+specification and implemented by database vendors subsequently.</p><p>Using <em>join</em> for the same query above (in which used the cross-product and where
+clause) turns out as so:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> details, date, place
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t <span style=font-weight:700>join</span> venue v <span style=font-weight:700>on</span> t.venue_id = v.venue_id;
 </span></span></code></pre></div><p>Since both the foreign key column and the primary key column have the same name,
-we can use <em>using</em> which is arguably cleaner:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> details, date, place
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t <span style="font-weight:bold">join</span> venue v <span style="font-weight:bold">using</span>(venue_id);
+we can use <em>using</em> which is arguably cleaner:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> details, date, place
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t <span style=font-weight:700>join</span> venue v <span style=font-weight:700>using</span>(venue_id);
 </span></span></code></pre></div><p>And compared to cross-products plus row-level filters, using joins (if you
 weren&rsquo;t already doing so) is the best way to approach such kind of queries not
 only because it&rsquo;s much more readable (it seperates row-level filters from join
 predicates) but also because it&rsquo;ll probably run faster as most query processors
-optimize joins given it is the common case.</p>
-<h2 class="heading" id="outer-joins-without-the-join-keyword">
-  Outer joins without the &lsquo;join&rsquo; keyword
-  <a href="#outer-joins-without-the-join-keyword">#</a>
-</h2>
-<p>One last thing to point out is how to carry out an <strong>outer join</strong> without using
+optimize joins given it is the common case.</p><h2 class=heading id=outer-joins-without-the-join-keyword>Outer joins without the &lsquo;join&rsquo; keyword
+<a href=#outer-joins-without-the-join-keyword>#</a></h2><p>One last thing to point out is how to carry out an <strong>outer join</strong> without using
 <em>join</em>. As a quick recap, outer joins are used to retain rows that would
 otherwise be filtered out in an inner-join since they don&rsquo;t have a correspoding
 row in the table being joined on. Suppose we&rsquo;ve now started signing up members
-for our charity organization:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> volunteer(
-</span></span><span style="display:flex;"><span>    volunteer_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    last_name varchar(30) <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> volunteer(last_name)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">values</span>
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;john&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;smith&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;mary&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;william&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;lou&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;leia&#39;</span>),
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;rael&#39;</span>);
+for our charity organization:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> volunteer(
+</span></span><span style=display:flex><span>    volunteer_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    last_name varchar(30) <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>insert</span> <span style=font-weight:700>into</span> volunteer(last_name)
+</span></span><span style=display:flex><span><span style=font-weight:700>values</span>
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;john&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;smith&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;mary&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;william&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;lou&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;leia&#39;</span>),
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;rael&#39;</span>);
 </span></span></code></pre></div><p>We then allocate tasks as so, presuming that no one volunteers to cook food or
-donate blood:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> allocation(
-</span></span><span style="display:flex;"><span>    task_id integer <span style="font-weight:bold">references</span> task(task_id),
-</span></span><span style="display:flex;"><span>    volunteer_id integer <span style="font-weight:bold">references</span> volunteer(volunteer_id),
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>(task_id, volunteer_id)
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> allocation(volunteer_id, task_id)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">values</span>
-</span></span><span style="display:flex;"><span>    (1,1),(1,2),(1,3),(1,4),(2,1),(2,2),(3,1),(3,3),(4,1),(4,2),(5,1),(5,3),(6,1),(6,2),(6,3);
+donate blood:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> allocation(
+</span></span><span style=display:flex><span>    task_id integer <span style=font-weight:700>references</span> task(task_id),
+</span></span><span style=display:flex><span>    volunteer_id integer <span style=font-weight:700>references</span> volunteer(volunteer_id),
+</span></span><span style=display:flex><span>    <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>(task_id, volunteer_id)
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span><span style=font-weight:700>insert</span> <span style=font-weight:700>into</span> allocation(volunteer_id, task_id)
+</span></span><span style=display:flex><span><span style=font-weight:700>values</span>
+</span></span><span style=display:flex><span>    (1,1),(1,2),(1,3),(1,4),(2,1),(2,2),(3,1),(3,3),(4,1),(4,2),(5,1),(5,3),(6,1),(6,2),(6,3);
 </span></span></code></pre></div><p>A query we might have to run at some point is to get for each task the number of
 volunteers allocated, maybe so that we can distribute volunteers to tasks better
-or for some other purpose:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> t.task_id, t.details, <span style="font-weight:bold">count</span>(a.volunteer_id) <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">join</span> allocation a <span style="font-weight:bold">using</span>(task_id)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> t.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> total_volunteers <span style="font-weight:bold">desc</span>;
+or for some other purpose:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> t.task_id, t.details, <span style=font-weight:700>count</span>(a.volunteer_id) <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t
+</span></span><span style=display:flex><span>    <span style=font-weight:700>join</span> allocation a <span style=font-weight:700>using</span>(task_id)
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> t.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> total_volunteers <span style=font-weight:700>desc</span>;
 </span></span></code></pre></div><p>However, this discards rows from the <em>task</em> table that don&rsquo;t have anyone
 allocated to them, yet we need this information. By simply changing to a <strong>left
-outer join</strong>, we get the required information:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> t.task_id, t.details, <span style="font-weight:bold">count</span>(a.volunteer_id) <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">left</span> <span style="font-weight:bold">join</span> allocation a <span style="font-weight:bold">using</span>(task_id)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> t.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> total_volunteers <span style="font-weight:bold">desc</span>;
+outer join</strong>, we get the required information:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> t.task_id, t.details, <span style=font-weight:700>count</span>(a.volunteer_id) <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t
+</span></span><span style=display:flex><span>    <span style=font-weight:700>left</span> <span style=font-weight:700>join</span> allocation a <span style=font-weight:700>using</span>(task_id)
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> t.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> total_volunteers <span style=font-weight:700>desc</span>;
 </span></span></code></pre></div><p>If we were to do the same without a join statement, it gets a bit tricky. Let&rsquo;s
-start with what we know so far, the inner join:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> t.task_id, t.details, <span style="font-weight:bold">count</span>(a.volunteer_id) <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> task t, allocation a
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> t.task_id = a.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> t.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> total_volunteers <span style="font-weight:bold">desc</span>;
+start with what we know so far, the inner join:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> t.task_id, t.details, <span style=font-weight:700>count</span>(a.volunteer_id) <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> task t, allocation a
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> t.task_id = a.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> t.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> total_volunteers <span style=font-weight:700>desc</span>;
 </span></span></code></pre></div><p>Now, the following is a trick I learned from Jennifer Widom&rsquo;s
-<a href="https://lagunita.stanford.edu/courses/Engineering/db/2014_1/about">Databases course</a>;
+<a href=https://lagunita.stanford.edu/courses/Engineering/db/2014_1/about>Databases course</a>;
 to do an outer left join query without using join, we have to find a way to
 include the rows that were filtered out by the <em>where</em> clause and plug in either
-null or the expected values.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> *
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> (
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    (<span style="font-weight:bold">select</span> t.task_id, t.details, <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> task t, allocation a
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> t.task_id = a.task_id
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> t.task_id)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">union</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    (<span style="font-weight:bold">select</span> task_id, details, 0 <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> task
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> task_id <span style="font-weight:bold">not</span> <span style="font-weight:bold">in</span> (<span style="font-weight:bold">select</span> task_id <span style="font-weight:bold">from</span> allocation))
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> task_counts
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> total_volunteers <span style="font-weight:bold">desc</span>;
-</span></span></code></pre></div><p>Here&rsquo;s another way of achieving the same results as above:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> t.task_id, t.details, <span style="font-weight:bold">count</span>(volunteer_id) <span style="font-weight:bold">as</span> total_volunteers
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span>
-</span></span><span style="display:flex;"><span>    task t,
-</span></span><span style="display:flex;"><span>    (
-</span></span><span style="display:flex;"><span>        (<span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> allocation)
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">union</span>
-</span></span><span style="display:flex;"><span>        (<span style="font-weight:bold">select</span> task_id, <span style="font-weight:bold">null</span>
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">from</span> task
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">where</span> task_id <span style="font-weight:bold">not</span> <span style="font-weight:bold">in</span> (<span style="font-weight:bold">select</span> task_id <span style="font-weight:bold">from</span> allocation))
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> a
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> t.task_id = a.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> t.task_id
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> total_volunteers <span style="font-weight:bold">desc</span>;
+null or the expected values.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> *
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> (
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    (<span style=font-weight:700>select</span> t.task_id, t.details, <span style=font-weight:700>count</span>(*) <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> task t, allocation a
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> t.task_id = a.task_id
+</span></span><span style=display:flex><span>    <span style=font-weight:700>group</span> <span style=font-weight:700>by</span> t.task_id)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>union</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    (<span style=font-weight:700>select</span> task_id, details, 0 <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> task
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> task_id <span style=font-weight:700>not</span> <span style=font-weight:700>in</span> (<span style=font-weight:700>select</span> task_id <span style=font-weight:700>from</span> allocation))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> task_counts
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> total_volunteers <span style=font-weight:700>desc</span>;
+</span></span></code></pre></div><p>Here&rsquo;s another way of achieving the same results as above:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> t.task_id, t.details, <span style=font-weight:700>count</span>(volunteer_id) <span style=font-weight:700>as</span> total_volunteers
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span>
+</span></span><span style=display:flex><span>    task t,
+</span></span><span style=display:flex><span>    (
+</span></span><span style=display:flex><span>        (<span style=font-weight:700>select</span> * <span style=font-weight:700>from</span> allocation)
+</span></span><span style=display:flex><span>    <span style=font-weight:700>union</span>
+</span></span><span style=display:flex><span>        (<span style=font-weight:700>select</span> task_id, <span style=font-weight:700>null</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700>from</span> task
+</span></span><span style=display:flex><span>        <span style=font-weight:700>where</span> task_id <span style=font-weight:700>not</span> <span style=font-weight:700>in</span> (<span style=font-weight:700>select</span> task_id <span style=font-weight:700>from</span> allocation))
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> a
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> t.task_id = a.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> t.task_id
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> total_volunteers <span style=font-weight:700>desc</span>;
 </span></span></code></pre></div><p>And by they way, if you&rsquo;re curious about how Postgres manages foreign key
 references for primary keys, its documentation provides the following. I presume
-it&rsquo;s the same with other major relational databases.</p>
-<blockquote>
-<p>A foreign key must reference columns that either are a primary key or form a
+it&rsquo;s the same with other major relational databases.</p><blockquote><p>A foreign key must reference columns that either are a primary key or form a
 unique constraint. This means that the referenced columns always have an index
 (the one underlying the primary key or unique constraint); so checks on
 whether a referencing row has a match will be efficient. Since a DELETE of a
@@ -573,127 +326,7 @@ a scan of the referencing table for rows matching the old value, it is often a
 good idea to index the referencing columns too. Because this is not always
 needed, and there are many choices available on how to index, declaration of a
 foreign key constraint does not automatically create an index on the
-referencing columns. - <a href="https://www.postgresql.org/docs/12/ddl-constraints.html">https://www.postgresql.org/docs/12/ddl-constraints.html</a></p>
-</blockquote>
-<p>With that, I&rsquo;d like to give credit to Martin Kleppman&rsquo;s <em>Designing
+referencing columns. - <a href=https://www.postgresql.org/docs/12/ddl-constraints.html>https://www.postgresql.org/docs/12/ddl-constraints.html</a></p></blockquote><p>With that, I&rsquo;d like to give credit to Martin Kleppman&rsquo;s <em>Designing
 Data-Intensive Application</em> which I referenced heavily for the history of
 databases and Jennifer Widom&rsquo;s <em>Introduction to SQL</em> course which massively
-improved my understanding of SQL.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-joins-p1/">
-                        SQL joins as reduce/folds over relations
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/range-difference-search-availability/">
-                        Generalized Range Difference, Recursion &amp; Search Availability in PostgreSQL
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+improved my understanding of SQL.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/sql-joins-p1/>SQL joins as reduce/folds over relations</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/range-difference-search-availability/>Generalized Range Difference, Recursion & Search Availability in PostgreSQL</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

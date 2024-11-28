@@ -1,238 +1,50 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Handling Bank Transactions, V2 | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/sql-bank-txs-v2/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/sql-bank-txs-v2/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Handling Bank Transactions, V2">
-  <meta property="og:description" content="Version 2 of a simplified Node.js-based API &#43; PG database layer for handling a bank’s intra-account transfer operations">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2019-12-05T00:00:00+00:00">
-    <meta property="article:modified_time" content="2019-12-05T00:00:00+00:00">
-    <meta property="article:tag" content="PostgreSQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/sql-bank-txs-v2/">Handling Bank Transactions, V2</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Handling Bank Transactions, V2</h1>
-    
-    <p class="single-summary">Version 2 of a simplified Node.js-based API + PG database layer for handling a bank&rsquo;s intra-account transfer operations</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2019-12-05T00:00:00&#43;00:00">December 5, 2019</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      12 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <h3 class="heading" id="db-design">
-  DB DESIGN
-  <a href="#db-design">#</a>
-</h3>
-<p>The following is an overview of the database layer for an API that facilates a
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Handling Bank Transactions, V2 | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/sql-bank-txs-v2/><meta property="og:url" content="https://bnm3k.github.io/blog/sql-bank-txs-v2/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Handling Bank Transactions, V2"><meta property="og:description" content="Version 2 of a simplified Node.js-based API + PG database layer for handling a bank’s intra-account transfer operations"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2019-12-05T00:00:00+00:00"><meta property="article:modified_time" content="2019-12-05T00:00:00+00:00"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/sql-bank-txs-v2/>Handling Bank Transactions, V2</a></div><div><div class=single-intro-container><h1 class=single-title>Handling Bank Transactions, V2</h1><p class=single-summary>Version 2 of a simplified Node.js-based API + PG database layer for handling a bank&rsquo;s intra-account transfer operations</p><p class=single-readtime><time datetime=2019-12-05T00:00:00+00:00>December 5, 2019</time>
+&nbsp; · &nbsp;
+12 min read</p></div><div class=single-content><h3 class=heading id=db-design>DB DESIGN
+<a href=#db-design>#</a></h3><p>The following is an overview of the database layer for an API that facilates a
 subset of the business operations of a made-up bank. Right now, the bank&rsquo;s
 services are limited: users make a one-time deposit of 1000 into an account when
 they open it and users can transfer money but only to other users within the
 same bank. Additionally, users can check their balance, last 5 transactions and
-full transactions history.</p>
-<p>The three main tables underlying the database are: <strong>users</strong>, <strong>account</strong> and
+full transactions history.</p><p>The three main tables underlying the database are: <strong>users</strong>, <strong>account</strong> and
 <strong>transfer_log</strong>. There is a one-to-many relationship from <strong>users</strong> to
 <strong>account</strong>, that is, users can have zero, one or more accounts with the bank.
 There is also a one-to-many relationship from <strong>account</strong> to <strong>transfer_log</strong>
 entries: each transfer log entry is associated with a sender&rsquo;s account and the
-receiver&rsquo;s account.</p>
-<h3 class="heading" id="users-table">
-  users table
-  <a href="#users-table">#</a>
-</h3>
-<p>The users table is pretty standard and self-explanatory. I kind of prefer using
-the singular &lsquo;user&rsquo; over &lsquo;users&rsquo; but in postgres, &lsquo;user&rsquo; is a reserved keyword.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">domain</span> contact_entry_t <span style="font-weight:bold">as</span>
-</span></span><span style="display:flex;"><span>    varchar(50) <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">check</span> (value &lt;&gt; <span style="font-style:italic">&#39;&#39;</span> <span style="font-weight:bold">and</span> value !~ <span style="font-style:italic">&#39;\s&#39;</span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> users(
-</span></span><span style="display:flex;"><span>    user_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    email contact_entry_t <span style="font-weight:bold">unique</span>,
-</span></span><span style="display:flex;"><span>    firstname contact_entry_t,
-</span></span><span style="display:flex;"><span>    lastname contact_entry_t,
-</span></span><span style="display:flex;"><span>    password varchar(50) <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    created_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    updated_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    last_login timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now()
-</span></span><span style="display:flex;"><span>);
-</span></span></code></pre></div><h3 class="heading" id="account-table">
-  account table
-  <a href="#account-table">#</a>
-</h3>
-<p>The &lsquo;account&rsquo; table is also quite basic and is as follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> account(
-</span></span><span style="display:flex;"><span>    account_id serial <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span>,
-</span></span><span style="display:flex;"><span>    user_id int <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    balance numeric(12,2) <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> 0,
-</span></span><span style="display:flex;"><span>    created_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    updated_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    is_active boolean <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> <span style="font-style:italic">&#39;t&#39;</span>,
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">foreign</span> <span style="font-weight:bold">key</span> (user_id) <span style="font-weight:bold">references</span> users(user_id)
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">on</span> <span style="font-weight:bold">delete</span> <span style="font-weight:bold">restrict</span> <span style="font-weight:bold">on</span> <span style="font-weight:bold">update</span> <span style="font-weight:bold">restrict</span>,
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">constraint</span> balance_nonnegative <span style="font-weight:bold">check</span>(
-</span></span><span style="display:flex;"><span>        balance &gt;= 0
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>);
+receiver&rsquo;s account.</p><h3 class=heading id=users-table>users table
+<a href=#users-table>#</a></h3><p>The users table is pretty standard and self-explanatory. I kind of prefer using
+the singular &lsquo;user&rsquo; over &lsquo;users&rsquo; but in postgres, &lsquo;user&rsquo; is a reserved keyword.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>domain</span> contact_entry_t <span style=font-weight:700>as</span>
+</span></span><span style=display:flex><span>    varchar(50) <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>check</span> (value &lt;&gt; <span style=font-style:italic>&#39;&#39;</span> <span style=font-weight:700>and</span> value !~ <span style=font-style:italic>&#39;\s&#39;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> users(
+</span></span><span style=display:flex><span>    user_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    email contact_entry_t <span style=font-weight:700>unique</span>,
+</span></span><span style=display:flex><span>    firstname contact_entry_t,
+</span></span><span style=display:flex><span>    lastname contact_entry_t,
+</span></span><span style=display:flex><span>    password varchar(50) <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    created_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    updated_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    last_login timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now()
+</span></span><span style=display:flex><span>);
+</span></span></code></pre></div><h3 class=heading id=account-table>account table
+<a href=#account-table>#</a></h3><p>The &lsquo;account&rsquo; table is also quite basic and is as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> account(
+</span></span><span style=display:flex><span>    account_id serial <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span>,
+</span></span><span style=display:flex><span>    user_id int <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    balance numeric(12,2) <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> 0,
+</span></span><span style=display:flex><span>    created_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    updated_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    is_active boolean <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> <span style=font-style:italic>&#39;t&#39;</span>,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>foreign</span> <span style=font-weight:700>key</span> (user_id) <span style=font-weight:700>references</span> users(user_id)
+</span></span><span style=display:flex><span>        <span style=font-weight:700>on</span> <span style=font-weight:700>delete</span> <span style=font-weight:700>restrict</span> <span style=font-weight:700>on</span> <span style=font-weight:700>update</span> <span style=font-weight:700>restrict</span>,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>constraint</span> balance_nonnegative <span style=font-weight:700>check</span>(
+</span></span><span style=display:flex><span>        balance &gt;= 0
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>One of the business rules of the bank is that account balances should not go
 below 0 and this is enforced via the constraint <em>balance_nonnegative</em>. An
 additional business rule is that there are no &lsquo;dangling&rsquo; accounts, each account
@@ -241,8 +53,7 @@ values. Furthermore, the foreign-key constraint ensures that a users entry
 cannot be deleted as long as an account has been registered under its name and
 accounts can not be transfered from one user to another. Additionally, accounts
 themselves cannot be deleted, they can only be deactivated. This is enforced
-with the following trigger:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">create or replace function trig_soft_account_delete_fn()
+with the following trigger:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>create or replace function trig_soft_account_delete_fn()
     returns trigger
     language &#39;plpgsql&#39;
 as $$
@@ -259,40 +70,32 @@ create trigger trig_soft_account_delete
     execute procedure trig_soft_account_delete_fn();
 </code></pre><p>Lastly, deactivated accounts cannot send any money but they can receive money.
 This is implemented and enforced in the <em>confirm_transfer</em> function that&rsquo;s
-detailed later on.</p>
-<h3 class="heading" id="transfer_log-table">
-  transfer_log table
-  <a href="#transfer_log-table">#</a>
-</h3>
-<p>The transfer_log table stores all the transfers. Each transfer consists of an
+detailed later on.</p><h3 class=heading id=transfer_log-table>transfer_log table
+<a href=#transfer_log-table>#</a></h3><p>The transfer_log table stores all the transfers. Each transfer consists of an
 id, the sender&rsquo;s account, the receiver&rsquo;s account, the amount and the status of
-the transfer plus the time it was created and time it was updated.</p>
-<p>The transfer id&rsquo;s are uuids. Since they only have to be random,
+the transfer plus the time it was created and time it was updated.</p><p>The transfer id&rsquo;s are uuids. Since they only have to be random,
 <em>uuid_generate_v4()</em> is used instead of <em>uuid_generate_v1()</em>. But first, the
-<em>uuid</em> extension is enabled:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> extension <span style="font-weight:bold">if</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">exists</span> <span style="font-style:italic">&#34;uuid-ossp&#34;</span>;
+<em>uuid</em> extension is enabled:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> extension <span style=font-weight:700>if</span> <span style=font-weight:700>not</span> <span style=font-weight:700>exists</span> <span style=font-style:italic>&#34;uuid-ossp&#34;</span>;
 </span></span></code></pre></div><p>The type used to store the transfer state are enums, which is created as
-follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">type</span> transfer_status_t <span style="font-weight:bold">as</span> enum
-</span></span><span style="display:flex;"><span>    (<span style="font-style:italic">&#39;pending&#39;</span>, <span style="font-style:italic">&#39;cancelled&#39;</span>, <span style="font-style:italic">&#39;timeout&#39;</span>, <span style="font-style:italic">&#39;error&#39;</span>, <span style="font-style:italic">&#39;confirmed&#39;</span>);
+follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>type</span> transfer_status_t <span style=font-weight:700>as</span> enum
+</span></span><span style=display:flex><span>    (<span style=font-style:italic>&#39;pending&#39;</span>, <span style=font-style:italic>&#39;cancelled&#39;</span>, <span style=font-style:italic>&#39;timeout&#39;</span>, <span style=font-style:italic>&#39;error&#39;</span>, <span style=font-style:italic>&#39;confirmed&#39;</span>);
 </span></span></code></pre></div><p>Now for the table definition. Not that the <em>from_account</em> can have a null value.
 This is so as to accomodate the initial &lsquo;deposit&rsquo; of 1000 whenever an account is
 created. However, it is definitely an anti-pattern and a future redesign should
 be able to accomodate deposits and withdrawal entries without having to resort
-to null values.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> transfer_log(
-</span></span><span style="display:flex;"><span>    transfer_log_id uuid <span style="font-weight:bold">primary</span> <span style="font-weight:bold">key</span> <span style="font-weight:bold">default</span> uuid_generate_v4(),
-</span></span><span style="display:flex;"><span>    from_account int <span style="font-weight:bold">references</span> account,
-</span></span><span style="display:flex;"><span>    to_account int <span style="font-weight:bold">references</span> account <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>,
-</span></span><span style="display:flex;"><span>    amount numeric(12,2) <span style="font-weight:bold">check</span>(amount &gt; 0),
-</span></span><span style="display:flex;"><span>    transfer_status transfer_status_t <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> <span style="font-style:italic">&#39;pending&#39;</span>,
-</span></span><span style="display:flex;"><span>    created_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>    updated_at timestamptz <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span> <span style="font-weight:bold">default</span> now(),
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">constraint</span> transfer_self_send <span style="font-weight:bold">check</span>(
-</span></span><span style="display:flex;"><span>        from_account &lt;&gt; to_account
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>);
+to null values.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> transfer_log(
+</span></span><span style=display:flex><span>    transfer_log_id uuid <span style=font-weight:700>primary</span> <span style=font-weight:700>key</span> <span style=font-weight:700>default</span> uuid_generate_v4(),
+</span></span><span style=display:flex><span>    from_account int <span style=font-weight:700>references</span> account,
+</span></span><span style=display:flex><span>    to_account int <span style=font-weight:700>references</span> account <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>,
+</span></span><span style=display:flex><span>    amount numeric(12,2) <span style=font-weight:700>check</span>(amount &gt; 0),
+</span></span><span style=display:flex><span>    transfer_status transfer_status_t <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> <span style=font-style:italic>&#39;pending&#39;</span>,
+</span></span><span style=display:flex><span>    created_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>    updated_at timestamptz <span style=font-weight:700>not</span> <span style=font-weight:700>null</span> <span style=font-weight:700>default</span> now(),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>constraint</span> transfer_self_send <span style=font-weight:700>check</span>(
+</span></span><span style=display:flex><span>        from_account &lt;&gt; to_account
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>When inserted, transfer&rsquo;s must begin from a <em>pending</em> state. Under this state,
 modifications on the receipient and amount are allowed. However, the sender
 cannot be changed. When a transfer is either confirmed, cancelled, errored out
@@ -300,8 +103,7 @@ or timed out, its respective state is changed. This state change is one-way and
 once it occurs, further modifications on the row are disabled. In order to
 accomdate deposits, an additional condition whereby the <em>from_account</em> is null
 is included. Lastly, transfer_log entries cannot be deleted. All these rules are
-enforced with the following trigger and procedure:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">create function trig_validate_transfer_log_fn()
+enforced with the following trigger and procedure:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>create function trig_validate_transfer_log_fn()
     returns trigger 
     language &#39;plpgsql&#39;
 as $$
@@ -332,8 +134,7 @@ create trigger trig_validate_transfer_log
 really for test-purposes since we need each account to at least have some money
 for transfers here and there. This is achieved via the following post-trigger.
 On second thought though, it should have just been a direct procedure which the
-application can invoke:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">create or replace function trig_account_creation_bonus_fn()
+application can invoke:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>create or replace function trig_account_creation_bonus_fn()
     returns trigger 
     language &#39;plpgsql&#39;
 as $$
@@ -359,22 +160,14 @@ $$;
 create trigger trig_account_creation_bonus
     after insert on account for each row 
     execute procedure trig_account_creation_bonus_fn();
-</code></pre><h3 class="heading" id="handling-transfers">
-  handling transfers
-  <a href="#handling-transfers">#</a>
-</h3>
-<p>Finally, the heart of the application, handling actual transfers. Transfers
+</code></pre><h3 class=heading id=handling-transfers>handling transfers
+<a href=#handling-transfers>#</a></h3><p>Finally, the heart of the application, handling actual transfers. Transfers
 consist of two stages: the request/pending stage and the
-finalization/confirmation stage.</p>
-<h4 class="heading" id="transfer-request">
-  transfer request
-  <a href="#transfer-request">#</a>
-</h4>
-<p>The <em>request_transfer</em> is quite simple: given the sender&rsquo;s account id, the
+finalization/confirmation stage.</p><h4 class=heading id=transfer-request>transfer request
+<a href=#transfer-request>#</a></h4><p>The <em>request_transfer</em> is quite simple: given the sender&rsquo;s account id, the
 receiver&rsquo;s account id and the amount to transfer, it inserts the pending entry
 into <em>transfer_log</em> and returns the transfer id generated on insertion. This
-transfer id can then be used to either confirm or cancel the transfer.</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">create function request_transfer(from_acc int, to_acc int, amount numeric)
+transfer id can then be used to either confirm or cancel the transfer.</p><pre tabindex=0><code class=language-plsql data-lang=plsql>create function request_transfer(from_acc int, to_acc int, amount numeric)
     returns uuid
     language &#39;plpgsql&#39;
 as $$
@@ -392,36 +185,19 @@ end;
 $$;
 </code></pre><p>A lot of the work to ensure the transfer request entry is valid is handled by
 the contraints and additional pre-triggers placed on the <em>transfer_log</em> table.
-For example,</p>
-<ul>
-<li>
-<p>the foreign key constraint ensures that the <em>to_acc</em> must exist</p>
-</li>
-<li>
-<p>the nonnegative constraint on <em>amount</em> ensures that the sender cannot send
-negative money which is basically stealing money from the receiver</p>
-</li>
-<li>
-<p>The <em>transfer_log</em> trigger detailed earlier ensures that a transfer request
+For example,</p><ul><li><p>the foreign key constraint ensures that the <em>to_acc</em> must exist</p></li><li><p>the nonnegative constraint on <em>amount</em> ensures that the sender cannot send
+negative money which is basically stealing money from the receiver</p></li><li><p>The <em>transfer_log</em> trigger detailed earlier ensures that a transfer request
 must begin from a <em>pending</em> state and the <em>from_account</em> cannot be changed
 once inserted since it it were otherwise, an enterprising user can modify the
 <em>from</em> field after insertion and before confirmation so as to swindle from
-someone else&rsquo;s account.</p>
-</li>
-</ul>
-<p>One glaring aspect that&rsquo;s missing is a security check to ensure that the
+someone else&rsquo;s account.</p></li></ul><p>One glaring aspect that&rsquo;s missing is a security check to ensure that the
 transfer request comes from a verified sender account and the <em>from_account</em> id
 matches. I&rsquo;m reading up as much as I can on row-level security and authorization
 so that it is incorporated in future. For now, it is expected that the
-application will handle such authorization.</p>
-<h4 class="heading" id="transfer-cancellation">
-  transfer cancellation
-  <a href="#transfer-cancellation">#</a>
-</h4>
-<p>An account user is given the chance to cancel a transfer if they don&rsquo;t intend
+application will handle such authorization.</p><h4 class=heading id=transfer-cancellation>transfer cancellation
+<a href=#transfer-cancellation>#</a></h4><p>An account user is given the chance to cancel a transfer if they don&rsquo;t intend
 for it to go through. This is achieved via the following <em>cancel_transfer</em>
-function:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">create function cancel_transfer(transfer_id uuid)
+function:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>create function cancel_transfer(transfer_id uuid)
     returns boolean 
     language &#39;plpgsql&#39;
 as $$
@@ -445,15 +221,10 @@ to use stored procedures as much as possible. My original intention was to have
 the cancel requests be idempotent. In a way, this is already achieved by the
 <em>transfer_log</em> trigger which ensures that once a transfer entry&rsquo;s state is
 changed to &lsquo;cancelled&rsquo; (or any other non-pending state), further modifications
-(such as the update in this case) are disabled.</p>
-<h4 class="heading" id="transfer-confirmation">
-  transfer confirmation
-  <a href="#transfer-confirmation">#</a>
-</h4>
-<p>Finally, an account&rsquo;s user can confirm a pending transfer using the
+(such as the update in this case) are disabled.</p><h4 class=heading id=transfer-confirmation>transfer confirmation
+<a href=#transfer-confirmation>#</a></h4><p>Finally, an account&rsquo;s user can confirm a pending transfer using the
 <em>confirm_transfer</em> function - all they have to provide is the transfer_id. This
-function is quite involved compared to previous ones:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">--CONFIRM TRANSFER
+function is quite involved compared to previous ones:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>--CONFIRM TRANSFER
 create function confirm_transfer(transfer_id uuid)
     returns boolean
     language &#39;plpgsql&#39;
@@ -501,8 +272,7 @@ begin
 end;
 $$;
 </code></pre><p>The first part of <em>confirm_transfer</em> checks whether the confirmation has already
-been made or if the caller is attempting to confirm a non-pending transfer:</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">select * into tf_row from transfer_log where transfer_log_id = transfer_id;
+been made or if the caller is attempting to confirm a non-pending transfer:</p><pre tabindex=0><code class=language-plsql data-lang=plsql>select * into tf_row from transfer_log where transfer_log_id = transfer_id;
 if tf_row.transfer_status = &#39;confirmed&#39; then 
     return &#39;t&#39;;
 end if;
@@ -512,8 +282,7 @@ end if;
 </code></pre><p>Past the checks, a deduction is made from the sender&rsquo;s account, with checks that
 the sender&rsquo;s account should be active, and they should have enough money to
 begin with before sending. Otherwise, the transfer status is set to <em>error</em> and
-the function returns immediately.</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">with sender as(
+the function returns immediately.</p><pre tabindex=0><code class=language-plsql data-lang=plsql>with sender as(
     update account 
         set balance = balance - tf_row.amount, updated_at = now() 
         where account_id = tf_row.from_account 
@@ -533,25 +302,21 @@ end if;
 receive money unless a change to the requirement is made. Since the receiver&rsquo;s
 account id is retrieved from the transfer entry, we know that it already exists
 (via the foreign key constraint), hence there&rsquo;s no need to perform such a check
-again.</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">update account 
+again.</p><pre tabindex=0><code class=language-plsql data-lang=plsql>update account 
     set balance = balance + tf_row.amount, updated_at = now() 
     where account_id = tf_row.to_account;
-</code></pre><p>The transfer entry state is then changed to &lsquo;confirmed&rsquo;.</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">update transfer_log 
+</code></pre><p>The transfer entry state is then changed to &lsquo;confirmed&rsquo;.</p><pre tabindex=0><code class=language-plsql data-lang=plsql>update transfer_log 
     set transfer_status = &#39;confirmed&#39;
     where transfer_log_id = transfer_id;
 </code></pre><p>Finally, other pending requests are timed out. This is so as to constrain
 account holders to only carrying out a transfer(both stages), one at a time and
 in combination with UI and the application, prevent them from mistakenly
-repeating the same transfer several times.</p>
-<pre tabindex="0"><code class="language-plsql" data-lang="plsql">update transfer_log 
+repeating the same transfer several times.</p><pre tabindex=0><code class=language-plsql data-lang=plsql>update transfer_log 
     set transfer_status = &#39;timeout&#39;
     where transfer_status = &#39;pending&#39; and from_account = sender_acct_id;
 </code></pre><p>It goes without saying that the entire procedure should be atomic. In the
 <em>transfer concurrency issues</em> section, a discussion on the correct isolation
-level for the transaction block is provided.</p>
-<p>It is worth noting that the <em>confirm_transfer</em> has the same security issue as
+level for the transaction block is provided.</p><p>It is worth noting that the <em>confirm_transfer</em> has the same security issue as
 the <em>request_transfer</em> and even <em>cancel_transfer</em>, that is, they all have no
 means of enforcing that only the authorized sender can initiate a transfer,
 cancel it or confirm it. Part of mitigating this is delegated to the
@@ -563,12 +328,8 @@ serial keys, since with serial keys, attackers can just post the transfer id
 back and confirm/cancel transfers that don&rsquo;t belong to them by easily generating
 keys. Hashing the uuid before sending and caching it until it&rsquo;s processed at the
 application does not add any security benefits plus it adds the burden of making
-the application stateful.</p>
-<h4 class="heading" id="transfer-concurrency-issues">
-  transfer concurrency issues
-  <a href="#transfer-concurrency-issues">#</a>
-</h4>
-<p>As is, I don&rsquo;t think there is any concurrency error that can occur if
+the application stateful.</p><h4 class=heading id=transfer-concurrency-issues>transfer concurrency issues
+<a href=#transfer-concurrency-issues>#</a></h4><p>As is, I don&rsquo;t think there is any concurrency error that can occur if
 <em>request_transfer</em> is invoked without placing it in a transaction block - it&rsquo;s a
 simple insertion. However, both the <em>cancel_transfer</em> and <em>confirm_transfer</em>
 have to be invoked within a transaction block. Moreover, given that locks aren&rsquo;t
@@ -577,156 +338,35 @@ functions are invoked under a <em>serializable</em> isolation level. This not on
 ensures correctness under concurrency, it also provides a simple reasoning model
 whereby, we only have to think about whether they are doing the right thing when
 run serially (ie one by one rather than concurrently). The only downside is that
-the application must be ready to retry when serialization errors occurs.</p>
-<p>From the application (using node.js), in order to carry out the transfer within
-a transaction, I use the following helper or rather, wrapper:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="font-weight:bold">const</span> makeSerializableTx = <span style="font-weight:bold">async</span> (doSQL) =&gt; {
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">let</span> serializationErrOccured = <span style="font-weight:bold">false</span>;
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">do</span> {
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">const</span> client = <span style="font-weight:bold">await</span> db.getClient();
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">try</span> {
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">await</span> client.query(<span style="font-style:italic">&#34;begin isolation level serializable&#34;</span>);
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">const</span> res = <span style="font-weight:bold">await</span> doSQL(client);
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">await</span> client.query(<span style="font-style:italic">&#34;commit&#34;</span>);
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">return</span> res;
-</span></span><span style="display:flex;"><span>    } <span style="font-weight:bold">catch</span> (err) {
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">await</span> client.query(<span style="font-style:italic">&#34;rollback&#34;</span>);
-</span></span><span style="display:flex;"><span>      serializationErrOccured = err.code === <span style="font-style:italic">&#34;40001&#34;</span>;
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">if</span> (serializationErrOccured === <span style="font-weight:bold">false</span>) {
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">throw</span> err;
-</span></span><span style="display:flex;"><span>      }
-</span></span><span style="display:flex;"><span>    } <span style="font-weight:bold">finally</span> {
-</span></span><span style="display:flex;"><span>      client.release();
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  } <span style="font-weight:bold">while</span> (serializationErrOccured);
-</span></span><span style="display:flex;"><span>};
+the application must be ready to retry when serialization errors occurs.</p><p>From the application (using node.js), in order to carry out the transfer within
+a transaction, I use the following helper or rather, wrapper:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=font-weight:700>const</span> makeSerializableTx = <span style=font-weight:700>async</span> (doSQL) =&gt; {
+</span></span><span style=display:flex><span>  <span style=font-weight:700>let</span> serializationErrOccured = <span style=font-weight:700>false</span>;
+</span></span><span style=display:flex><span>  <span style=font-weight:700>do</span> {
+</span></span><span style=display:flex><span>    <span style=font-weight:700>const</span> client = <span style=font-weight:700>await</span> db.getClient();
+</span></span><span style=display:flex><span>    <span style=font-weight:700>try</span> {
+</span></span><span style=display:flex><span>      <span style=font-weight:700>await</span> client.query(<span style=font-style:italic>&#34;begin isolation level serializable&#34;</span>);
+</span></span><span style=display:flex><span>      <span style=font-weight:700>const</span> res = <span style=font-weight:700>await</span> doSQL(client);
+</span></span><span style=display:flex><span>      <span style=font-weight:700>await</span> client.query(<span style=font-style:italic>&#34;commit&#34;</span>);
+</span></span><span style=display:flex><span>      <span style=font-weight:700>return</span> res;
+</span></span><span style=display:flex><span>    } <span style=font-weight:700>catch</span> (err) {
+</span></span><span style=display:flex><span>      <span style=font-weight:700>await</span> client.query(<span style=font-style:italic>&#34;rollback&#34;</span>);
+</span></span><span style=display:flex><span>      serializationErrOccured = err.code === <span style=font-style:italic>&#34;40001&#34;</span>;
+</span></span><span style=display:flex><span>      <span style=font-weight:700>if</span> (serializationErrOccured === <span style=font-weight:700>false</span>) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700>throw</span> err;
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    } <span style=font-weight:700>finally</span> {
+</span></span><span style=display:flex><span>      client.release();
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  } <span style=font-weight:700>while</span> (serializationErrOccured);
+</span></span><span style=display:flex><span>};
 </span></span></code></pre></div><p>From there, the <em>confirmTransfer</em> procedure is as follows. <em>makeSerializableTx</em>
-handles retrying the transfer if a serialization error occurs:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="font-weight:bold">const</span> confirmTransfer = (transferID) =&gt;
-</span></span><span style="display:flex;"><span>  makeSerializableTx(<span style="font-weight:bold">async</span> (tx) =&gt; {
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">const</span> res = <span style="font-weight:bold">await</span> tx.query(<span style="font-style:italic">&#34;select confirm_transfer($1)&#34;</span>, [transferID]);
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">return</span> { confirmed: res.rows[0].confirm_transfer };
-</span></span><span style="display:flex;"><span>  });
+handles retrying the transfer if a serialization error occurs:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=font-weight:700>const</span> confirmTransfer = (transferID) =&gt;
+</span></span><span style=display:flex><span>  makeSerializableTx(<span style=font-weight:700>async</span> (tx) =&gt; {
+</span></span><span style=display:flex><span>    <span style=font-weight:700>const</span> res = <span style=font-weight:700>await</span> tx.query(<span style=font-style:italic>&#34;select confirm_transfer($1)&#34;</span>, [transferID]);
+</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> { confirmed: res.rows[0].confirm_transfer };
+</span></span><span style=display:flex><span>  });
 </span></span></code></pre></div><p>The rest of the code for the full API is in
-<a href="https://github.com/nagamocha3000/bank_transactions_v2">this</a> repository. It&rsquo;s
+<a href=https://github.com/nagamocha3000/bank_transactions_v2>this</a> repository. It&rsquo;s
 almost complete but I&rsquo;ve paused adding further features since on load-testing,
 Postgres was reporting dead-lock errors and I&rsquo;m trying to figure out what&rsquo;s
-causing them and how I can fix it. I welcome any and all suggestions. Regards.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-bank-txs-v1/">
-                        Handling Bank Transactions, V1
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/go-custom-logger-pg-leveldb/">
-                        Golang Custom Loggers: using Postgres and Leveldb
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+causing them and how I can fix it. I welcome any and all suggestions. Regards.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/sql-bank-txs-v1/>Handling Bank Transactions, V1</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/go-custom-logger-pg-leveldb/>Golang Custom Loggers: using Postgres and Leveldb</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

@@ -1,374 +1,173 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Archiving Time-Series Data from PostgreSQL into Parquet | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/pg-parquet-archive-timeseries/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/pg-parquet-archive-timeseries/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Archiving Time-Series Data from PostgreSQL into Parquet">
-  <meta property="og:description" content="Keeping your database lean">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2024-11-15T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-11-15T00:00:00+00:00">
-    <meta property="article:tag" content="Timeseries">
-    <meta property="article:tag" content="PostgreSQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/pg-parquet-archive-timeseries/">Archiving Time-Series Data from PostgreSQL into Parquet</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Archiving Time-Series Data from PostgreSQL into Parquet</h1>
-    
-    <p class="single-summary">Keeping your database lean</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-11-15T00:00:00&#43;00:00">November 15, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      8 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>With time-series and real-time analytics, we usually query recent data rather
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Archiving Time-Series Data from PostgreSQL into Parquet | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/pg-parquet-archive-timeseries/><meta property="og:url" content="https://bnm3k.github.io/blog/pg-parquet-archive-timeseries/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Archiving Time-Series Data from PostgreSQL into Parquet"><meta property="og:description" content="Keeping your database lean"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-11-15T00:00:00+00:00"><meta property="article:modified_time" content="2024-11-15T00:00:00+00:00"><meta property="article:tag" content="Timeseries"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/pg-parquet-archive-timeseries/>Archiving Time-Series Data from PostgreSQL into Parquet</a></div><div><div class=single-intro-container><h1 class=single-title>Archiving Time-Series Data from PostgreSQL into Parquet</h1><p class=single-summary>Keeping your database lean</p><p class=single-readtime><time datetime=2024-11-15T00:00:00+00:00>November 15, 2024</time>
+&nbsp; · &nbsp;
+8 min read</p></div><div class=single-tags><span><a href=https://bnm3k.github.io/tags/timeseries/>#Timeseries</a>
+</span><span><a href=https://bnm3k.github.io/tags/postgresql/>#PostgreSQL</a></span></div><aside class=toc><p><strong>Table of contents</strong></p><nav id=TableOfContents><ul><li><a href=#setup>Setup</a></li><li><a href=#any-language--postgres-client--parquet-writer>Any Language + Postgres Client + Parquet Writer</a></li><li><a href=#connectorx---faster-data-loading-from-databases-into-dataframes>ConnectorX - Faster Data Loading from Databases into Dataframes</a></li><li><a href=#duckdb>DuckDB</a></li><li><a href=#pg-parquet-postgres-extension>PG-Parquet Postgres Extension</a></li></ul></nav></aside><div class=single-content><p>With time-series and real-time analytics, we usually query recent data rather
 than <em>all</em> the data at a go. This means we don&rsquo;t have to index or even store
 <em>all</em> the data in the online/main database. Instead, we can retain let&rsquo;s say
 data from the past 30 days and archive the rest to remote storage and only query
-it when needed.</p>
-<p>In this post I will be going over some approaches for archiving timeseries data
+it when needed.</p><p>In this post I will be going over some approaches for archiving timeseries data
 from Postgres. The archival file format I&rsquo;ll be using is parquet due to its
 ubiquity in the big-data analytics space. I have reviewed the compression
 advantages of parquet in a previous blog post
-(<a href="blog/parquet-zstd">Parquet + Zstd: Smaller faster data formats</a>) if you&rsquo;re
+(<a href=blog/parquet-zstd>Parquet + Zstd: Smaller faster data formats</a>) if you&rsquo;re
 interested. Also, as a bonus, I&rsquo;ll show how you can query across both recent
-data and archived data.</p>
-<h2 class="heading" id="setup">
-  Setup
-  <a href="#setup">#</a>
-</h2>
-<p>First, let&rsquo;s set up the database plus some test data. Here&rsquo;s the main table:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> iot_data(
-</span></span><span style="display:flex;"><span>    device_id varchar,
-</span></span><span style="display:flex;"><span>    ts timestamptz,
-</span></span><span style="display:flex;"><span>    value real
-</span></span><span style="display:flex;"><span>);
+data and archived data.</p><h2 class=heading id=setup>Setup
+<a href=#setup>#</a></h2><p>First, let&rsquo;s set up the database plus some test data. Here&rsquo;s the main table:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> iot_data(
+</span></span><span style=display:flex><span>    device_id varchar,
+</span></span><span style=display:flex><span>    ts timestamptz,
+</span></span><span style=display:flex><span>    value real
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>As for the entries, we&rsquo;ll generate 4 days worth of data. The folks at timescale
 have a great series on generating synthetic timeseries data
-(<a href="https://www.timescale.com/blog/how-to-create-lots-of-sample-time-series-data-with-postgresql-generate_series/">link here</a>) -
+(<a href=https://www.timescale.com/blog/how-to-create-lots-of-sample-time-series-data-with-postgresql-generate_series/>link here</a>) -
 I borrowed some techniques from them customizing it a bit so I can quickly
-eyeball any mistakes I make in my queries solely by looking at the output:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">insert</span> <span style="font-weight:bold">into</span> iot_data(device_id, ts, value)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">&#39;dev-&#39;</span>|| d <span style="font-weight:bold">as</span> device_id,
-</span></span><span style="display:flex;"><span>    ts,
-</span></span><span style="display:flex;"><span>    (30 * (<span style="font-weight:bold">extract</span>(isodow <span style="font-weight:bold">from</span> ts)  - 1) + 10) + ((d-1) * 10) + random() <span style="font-weight:bold">as</span> value
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span>
-</span></span><span style="display:flex;"><span>    generate_series(
-</span></span><span style="display:flex;"><span>        date(now()) - <span style="font-style:italic">&#39;4 days&#39;</span>::interval,
-</span></span><span style="display:flex;"><span>        date(now()) - <span style="font-style:italic">&#39;1 second&#39;</span>::interval,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#39;1 second&#39;</span>::interval
-</span></span><span style="display:flex;"><span>    ) ts,
-</span></span><span style="display:flex;"><span>    generate_series(1,3) d
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> ts <span style="font-weight:bold">asc</span>, device_id <span style="font-weight:bold">asc</span>;
-</span></span></code></pre></div><p>Let&rsquo;s now archive some data:</p>
-<h2 class="heading" id="any-language--postgres-client--parquet-writer">
-  Any Language + Postgres Client + Parquet Writer
-  <a href="#any-language--postgres-client--parquet-writer">#</a>
-</h2>
-<p>The most basic approach is to use a language of our choice, connect to Postgres
+eyeball any mistakes I make in my queries solely by looking at the output:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>insert</span> <span style=font-weight:700>into</span> iot_data(device_id, ts, value)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>&#39;dev-&#39;</span>|| d <span style=font-weight:700>as</span> device_id,
+</span></span><span style=display:flex><span>    ts,
+</span></span><span style=display:flex><span>    (30 * (<span style=font-weight:700>extract</span>(isodow <span style=font-weight:700>from</span> ts)  - 1) + 10) + ((d-1) * 10) + random() <span style=font-weight:700>as</span> value
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span>
+</span></span><span style=display:flex><span>    generate_series(
+</span></span><span style=display:flex><span>        date(now()) - <span style=font-style:italic>&#39;4 days&#39;</span>::interval,
+</span></span><span style=display:flex><span>        date(now()) - <span style=font-style:italic>&#39;1 second&#39;</span>::interval,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#39;1 second&#39;</span>::interval
+</span></span><span style=display:flex><span>    ) ts,
+</span></span><span style=display:flex><span>    generate_series(1,3) d
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> ts <span style=font-weight:700>asc</span>, device_id <span style=font-weight:700>asc</span>;
+</span></span></code></pre></div><p>Let&rsquo;s now archive some data:</p><h2 class=heading id=any-language--postgres-client--parquet-writer>Any Language + Postgres Client + Parquet Writer
+<a href=#any-language--postgres-client--parquet-writer>#</a></h2><p>The most basic approach is to use a language of our choice, connect to Postgres
 via a client library, read the data that we want to archive then write it to a
 parquet file. If the data fits into memory, we can read it all in one go,
-otherwise, we&rsquo;ll have to read it row-by-row as we write.</p>
-<p>This approach is the most flexible since we can use the languages and tooling
+otherwise, we&rsquo;ll have to read it row-by-row as we write.</p><p>This approach is the most flexible since we can use the languages and tooling
 we&rsquo;re most comfortable with as long as there are Postgres client and parquet
-libraries for that language.</p>
-<p>Here&rsquo;s a demonstration of the approach using Go (credits to @johnonline35 for
-<a href="https://github.com/johnonline35/pg-archiver/tree/main">pg-archiver</a> which also
+libraries for that language.</p><p>Here&rsquo;s a demonstration of the approach using Go (credits to @johnonline35 for
+<a href=https://github.com/johnonline35/pg-archiver/tree/main>pg-archiver</a> which also
 served as the inspiration for this post). For the client library, I&rsquo;ll be using
-@jackc&rsquo;s <a href="https://github.com/jackc/pgx">pgx</a> library and for the parquet
+@jackc&rsquo;s <a href=https://github.com/jackc/pgx>pgx</a> library and for the parquet
 library, I&rsquo;ll be using @xtongsys&rsquo;s
-<a href="https://github.com/xitongsys/parquet-go/tree/master">parquet-go</a> library. I&rsquo;ll
+<a href=https://github.com/xitongsys/parquet-go/tree/master>parquet-go</a> library. I&rsquo;ll
 also assume that the data doesn&rsquo;t fit in memory so I&rsquo;ll be writing it row by
-row.</p>
-<p>First, let&rsquo;s read the data from Postgres:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="font-weight:bold">type</span> iotEntry <span style="font-weight:bold">struct</span> {
-</span></span><span style="display:flex;"><span>	deviceID  <span style="">string</span>
-</span></span><span style="display:flex;"><span>	timestamp time.Time
-</span></span><span style="display:flex;"><span>	value     <span style="">float32</span>
-</span></span><span style="display:flex;"><span>}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">func</span> readRows(ctx context.Context, date time.Time, onRow <span style="font-weight:bold">func</span>(*iotEntry) <span style="">error</span>) <span style="">error</span> {
-</span></span><span style="display:flex;"><span>	conn, err := pgx.Connect(ctx, os.Getenv(<span style="font-style:italic">&#34;PG_URL&#34;</span>))
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;unable to connect to db: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">defer</span> conn.Close(ctx)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	rows, err := conn.Query(ctx, <span style="font-style:italic">`
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        select device_id, ts, value
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        from iot_data
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        where
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">            ts &gt;= $1 and
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">            ts &lt; $1 + &#39;1 day&#39;::interval
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        `</span>, date)
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;QueryRow failed: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">defer</span> rows.Close()
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">var</span> e iotEntry
-</span></span><span style="display:flex;"><span>	_, err = pgx.ForEachRow(rows, []any{&amp;e.deviceID, &amp;e.timestamp, &amp;e.value}, <span style="font-weight:bold">func</span>() <span style="">error</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> onRow(&amp;e)
-</span></span><span style="display:flex;"><span>	})
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;read rows failed: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> <span style="font-weight:bold">nil</span>
-</span></span><span style="display:flex;"><span>}
+row.</p><p>First, let&rsquo;s read the data from Postgres:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=font-weight:700>type</span> iotEntry <span style=font-weight:700>struct</span> {
+</span></span><span style=display:flex><span>	deviceID  <span>string</span>
+</span></span><span style=display:flex><span>	timestamp time.Time
+</span></span><span style=display:flex><span>	value     <span>float32</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>func</span> readRows(ctx context.Context, date time.Time, onRow <span style=font-weight:700>func</span>(*iotEntry) <span>error</span>) <span>error</span> {
+</span></span><span style=display:flex><span>	conn, err := pgx.Connect(ctx, os.Getenv(<span style=font-style:italic>&#34;PG_URL&#34;</span>))
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;unable to connect to db: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>defer</span> conn.Close(ctx)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	rows, err := conn.Query(ctx, <span style=font-style:italic>`
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        select device_id, ts, value
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        from iot_data
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        where
+</span></span></span><span style=display:flex><span><span style=font-style:italic>            ts &gt;= $1 and
+</span></span></span><span style=display:flex><span><span style=font-style:italic>            ts &lt; $1 + &#39;1 day&#39;::interval
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        `</span>, date)
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;QueryRow failed: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>defer</span> rows.Close()
+</span></span><span style=display:flex><span>	<span style=font-weight:700>var</span> e iotEntry
+</span></span><span style=display:flex><span>	_, err = pgx.ForEachRow(rows, []any{&amp;e.deviceID, &amp;e.timestamp, &amp;e.value}, <span style=font-weight:700>func</span>() <span>error</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> onRow(&amp;e)
+</span></span><span style=display:flex><span>	})
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;read rows failed: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span> <span style=font-weight:700>nil</span>
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>The above function takes in a <code>date</code> parameter since we&rsquo;ll be archiving data
 day-by-day. There is also an <code>onRow</code> callback that will be called for each row
 retrieved. This give the caller the option to buffer all the rows before writing
 to parquet or chunk-by-chunk or even row-by-row. We could make the <code>readRows</code>
-more ergonomic by having it return an iterator but this will do for now.</p>
-<p>At the caller (for <code>readRows</code>) the parquet writer is set up as follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="font-weight:bold">func</span> run() <span style="">error</span> {
-</span></span><span style="display:flex;"><span>	ctx := context.Background()
-</span></span><span style="display:flex;"><span>	dateString := <span style="font-style:italic">&#34;2024-11-12&#34;</span>
-</span></span><span style="display:flex;"><span>	date, err := time.Parse(<span style="font-style:italic">&#34;2006-01-02&#34;</span>, dateString)
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> err
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	filename := fmt.Sprintf(<span style="font-style:italic">&#34;output/iot_data_%s.parquet&#34;</span>, dateString)
-</span></span><span style="display:flex;"><span>	fw, err := local.NewLocalFileWriter(filename)
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;on create local file writer: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	pw, err := writer.NewParquetWriter(fw, new(ParquetFile), 1)
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		fw.Close()
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;on create parquet writer: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">defer</span> fw.Close()
-</span></span><span style="display:flex;"><span>	pw.RowGroupSize = 1024 * 1024
-</span></span><span style="display:flex;"><span>	pw.PageSize = 8 * 1024              <span style="font-style:italic">//8K
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>	pw.CompressionType = parquet.CompressionCodec_ZSTD
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	err = readRows(ctx, date, <span style="font-weight:bold">func</span>(e *iotEntry) <span style="">error</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> pw.Write(e.ToParquet())
-</span></span><span style="display:flex;"><span>	})
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> err
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err = pw.WriteStop(); err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;close parquet writer: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> err = fw.Close(); err != <span style="font-weight:bold">nil</span> {
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> fmt.Errorf(<span style="font-style:italic">&#34;close file: %w\n&#34;</span>, err)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> <span style="font-weight:bold">nil</span>
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>In the above snippet, here&rsquo;s where we&rsquo;re writing to the parquet file:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>err = readRows(ctx, date, <span style="font-weight:bold">func</span>(e *iotEntry) <span style="">error</span> {
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> pw.Write(e.ToParquet())
-</span></span><span style="display:flex;"><span>})
+more ergonomic by having it return an iterator but this will do for now.</p><p>At the caller (for <code>readRows</code>) the parquet writer is set up as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=font-weight:700>func</span> run() <span>error</span> {
+</span></span><span style=display:flex><span>	ctx := context.Background()
+</span></span><span style=display:flex><span>	dateString := <span style=font-style:italic>&#34;2024-11-12&#34;</span>
+</span></span><span style=display:flex><span>	date, err := time.Parse(<span style=font-style:italic>&#34;2006-01-02&#34;</span>, dateString)
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	filename := fmt.Sprintf(<span style=font-style:italic>&#34;output/iot_data_%s.parquet&#34;</span>, dateString)
+</span></span><span style=display:flex><span>	fw, err := local.NewLocalFileWriter(filename)
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;on create local file writer: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	pw, err := writer.NewParquetWriter(fw, new(ParquetFile), 1)
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		fw.Close()
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;on create parquet writer: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>defer</span> fw.Close()
+</span></span><span style=display:flex><span>	pw.RowGroupSize = 1024 * 1024
+</span></span><span style=display:flex><span>	pw.PageSize = 8 * 1024              <span style=font-style:italic>//8K
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>	pw.CompressionType = parquet.CompressionCodec_ZSTD
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	err = readRows(ctx, date, <span style=font-weight:700>func</span>(e *iotEntry) <span>error</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> pw.Write(e.ToParquet())
+</span></span><span style=display:flex><span>	})
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err = pw.WriteStop(); err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;close parquet writer: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> err = fw.Close(); err != <span style=font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> fmt.Errorf(<span style=font-style:italic>&#34;close file: %w\n&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span> <span style=font-weight:700>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>In the above snippet, here&rsquo;s where we&rsquo;re writing to the parquet file:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span>err = readRows(ctx, date, <span style=font-weight:700>func</span>(e *iotEntry) <span>error</span> {
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span> pw.Write(e.ToParquet())
+</span></span><span style=display:flex><span>})
 </span></span></code></pre></div><p>One of the most important configuration is <code>pw.CompressionType</code> - without
-compression, parquet files can be quite large depending on the schema.</p>
-<p>We&rsquo;ve also got the code for making <code>iotEntry</code> writable into a parquet file:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="font-weight:bold">func</span> (e *iotEntry) ToParquet() ParquetFile {
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span> ParquetFile{
-</span></span><span style="display:flex;"><span>		DeviceID:  e.deviceID,
-</span></span><span style="display:flex;"><span>		Timestamp: e.timestamp.UnixMicro(),
-</span></span><span style="display:flex;"><span>		Value:     e.value,
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">type</span> ParquetFile <span style="font-weight:bold">struct</span> {
-</span></span><span style="display:flex;"><span>	DeviceID  <span style="">string</span>  <span style="font-style:italic">`parquet:&#34;name=device_id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY&#34;`</span>
-</span></span><span style="display:flex;"><span>	Timestamp <span style="">int64</span>   <span style="font-style:italic">`parquet:&#34;name=ts, type=INT64, convertedtype=TIMESTAMP_MICROS&#34;`</span>
-</span></span><span style="display:flex;"><span>	Value     <span style="">float32</span> <span style="font-style:italic">`parquet:&#34;name=value, type=FLOAT&#34;`</span>
-</span></span><span style="display:flex;"><span>}
+compression, parquet files can be quite large depending on the schema.</p><p>We&rsquo;ve also got the code for making <code>iotEntry</code> writable into a parquet file:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=font-weight:700>func</span> (e *iotEntry) ToParquet() ParquetFile {
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span> ParquetFile{
+</span></span><span style=display:flex><span>		DeviceID:  e.deviceID,
+</span></span><span style=display:flex><span>		Timestamp: e.timestamp.UnixMicro(),
+</span></span><span style=display:flex><span>		Value:     e.value,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>type</span> ParquetFile <span style=font-weight:700>struct</span> {
+</span></span><span style=display:flex><span>	DeviceID  <span>string</span>  <span style=font-style:italic>`parquet:&#34;name=device_id, type=BYTE_ARRAY, convertedtype=UTF8, encoding=PLAIN_DICTIONARY&#34;`</span>
+</span></span><span style=display:flex><span>	Timestamp <span>int64</span>   <span style=font-style:italic>`parquet:&#34;name=ts, type=INT64, convertedtype=TIMESTAMP_MICROS&#34;`</span>
+</span></span><span style=display:flex><span>	Value     <span>float32</span> <span style=font-style:italic>`parquet:&#34;name=value, type=FLOAT&#34;`</span>
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>Notice the <code>encoding=PLAIN_DICTIONARY</code> configuration we&rsquo;ve got above for
 <code>DeviceID</code>. The cardinality of that field is 3 (we&rsquo;re only tracking 3 devices).
 Therefore it&rsquo;s more space efficient to dictionary encode the device ID strings
 plus database and dataframe engines that can take advantage (of the encoding)
-process queries hitting that field faster.</p>
-<p>On to the next approach.</p>
-<h2 class="heading" id="connectorx---faster-data-loading-from-databases-into-dataframes">
-  ConnectorX - Faster Data Loading from Databases into Dataframes
-  <a href="#connectorx---faster-data-loading-from-databases-into-dataframes">#</a>
-</h2>
-<p>This 2nd approach for archival is similar to the first but we&rsquo;ll be using
-<a href="https://github.com/sfu-db/connector-x">ConnectorX</a> - a library born out of a
+process queries hitting that field faster.</p><p>On to the next approach.</p><h2 class=heading id=connectorx---faster-data-loading-from-databases-into-dataframes>ConnectorX - Faster Data Loading from Databases into Dataframes
+<a href=#connectorx---faster-data-loading-from-databases-into-dataframes>#</a></h2><p>This 2nd approach for archival is similar to the first but we&rsquo;ll be using
+<a href=https://github.com/sfu-db/connector-x>ConnectorX</a> - a library born out of a
 research project for accelerating data loading from DBs into dataframes. The
 library is only available for Python and Rust, let&rsquo;s use Python for brevity&rsquo;s
-sake after all that Golang verbosity:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">os</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">connectorx</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">cx</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">polars</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pl</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>pg_url = os.environ[<span style="font-style:italic">&#34;PG_URL&#34;</span>]
-</span></span><span style="display:flex;"><span>date = <span style="font-style:italic">&#34;2024-11-12&#34;</span>
-</span></span><span style="display:flex;"><span>data_load_query = <span style="font-style:italic">&#34;&#34;&#34;
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    select device_id, ts, value
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    from iot_data
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    where
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        ts &gt;= &#39;</span><span style="font-weight:bold;font-style:italic">{0}</span><span style="font-style:italic">&#39;::date and
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        ts &lt; &#39;</span><span style="font-weight:bold;font-style:italic">{0}</span><span style="font-style:italic">&#39;::date + &#39;1 day&#39;::interval
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">    &#34;&#34;&#34;</span>.format(date)
-</span></span><span style="display:flex;"><span>df = cx.read_sql(pg_url, data_load_query, return_type=<span style="font-style:italic">&#34;polars&#34;</span>)
-</span></span><span style="display:flex;"><span>df.write_parquet(
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">f</span><span style="font-style:italic">&#34;output/iot_data_</span><span style="font-weight:bold;font-style:italic">{</span>date<span style="font-weight:bold;font-style:italic">}</span><span style="font-style:italic">.parquet&#34;</span>,
-</span></span><span style="display:flex;"><span>    compression=<span style="font-style:italic">&#34;zstd&#34;</span>,
-</span></span><span style="display:flex;"><span>    row_group_size=1024 * 1024,
-</span></span><span style="display:flex;"><span>)
+sake after all that Golang verbosity:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>os</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>connectorx</span> <span style=font-weight:700>as</span> <span style=font-weight:700>cx</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>polars</span> <span style=font-weight:700>as</span> <span style=font-weight:700>pl</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>pg_url = os.environ[<span style=font-style:italic>&#34;PG_URL&#34;</span>]
+</span></span><span style=display:flex><span>date = <span style=font-style:italic>&#34;2024-11-12&#34;</span>
+</span></span><span style=display:flex><span>data_load_query = <span style=font-style:italic>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=font-style:italic>    select device_id, ts, value
+</span></span></span><span style=display:flex><span><span style=font-style:italic>    from iot_data
+</span></span></span><span style=display:flex><span><span style=font-style:italic>    where
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        ts &gt;= &#39;</span><span style=font-weight:700;font-style:italic>{0}</span><span style=font-style:italic>&#39;::date and
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        ts &lt; &#39;</span><span style=font-weight:700;font-style:italic>{0}</span><span style=font-style:italic>&#39;::date + &#39;1 day&#39;::interval
+</span></span></span><span style=display:flex><span><span style=font-style:italic>    &#34;&#34;&#34;</span>.format(date)
+</span></span><span style=display:flex><span>df = cx.read_sql(pg_url, data_load_query, return_type=<span style=font-style:italic>&#34;polars&#34;</span>)
+</span></span><span style=display:flex><span>df.write_parquet(
+</span></span><span style=display:flex><span>    <span style=font-style:italic>f</span><span style=font-style:italic>&#34;output/iot_data_</span><span style=font-weight:700;font-style:italic>{</span>date<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>.parquet&#34;</span>,
+</span></span><span style=display:flex><span>    compression=<span style=font-style:italic>&#34;zstd&#34;</span>,
+</span></span><span style=display:flex><span>    row_group_size=1024 * 1024,
+</span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p>For the dataframe library, I&rsquo;ve opted for Polars since it ships with an in-built
 parquet writer. A couple of details worth noting: I used string composition
 instead of a parameterized query since I couldn&rsquo;t figure out how to pass
@@ -377,191 +176,65 @@ hasn&rsquo;t been documented so watch out for SQL injection! That aside, Connect
 offers the <code>partition_on</code> and <code>partition_num</code> options which lets us do parallel
 data loading and should be faster in theory. However, it currently only supports
 partitioning on numerical non-null columns. Once support for timestamp columns
-is added, loading timeseries data should be faster.</p>
-<h2 class="heading" id="duckdb">
-  DuckDB
-  <a href="#duckdb">#</a>
-</h2>
-<p>There&rsquo;s also DuckDB which has in-built support for reading directly from
+is added, loading timeseries data should be faster.</p><h2 class=heading id=duckdb>DuckDB
+<a href=#duckdb>#</a></h2><p>There&rsquo;s also DuckDB which has in-built support for reading directly from
 Postgres
-(<a href="https://duckdb.org/docs/extensions/postgres.html">PostgreSQL Extension</a>).
+(<a href=https://duckdb.org/docs/extensions/postgres.html>PostgreSQL Extension</a>).
 Combining this feature with DuckDB&rsquo;s
-<a href="https://duckdb.org/docs/data/parquet/overview.html">parquet support</a>, we get:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>attach <span style="font-style:italic">&#39;dbname=db user=user host=localhost&#39;</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">as</span> pg (<span style="font-weight:bold">type</span> postgres, read_only);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">set</span> <span style="font-weight:bold">variable</span> date = <span style="font-style:italic">&#39;2024-11-14&#39;</span>::date;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">copy</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> device_id, ts, value
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> pg.<span style="font-weight:bold">public</span>.iot_data
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span>
-</span></span><span style="display:flex;"><span>        ts &gt;= getvariable(<span style="font-style:italic">&#39;date&#39;</span>) <span style="font-weight:bold">and</span>
-</span></span><span style="display:flex;"><span>        ts &lt; getvariable(<span style="font-style:italic">&#39;date&#39;</span>) + <span style="font-style:italic">&#39;1 day&#39;</span>::interval
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">to</span> <span style="font-style:italic">&#39;output/iot_data_2024-11-14.parquet&#39;</span>
-</span></span><span style="display:flex;"><span>(format <span style="font-style:italic">&#39;parquet&#39;</span>, compression <span style="font-style:italic">&#39;zstd&#39;</span>, row_group_size 1048576)
+<a href=https://duckdb.org/docs/data/parquet/overview.html>parquet support</a>, we get:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>attach <span style=font-style:italic>&#39;dbname=db user=user host=localhost&#39;</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>as</span> pg (<span style=font-weight:700>type</span> postgres, read_only);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>set</span> <span style=font-weight:700>variable</span> date = <span style=font-style:italic>&#39;2024-11-14&#39;</span>::date;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>copy</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> device_id, ts, value
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> pg.<span style=font-weight:700>public</span>.iot_data
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span>
+</span></span><span style=display:flex><span>        ts &gt;= getvariable(<span style=font-style:italic>&#39;date&#39;</span>) <span style=font-weight:700>and</span>
+</span></span><span style=display:flex><span>        ts &lt; getvariable(<span style=font-style:italic>&#39;date&#39;</span>) + <span style=font-style:italic>&#39;1 day&#39;</span>::interval
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>to</span> <span style=font-style:italic>&#39;output/iot_data_2024-11-14.parquet&#39;</span>
+</span></span><span style=display:flex><span>(format <span style=font-style:italic>&#39;parquet&#39;</span>, compression <span style=font-style:italic>&#39;zstd&#39;</span>, row_group_size 1048576)
 </span></span></code></pre></div><p>I like this approach since I only have one dependency to install plus I can use
-it across most languages or even via a standalone script in the terminal.</p>
-<p>As an aside, we can take advantage of DuckDB&rsquo;s PostgreSQL support to query
+it across most languages or even via a standalone script in the terminal.</p><p>As an aside, we can take advantage of DuckDB&rsquo;s PostgreSQL support to query
 across both archived data and recent data that&rsquo;s in Postgres. Let&rsquo;s assume the
 recent data starts at &lsquo;2014-11-15&rsquo;. From there, we&rsquo;ll create a view that
-&lsquo;unifies&rsquo; all the data:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">set</span> <span style="font-weight:bold">variable</span> pg_start = <span style="font-style:italic">&#39;2024-11-15&#39;</span>::date;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">view</span> iot_data_v <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">-- recent data from postgres
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-weight:bold">select</span> device_id, value, ts
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> pg.<span style="font-weight:bold">public</span>.iot_data
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> ts &gt;= getvariable(<span style="font-style:italic">&#39;pg_start&#39;</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-style:italic">-- archived data
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    <span style="font-weight:bold">select</span> device_id, value, ts
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> read_parquet(<span style="font-style:italic">&#34;output/iot_data_*.parquet&#34;</span>)
-</span></span><span style="display:flex;"><span>);
+&lsquo;unifies&rsquo; all the data:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>set</span> <span style=font-weight:700>variable</span> pg_start = <span style=font-style:italic>&#39;2024-11-15&#39;</span>::date;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>view</span> iot_data_v <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-style:italic>-- recent data from postgres
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>select</span> device_id, value, ts
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> pg.<span style=font-weight:700>public</span>.iot_data
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> ts &gt;= getvariable(<span style=font-style:italic>&#39;pg_start&#39;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-style:italic>-- archived data
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>select</span> device_id, value, ts
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> read_parquet(<span style=font-style:italic>&#34;output/iot_data_*.parquet&#34;</span>)
+</span></span><span style=display:flex><span>);
 </span></span></code></pre></div><p>Note that we&rsquo;re using a wildcard at <code>read_parquet</code> above so as that we can read
-in all the archived parquet files.</p>
-<p>From there, downstream queries can use the view relation, without having to
-worry about what&rsquo;s in Postgres and what&rsquo;s in the archive:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    device_id,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">avg</span>(value)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> iot_data_v
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> device_id
+in all the archived parquet files.</p><p>From there, downstream queries can use the view relation, without having to
+worry about what&rsquo;s in Postgres and what&rsquo;s in the archive:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    device_id,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>avg</span>(value)
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> iot_data_v
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> device_id
 </span></span></code></pre></div><p>We do loose timezone information for the <code>ts</code> column when archiving to parquet
 so when unifying the data into a single view, we&rsquo;ll have to handle the
-associated discrepancies that arise.</p>
-<h2 class="heading" id="pg-parquet-postgres-extension">
-  PG-Parquet Postgres Extension
-  <a href="#pg-parquet-postgres-extension">#</a>
-</h2>
-<p>For the last archival approach, we&rsquo;ve got the
-<a href="https://github.com/CrunchyData/pg_parquet">pg_parquet</a> extension developed by
+associated discrepancies that arise.</p><h2 class=heading id=pg-parquet-postgres-extension>PG-Parquet Postgres Extension
+<a href=#pg-parquet-postgres-extension>#</a></h2><p>For the last archival approach, we&rsquo;ve got the
+<a href=https://github.com/CrunchyData/pg_parquet>pg_parquet</a> extension developed by
 the CrunchyData folks. Unlike previous methods, this will output the parquet
 file at the database server which means we&rsquo;ll have to figure out a way to move
-the files into the archival destination (e.g. via scp).</p>
-<p>Installing the extension can also be quite convoluted if you haven&rsquo;t played
-around with <a href="https://github.com/pgcentralfoundation/pgrx">pgrx</a> before.</p>
-<p>That aside, copying the data into parquet is quite straightforward:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> extension pg_parquet;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">copy</span> (
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">select</span> device_id, value, ts
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">from</span> iot_data
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">where</span> ts &gt;= <span style="font-style:italic">&#39;2024-11-14&#39;</span>::date
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> device_id
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">to</span> <span style="font-style:italic">&#39;/tmp/iot_data_2024-11-14.parquet&#39;</span> (format <span style="font-style:italic">&#39;parquet&#39;</span>, compression <span style="font-style:italic">&#39;zstd&#39;</span>)
-</span></span></code></pre></div><p>Also worth pointing out, pg_parquet supports writing out directly to S3.</p>
-<p>That&rsquo;s all for today.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/sql-cypher-flights/">
-                        Graph Query Interfaces: A Comparison Between SQL and Cypher
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+the files into the archival destination (e.g. via scp).</p><p>Installing the extension can also be quite convoluted if you haven&rsquo;t played
+around with <a href=https://github.com/pgcentralfoundation/pgrx>pgrx</a> before.</p><p>That aside, copying the data into parquet is quite straightforward:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> extension pg_parquet;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>copy</span> (
+</span></span><span style=display:flex><span>  <span style=font-weight:700>select</span> device_id, value, ts
+</span></span><span style=display:flex><span>  <span style=font-weight:700>from</span> iot_data
+</span></span><span style=display:flex><span>  <span style=font-weight:700>where</span> ts &gt;= <span style=font-style:italic>&#39;2024-11-14&#39;</span>::date
+</span></span><span style=display:flex><span>  <span style=font-weight:700>group</span> <span style=font-weight:700>by</span> device_id
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>to</span> <span style=font-style:italic>&#39;/tmp/iot_data_2024-11-14.parquet&#39;</span> (format <span style=font-style:italic>&#39;parquet&#39;</span>, compression <span style=font-style:italic>&#39;zstd&#39;</span>)
+</span></span></code></pre></div><p>Also worth pointing out, pg_parquet supports writing out directly to S3.</p><p>That&rsquo;s all for today.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/sql-cypher-flights/>Graph Query Interfaces: A Comparison Between SQL and Cypher</a></div></div></div><div class=single-pagination-next></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

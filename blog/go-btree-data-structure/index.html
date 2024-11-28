@@ -1,242 +1,56 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Go data-structure tricks: google/Btree | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/go-btree-data-structure/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/go-btree-data-structure/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Go data-structure tricks: google/Btree">
-  <meta property="og:description" content="A couple of interesting approaches to concurrency and memory allocation from the Go google/btree package">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2020-06-29T00:00:00+00:00">
-    <meta property="article:modified_time" content="2020-06-29T00:00:00+00:00">
-    <meta property="article:tag" content="Golang">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/go-btree-data-structure/">Go data-structure tricks: google/Btree</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Go data-structure tricks: google/Btree</h1>
-    
-    <p class="single-summary">A couple of interesting approaches to concurrency and memory allocation from the Go google/btree package</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2020-06-29T00:00:00&#43;00:00">June 29, 2020</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      5 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>I&rsquo;ve been studying B-Tree implementations in Golang of late and the first one I
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Go data-structure tricks: google/Btree | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/go-btree-data-structure/><meta property="og:url" content="https://bnm3k.github.io/blog/go-btree-data-structure/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Go data-structure tricks: google/Btree"><meta property="og:description" content="A couple of interesting approaches to concurrency and memory allocation from the Go google/btree package"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2020-06-29T00:00:00+00:00"><meta property="article:modified_time" content="2020-06-29T00:00:00+00:00"><meta property="article:tag" content="Golang"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/go-btree-data-structure/>Go data-structure tricks: google/Btree</a></div><div><div class=single-intro-container><h1 class=single-title>Go data-structure tricks: google/Btree</h1><p class=single-summary>A couple of interesting approaches to concurrency and memory allocation from the Go google/btree package</p><p class=single-readtime><time datetime=2020-06-29T00:00:00+00:00>June 29, 2020</time>
+&nbsp; · &nbsp;
+5 min read</p></div><div class=single-content><p>I&rsquo;ve been studying B-Tree implementations in Golang of late and the first one I
 came across was Google&rsquo;s B-Tree package. It&rsquo;s entirely in-memory and meant to
 serve as a more efficient, drop-in replacement for the
-<a href="github.com/petar/gollrb">llrb</a> package, which implements a red-black tree.
+<a href=github.com/petar/gollrb>llrb</a> package, which implements a red-black tree.
 Before going further, if you aren&rsquo;t familiar with B-Trees, the following
 <a href="https://www.youtube.com/watch?v=C_q5ccN84C8">video</a> (12 min) provides a great
-introduction, wikipedia does too.</p>
-<h2 class="heading" id="memory-allocation-optimization">
-  Memory allocation optimization
-  <a href="#memory-allocation-optimization">#</a>
-</h2>
-<p>The first optimization used is the <code>FreeList</code>. From the documentation, the
-<code>FreeList</code> is described as follows:</p>
-<blockquote>
-<p>FreeList represents a free list of btree nodes. By default each BTree has its
-own FreeList, but multiple BTrees can share the same FreeList.</p>
-</blockquote>
-<p>If you&rsquo;ve dabbled in C/C++ before, the FreeList here is kind of similar to the
-<a href="http://www.buildyourownlisp.com/chapter16_bonus_projects#pool_allocation">Pool Allocation strategy</a>,
+introduction, wikipedia does too.</p><h2 class=heading id=memory-allocation-optimization>Memory allocation optimization
+<a href=#memory-allocation-optimization>#</a></h2><p>The first optimization used is the <code>FreeList</code>. From the documentation, the
+<code>FreeList</code> is described as follows:</p><blockquote><p>FreeList represents a free list of btree nodes. By default each BTree has its
+own FreeList, but multiple BTrees can share the same FreeList.</p></blockquote><p>If you&rsquo;ve dabbled in C/C++ before, the FreeList here is kind of similar to the
+<a href=http://www.buildyourownlisp.com/chapter16_bonus_projects#pool_allocation>Pool Allocation strategy</a>,
 which, in order to reduce the cost of mallocs and memory fragmentation, a huge
 chunk of memory is pre-allocated. The programmer then manually slices the memory
 up by themselves. So that this doesn&rsquo;t up as an ad-hoc re-implementation of
 <code>malloc</code>, it requires that the application requests for memory in fixed size
 blocks. Once the application is done with some block of the memory, it can be
 stored back into a list, a free-list if you will, and made available for later
-use</p>
-<p>However, google/btree&rsquo;s FreeList diverges from the pool allocation strategy
+use</p><p>However, google/btree&rsquo;s FreeList diverges from the pool allocation strategy
 quite a bit. For one, nodes are <em>not</em> pre-allocated at the start, rather, the
 FreeList fills up only when nodes are deleted, which occurs during during
 merging. Since there isn&rsquo;t a pre-allocated pool, when the btree requests for a
 new node (such as during splitting) and the free-list is empty, <code>new</code> is called
 directly. However, if there is an unused node lying around, it&rsquo;s returned
-instead:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="font-weight:bold">func</span> (f *FreeList) newNode() (n *node) {
-</span></span><span style="display:flex;"><span>	f.mu.Lock()
-</span></span><span style="display:flex;"><span>	index := len(f.freelist) - 1
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> index &lt; 0 {
-</span></span><span style="display:flex;"><span>		f.mu.Unlock()
-</span></span><span style="display:flex;"><span>		<span style="font-weight:bold">return</span> new(node)
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	n = f.freelist[index]
-</span></span><span style="display:flex;"><span>	f.freelist[index] = <span style="font-weight:bold">nil</span>
-</span></span><span style="display:flex;"><span>	f.freelist = f.freelist[:index]
-</span></span><span style="display:flex;"><span>	f.mu.Unlock()
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span>
-</span></span><span style="display:flex;"><span>}
+instead:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=font-weight:700>func</span> (f *FreeList) newNode() (n *node) {
+</span></span><span style=display:flex><span>	f.mu.Lock()
+</span></span><span style=display:flex><span>	index := len(f.freelist) - 1
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> index &lt; 0 {
+</span></span><span style=display:flex><span>		f.mu.Unlock()
+</span></span><span style=display:flex><span>		<span style=font-weight:700>return</span> new(node)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	n = f.freelist[index]
+</span></span><span style=display:flex><span>	f.freelist[index] = <span style=font-weight:700>nil</span>
+</span></span><span style=display:flex><span>	f.freelist = f.freelist[:index]
+</span></span><span style=display:flex><span>	f.mu.Unlock()
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span>
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>The number of nodes within a free-list is constrained to its capacity, as we see
-in the <code>freeNode</code> method below.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="font-style:italic">// freeNode adds the given node to the list, returning true if it was added
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">// and false if it was discarded.
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span><span style="font-weight:bold">func</span> (f *FreeList) freeNode(n *node) (out <span style="">bool</span>) {
-</span></span><span style="display:flex;"><span>	f.mu.Lock()
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">if</span> len(f.freelist) &lt; cap(f.freelist) {
-</span></span><span style="display:flex;"><span>		f.freelist = append(f.freelist, n)
-</span></span><span style="display:flex;"><span>		out = <span style="font-weight:bold">true</span>
-</span></span><span style="display:flex;"><span>	}
-</span></span><span style="display:flex;"><span>	f.mu.Unlock()
-</span></span><span style="display:flex;"><span>	<span style="font-weight:bold">return</span>
-</span></span><span style="display:flex;"><span>}
+in the <code>freeNode</code> method below.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=font-style:italic>// freeNode adds the given node to the list, returning true if it was added
+</span></span></span><span style=display:flex><span><span style=font-style:italic>// and false if it was discarded.
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span style=font-weight:700>func</span> (f *FreeList) freeNode(n *node) (out <span>bool</span>) {
+</span></span><span style=display:flex><span>	f.mu.Lock()
+</span></span><span style=display:flex><span>	<span style=font-weight:700>if</span> len(f.freelist) &lt; cap(f.freelist) {
+</span></span><span style=display:flex><span>		f.freelist = append(f.freelist, n)
+</span></span><span style=display:flex><span>		out = <span style=font-weight:700>true</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	f.mu.Unlock()
+</span></span><span style=display:flex><span>	<span style=font-weight:700>return</span>
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>By default, this capacity is 32 but it can be tuned based on the application&rsquo;s
 btree usage patterns. Constraining the length of the free-list seems to be a
 security mitigation against errant usage. If it were unbounded, an attacker, or
@@ -244,40 +58,25 @@ simply faulty code, could simply insert numerous entries then delete most of
 them, leaving maybe one or two entries. However, since all the deleted nodes are
 added to the free-list, those chunks of memory remain unavailable for other
 parts of the application even though the btree won&rsquo;t be using them any time
-soon.</p>
-<h2 class="heading" id="concurrency-optimization">
-  Concurrency optimization
-  <a href="#concurrency-optimization">#</a>
-</h2>
-<p>On concurrency, the approaches highlighted here might or might not be an
+soon.</p><h2 class=heading id=concurrency-optimization>Concurrency optimization
+<a href=#concurrency-optimization>#</a></h2><p>On concurrency, the approaches highlighted here might or might not be an
 optimization depending on the application&rsquo;s usage patterns. The documentation
 isn&rsquo;t quite specific on how one should handle concurrent access. The most it
-mentions is the following:</p>
-<blockquote>
-<p>Write operations are not safe for concurrent mutation by multiple goroutines,
-but Read operations are.</p>
-</blockquote>
-<p>In some way, this is great. From the source code, all reads proceed without any
+mentions is the following:</p><blockquote><p>Write operations are not safe for concurrent mutation by multiple goroutines,
+but Read operations are.</p></blockquote><p>In some way, this is great. From the source code, all reads proceed without any
 locking involved. However the documentation doesn&rsquo;t quite specify how one should
-synchronize or even organize writes, this seems to be left up to the end-user.</p>
-<p>Given the way the code is structured, a single writer with multiple concurrent
+synchronize or even organize writes, this seems to be left up to the end-user.</p><p>Given the way the code is structured, a single writer with multiple concurrent
 readers will not work since it leads to data races. Just to confirm that this is
 the case using Go&rsquo;s race detector, I wrote and ran a quick
-<a href="gist.github.com/nagamocha3000/53a16151b17215ff0c5dae37636f5d56">script</a>, which
-you can check out.</p>
-<p>One option for synchronizing concurrent reads interleaved with writes is simply
-to tack on readers-writer locks wherever necessary and call it a day.</p>
-<p>A better option (that doesn&rsquo;t involve modifying the source-code directly or
+<a href=gist.github.com/nagamocha3000/53a16151b17215ff0c5dae37636f5d56>script</a>, which
+you can check out.</p><p>One option for synchronizing concurrent reads interleaved with writes is simply
+to tack on readers-writer locks wherever necessary and call it a day.</p><p>A better option (that doesn&rsquo;t involve modifying the source-code directly or
 wrapping each and every public method), utilizes the <code>Clone</code> method provided so
 as to implement some hackish form of
-&lsquo;<a href="https://en.wikipedia.org/wiki/Snapshot_isolation">snapshot isolation</a>&rsquo;. From
-the documentation:</p>
-<blockquote>
-<p>Clone clones the btree, lazily. Clone should not be called concurrently, but
+&lsquo;<a href=https://en.wikipedia.org/wiki/Snapshot_isolation>snapshot isolation</a>&rsquo;. From
+the documentation:</p><blockquote><p>Clone clones the btree, lazily. Clone should not be called concurrently, but
 the original tree (t) and the new tree (t2) can be used concurrently once the
-Clone call completes.</p>
-</blockquote>
-<p>Reads can use the original &lsquo;snapshot&rsquo;, and synchronized writes can go into the
+Clone call completes.</p></blockquote><p>Reads can use the original &lsquo;snapshot&rsquo;, and synchronized writes can go into the
 new clone. Once the writes are complete, new reads then shift to the new clone.
 Furthermore, given the way the <code>Clone</code> function is structured, every
 modification that occurs in the <em>original</em> is not visible to any clones made -
@@ -285,129 +84,9 @@ all that the clones view is the old &lsquo;snapshot&rsquo; just before cloning t
 This is possible since in actuality, a <code>Clone</code> results in 3 trees, the original
 itself becomes a clone, and it now gets to &lsquo;share&rsquo; its old nodes (as the actual
 &lsquo;original&rsquo; tree) with the new clone. The old nodes thus are rendered immutable
-since neither the original nor the clones own them.</p>
-<p>However, I&rsquo;m probably using the wrong term here since this approach doesn&rsquo;t
+since neither the original nor the clones own them.</p><p>However, I&rsquo;m probably using the wrong term here since this approach doesn&rsquo;t
 quite provide the guarantees of snapshot isolation. For example, if you have a
 reference to and modify an <code>Item</code> that&rsquo;s currently stored within one of the
-nodes, both the original and the clone will view this change.</p>
-<p>Lastly, I&rsquo;d like to highlight an interesting fork of google/btree,
-<a href="github.com/tidwall/btree">tidwall/btree</a>, do check it out if you&rsquo;re interested.
-That&rsquo;s all for now</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/pg-unique-constraints/">
-                        Speeding up unique constraint checks in PostgreSQL... or not
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/malloc-excess/">
-                        Malloc excess bytes
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+nodes, both the original and the clone will view this change.</p><p>Lastly, I&rsquo;d like to highlight an interesting fork of google/btree,
+<a href=github.com/tidwall/btree>tidwall/btree</a>, do check it out if you&rsquo;re interested.
+That&rsquo;s all for now</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/pg-unique-constraints/>Speeding up unique constraint checks in PostgreSQL... or not</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/malloc-excess/>Malloc excess bytes</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

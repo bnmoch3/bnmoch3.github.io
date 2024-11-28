@@ -1,217 +1,33 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Wrangling JSON with DuckDB | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/wrangling-json-with-duckdb/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/wrangling-json-with-duckdb/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Wrangling JSON with DuckDB">
-  <meta property="og:description" content="For when you need to impose some structure on semi-structured data">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2023-07-25T00:00:00+00:00">
-    <meta property="article:modified_time" content="2023-07-25T00:00:00+00:00">
-    <meta property="article:tag" content="SQL">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/posts/">Posts</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/wrangling-json-with-duckdb/">Wrangling JSON with DuckDB</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Wrangling JSON with DuckDB</h1>
-    
-    <p class="single-summary">For when you need to impose some structure on semi-structured data</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2023-07-25T00:00:00&#43;00:00">July 25, 2023</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      10 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <h2 class="heading" id="setting-up-the-data">
-  Setting up the data
-  <a href="#setting-up-the-data">#</a>
-</h2>
-<h3 class="heading" id="ingesting-from-csv-using-pyarrow">
-  Ingesting from CSV using pyarrow
-  <a href="#ingesting-from-csv-using-pyarrow">#</a>
-</h3>
-<p>The data we&rsquo;ll be using is the Github events data, specifically the Citus
-<a href="https://examples.citusdata.com/events.csv">events.csv</a> version that&rsquo;s smaller.</p>
-<p>Let&rsquo;s insert the events data into the databases, I&rsquo;ll be using pyarrow&rsquo;s CSV
-module:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">duckdb</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">pa</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">import</span> <span style="font-weight:bold">pyarrow.csv</span> <span style="font-weight:bold">as</span> <span style="font-weight:bold">csv</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>conn = duckdb.connect(<span style="font-style:italic">&#34;events.db&#34;</span>)
-</span></span><span style="display:flex;"><span>opts = csv.ReadOptions(
-</span></span><span style="display:flex;"><span>    column_names=[
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;event_id&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;event_type&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;event_public&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;repo_id&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;payload&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;repo&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;user_id&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;org&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#34;created_at&#34;</span>,
-</span></span><span style="display:flex;"><span>    ]
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span>events_csv = csv.read_csv(<span style="font-style:italic">&#34;datasets/gh-events.csv&#34;</span>, read_options=opts)
-</span></span><span style="display:flex;"><span>conn.sql(<span style="font-style:italic">&#34;create table events as select * from events_csv&#34;</span>)
-</span></span></code></pre></div><p>Here&rsquo;s the inferred schema we get:</p>
-<pre tabindex="0"><code>describe events;
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Wrangling JSON with DuckDB | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/wrangling-json-with-duckdb/><meta property="og:url" content="https://bnm3k.github.io/blog/wrangling-json-with-duckdb/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Wrangling JSON with DuckDB"><meta property="og:description" content="For when you need to impose some structure on semi-structured data"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2023-07-25T00:00:00+00:00"><meta property="article:modified_time" content="2023-07-25T00:00:00+00:00"><meta property="article:tag" content="SQL"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/wrangling-json-with-duckdb/>Wrangling JSON with DuckDB</a></div><div><div class=single-intro-container><h1 class=single-title>Wrangling JSON with DuckDB</h1><p class=single-summary>For when you need to impose some structure on semi-structured data</p><p class=single-readtime><time datetime=2023-07-25T00:00:00+00:00>July 25, 2023</time>
+&nbsp; · &nbsp;
+10 min read</p></div><div class=single-content><h2 class=heading id=setting-up-the-data>Setting up the data
+<a href=#setting-up-the-data>#</a></h2><h3 class=heading id=ingesting-from-csv-using-pyarrow>Ingesting from CSV using pyarrow
+<a href=#ingesting-from-csv-using-pyarrow>#</a></h3><p>The data we&rsquo;ll be using is the Github events data, specifically the Citus
+<a href=https://examples.citusdata.com/events.csv>events.csv</a> version that&rsquo;s smaller.</p><p>Let&rsquo;s insert the events data into the databases, I&rsquo;ll be using pyarrow&rsquo;s CSV
+module:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>duckdb</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pyarrow</span> <span style=font-weight:700>as</span> <span style=font-weight:700>pa</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pyarrow.csv</span> <span style=font-weight:700>as</span> <span style=font-weight:700>csv</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>conn = duckdb.connect(<span style=font-style:italic>&#34;events.db&#34;</span>)
+</span></span><span style=display:flex><span>opts = csv.ReadOptions(
+</span></span><span style=display:flex><span>    column_names=[
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;event_id&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;event_type&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;event_public&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;repo_id&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;payload&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;repo&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;user_id&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;org&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#34;created_at&#34;</span>,
+</span></span><span style=display:flex><span>    ]
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>events_csv = csv.read_csv(<span style=font-style:italic>&#34;datasets/gh-events.csv&#34;</span>, read_options=opts)
+</span></span><span style=display:flex><span>conn.sql(<span style=font-style:italic>&#34;create table events as select * from events_csv&#34;</span>)
+</span></span></code></pre></div><p>Here&rsquo;s the inferred schema we get:</p><pre tabindex=0><code>describe events;
 
 ┌──────────────┬─────────────┬─────────┬─────────┬─────────┬───────┐
 │ column_name  │ column_type │  null   │   key   │ default │ extra │
@@ -227,89 +43,68 @@ module:</p>
 │ org          │ VARCHAR     │ YES     │         │         │       │
 │ created_at   │ TIMESTAMP_S │ YES     │         │         │       │
 └──────────────┴─────────────┴─────────┴─────────┴─────────┴───────┘
-</code></pre><h3 class="heading" id="alternative-duckdbs-csv-ingestion">
-  Alternative: DuckDB&rsquo;s CSV ingestion
-  <a href="#alternative-duckdbs-csv-ingestion">#</a>
-</h3>
-<p>We could also have used DuckDB&rsquo;s <code>read_csv_auto</code>. I used pyarrow purely out of
+</code></pre><h3 class=heading id=alternative-duckdbs-csv-ingestion>Alternative: DuckDB&rsquo;s CSV ingestion
+<a href=#alternative-duckdbs-csv-ingestion>#</a></h3><p>We could also have used DuckDB&rsquo;s <code>read_csv_auto</code>. I used pyarrow purely out of
 habit. For CSV, DuckDB has its advantages over pyarrow. For example, it&rsquo;s able
-to detect that <code>event_public</code> is boolean and empty strings in <code>org</code> are null.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">table</span> events <span style="font-weight:bold">as</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> * <span style="font-weight:bold">from</span> read_csv_auto(<span style="font-style:italic">&#39;datasets/gh-events.csv&#39;</span>);
-</span></span></code></pre></div><h3 class="heading" id="handling-low-cardinality-string-columns">
-  Handling low-cardinality string columns
-  <a href="#handling-low-cardinality-string-columns">#</a>
-</h3>
-<p><code>event_type</code> has low-cardinality, no point leaving it as VARCHAR:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> <span style="font-weight:bold">count</span>(<span style="font-weight:bold">distinct</span> event_type) <span style="font-weight:bold">from</span> events;
-</span></span><span style="display:flex;"><span><span style="font-style:italic">-- 14
+to detect that <code>event_public</code> is boolean and empty strings in <code>org</code> are null.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>table</span> events <span style=font-weight:700>as</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> * <span style=font-weight:700>from</span> read_csv_auto(<span style=font-style:italic>&#39;datasets/gh-events.csv&#39;</span>);
+</span></span></code></pre></div><h3 class=heading id=handling-low-cardinality-string-columns>Handling low-cardinality string columns
+<a href=#handling-low-cardinality-string-columns>#</a></h3><p><code>event_type</code> has low-cardinality, no point leaving it as VARCHAR:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> <span style=font-weight:700>count</span>(<span style=font-weight:700>distinct</span> event_type) <span style=font-weight:700>from</span> events;
+</span></span><span style=display:flex><span><span style=font-style:italic>-- 14
 </span></span></span></code></pre></div><p>Let&rsquo;s convert it into an enum, counting on DuckDB&rsquo;s feature for automatically
-casting enums to varchar whenever necessary.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">begin</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">type</span> EVENT_TYPE <span style="font-weight:bold">as</span> enum(
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-weight:bold">distinct</span> event_type <span style="font-weight:bold">from</span> events);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">alter</span> <span style="font-weight:bold">column</span> event_type
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">set</span> <span style="font-weight:bold">data</span> <span style="font-weight:bold">type</span> EVENT_TYPE;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">commit</span>;
-</span></span></code></pre></div><h3 class="heading" id="boolean-values">
-  Boolean values
-  <a href="#boolean-values">#</a>
-</h3>
-<p><code>event_public</code> column should be boolean instead of varchar, since it consists of
-&rsquo;t&rsquo; and &lsquo;f&rsquo; values:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">alter</span> event_public <span style="font-weight:bold">set</span> <span style="font-weight:bold">data</span> <span style="font-weight:bold">type</span> BOOLEAN;
+casting enums to varchar whenever necessary.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>begin</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>type</span> EVENT_TYPE <span style=font-weight:700>as</span> enum(
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-weight:700>distinct</span> event_type <span style=font-weight:700>from</span> events);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>alter</span> <span style=font-weight:700>column</span> event_type
+</span></span><span style=display:flex><span>    <span style=font-weight:700>set</span> <span style=font-weight:700>data</span> <span style=font-weight:700>type</span> EVENT_TYPE;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>commit</span>;
+</span></span></code></pre></div><h3 class=heading id=boolean-values>Boolean values
+<a href=#boolean-values>#</a></h3><p><code>event_public</code> column should be boolean instead of varchar, since it consists of
+&rsquo;t&rsquo; and &lsquo;f&rsquo; values:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>alter</span> event_public <span style=font-weight:700>set</span> <span style=font-weight:700>data</span> <span style=font-weight:700>type</span> BOOLEAN;
 </span></span></code></pre></div><p>No need to wrap this within a transaction since all the necessary changes can be
-done within a single statement.</p>
-<h2 class="heading" id="checking-that-json-is-valid">
-  Checking that JSON is valid
-  <a href="#checking-that-json-is-valid">#</a>
-</h2>
-<p>DuckDB provides the <code>json_valid</code> to check if values are valid json. Given that
+done within a single statement.</p><h2 class=heading id=checking-that-json-is-valid>Checking that JSON is valid
+<a href=#checking-that-json-is-valid>#</a></h2><p>DuckDB provides the <code>json_valid</code> to check if values are valid json. Given that
 <code>org</code>, <code>repo</code> and <code>payload</code> should be json columns, let&rsquo;s check how many values
-are in fact valid json:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>pivot (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#39;repo_invalid&#39;</span> <span style="font-weight:bold">as</span> col,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">as</span> <span style="font-weight:bold">c</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> json_valid(repo) &lt;&gt; <span style="font-weight:bold">True</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#39;payload_invalid&#39;</span> <span style="font-weight:bold">as</span> col,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">as</span> <span style="font-weight:bold">c</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> json_valid(payload) &lt;&gt; <span style="font-weight:bold">True</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">union</span> <span style="font-weight:bold">all</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#39;org_invalid&#39;</span> <span style="font-weight:bold">as</span> col,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">as</span> <span style="font-weight:bold">c</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> json_valid(org) &lt;&gt; <span style="font-weight:bold">True</span>
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">on</span> col <span style="font-weight:bold">using</span> <span style="font-weight:bold">first</span>(<span style="font-weight:bold">c</span>)
-</span></span></code></pre></div><p>This results in:</p>
-<pre tabindex="0"><code>┌─────────────┬─────────────────┬──────────────┐
+are in fact valid json:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>pivot (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#39;repo_invalid&#39;</span> <span style=font-weight:700>as</span> col,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>count</span>(*) <span style=font-weight:700>as</span> <span style=font-weight:700>c</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> json_valid(repo) &lt;&gt; <span style=font-weight:700>True</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#39;payload_invalid&#39;</span> <span style=font-weight:700>as</span> col,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>count</span>(*) <span style=font-weight:700>as</span> <span style=font-weight:700>c</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> json_valid(payload) &lt;&gt; <span style=font-weight:700>True</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>union</span> <span style=font-weight:700>all</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#39;org_invalid&#39;</span> <span style=font-weight:700>as</span> col,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>count</span>(*) <span style=font-weight:700>as</span> <span style=font-weight:700>c</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> json_valid(org) &lt;&gt; <span style=font-weight:700>True</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>on</span> col <span style=font-weight:700>using</span> <span style=font-weight:700>first</span>(<span style=font-weight:700>c</span>)
+</span></span></code></pre></div><p>This results in:</p><pre tabindex=0><code>┌─────────────┬─────────────────┬──────────────┐
 │ org_invalid │ payload_invalid │ repo_invalid │
 │    int64    │      int64      │    int64     │
 ├─────────────┼─────────────────┼──────────────┤
 │       89272 │               0 │            0 │
 └─────────────┴─────────────────┴──────────────┘
-</code></pre><p>It seems <code>org</code> has a couple of non-json values. Let&rsquo;s get a sample:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> org
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> json_valid(org) &lt;&gt; <span style="font-weight:bold">True</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">using</span> sample 5 <span style="font-weight:bold">rows</span>;
-</span></span></code></pre></div><p>This gives:</p>
-<pre tabindex="0"><code>┌─────────┐
+</code></pre><p>It seems <code>org</code> has a couple of non-json values. Let&rsquo;s get a sample:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> org
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> json_valid(org) &lt;&gt; <span style=font-weight:700>True</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>using</span> sample 5 <span style=font-weight:700>rows</span>;
+</span></span></code></pre></div><p>This gives:</p><pre tabindex=0><code>┌─────────┐
 │   org   │
 │ varchar │
 ├─────────┤
@@ -319,163 +114,126 @@ are in fact valid json:</p>
 │         │
 └─────────┘
 </code></pre><p>Either there&rsquo;s a lot of empty strings, whitespace or newlines I&rsquo;m not quite
-sure.</p>
-<p>Let&rsquo;s get rid of the whitespace (replace with empty strings):</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">update</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">set</span> org = <span style="font-weight:bold">trim</span>(org)
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> json_valid(org) &lt;&gt; <span style="font-weight:bold">True</span>;
-</span></span></code></pre></div><p>Next, let&rsquo;s set all the empty strings to NULL:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">update</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">set</span> org=<span style="font-weight:bold">NULL</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> org = <span style="font-style:italic">&#39;&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">from</span> events <span style="font-weight:bold">where</span> org <span style="font-weight:bold">is</span> <span style="font-weight:bold">NULL</span>; <span style="font-style:italic">-- 89272
-</span></span></span></code></pre></div><h2 class="heading" id="json-data-type">
-  JSON data type
-  <a href="#json-data-type">#</a>
-</h2>
-<p>DuckDB provides a JSON logical type. Given that <code>org</code>, <code>repo</code> and <code>payload</code> are
+sure.</p><p>Let&rsquo;s get rid of the whitespace (replace with empty strings):</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>update</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>set</span> org = <span style=font-weight:700>trim</span>(org)
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> json_valid(org) &lt;&gt; <span style=font-weight:700>True</span>;
+</span></span></code></pre></div><p>Next, let&rsquo;s set all the empty strings to NULL:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>update</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>set</span> org=<span style=font-weight:700>NULL</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> org = <span style=font-style:italic>&#39;&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> <span style=font-weight:700>count</span>(*) <span style=font-weight:700>from</span> events <span style=font-weight:700>where</span> org <span style=font-weight:700>is</span> <span style=font-weight:700>NULL</span>; <span style=font-style:italic>-- 89272
+</span></span></span></code></pre></div><h2 class=heading id=json-data-type>JSON data type
+<a href=#json-data-type>#</a></h2><p>DuckDB provides a JSON logical type. Given that <code>org</code>, <code>repo</code> and <code>payload</code> are
 <code>VARCHAR</code>, converting them to JSON does not alter them as per the docs, instead
-they are only parsed and validated.</p>
-<p>Still, let&rsquo;s convert them to JSON, it doesn&rsquo;t hurt.</p>
-<p>Ideally, I&rsquo;d love to use this <code>alter</code> statement, but as of v0.8.1 it does not
-work:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">alter</span> <span style="font-weight:bold">column</span> repo <span style="font-weight:bold">set</span> <span style="font-weight:bold">data</span> <span style="font-weight:bold">type</span> JSON <span style="font-weight:bold">using</span> json(repo);
-</span></span></code></pre></div><p>So we have to use this workaround:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">begin</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events <span style="font-weight:bold">add</span> <span style="font-weight:bold">column</span> temp JSON;
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">update</span> events <span style="font-weight:bold">set</span> temp = json(repo);
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events <span style="font-weight:bold">drop</span> repo;
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events <span style="font-weight:bold">rename</span> temp <span style="font-weight:bold">to</span> repo;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">commit</span>;
-</span></span></code></pre></div><p>Rinse and repeat for the <code>payload</code> and <code>org</code> columns.</p>
-<h2 class="heading" id="deriving-structure-from-json">
-  Deriving structure from JSON
-  <a href="#deriving-structure-from-json">#</a>
-</h2>
-<p>DuckDB provides the <code>json_structure</code> function to get the structure of a JSON
-value.</p>
-<p>Let&rsquo;s start with <code>org</code>. I&rsquo;ve placed the query in file &lsquo;query.sql&rsquo; and piped the
-output to <code>jq</code> so that it&rsquo;ll pretty-print the json. The query is as follows:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">copy</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-weight:bold">distinct</span>
-</span></span><span style="display:flex;"><span>        json_structure(org) <span style="font-weight:bold">as</span> <span style="font-weight:bold">structure</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> org <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>
-</span></span><span style="display:flex;"><span>) <span style="font-weight:bold">to</span> <span style="font-style:italic">&#39;/dev/stdout&#39;</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">with</span> (format <span style="font-style:italic">&#39;json&#39;</span>)
-</span></span></code></pre></div><p>And the shell command:</p>
-<pre tabindex="0"><code>duckdb -json events.db &lt; query.sql  | jq .structure
-</code></pre><p>For <code>org</code>, this outputs:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;id&#34;</span>: <span style="font-style:italic">&#34;UBIGINT&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;url&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;login&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;avatar_url&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;gravatar_id&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>Doing the same for <code>repo</code> we get:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;id&#34;</span>: <span style="font-style:italic">&#34;UBIGINT&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;url&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;name&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>However, <code>payload</code> isn&rsquo;t as straightforward, we&rsquo;ve got 415 different schemas:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span> <span style="font-weight:bold">count</span>(*)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-weight:bold">distinct</span>
-</span></span><span style="display:flex;"><span>        json_structure(payload) <span style="font-weight:bold">as</span> s
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-style:italic">-- 415
-</span></span></span></code></pre></div><p>We&rsquo;ll have to handle it differently.</p>
-<h2 class="heading" id="converting-json-to-struct">
-  Converting JSON to struct
-  <a href="#converting-json-to-struct">#</a>
-</h2>
-<p>Before going any further, since <code>repo</code> and <code>org</code> have a given structure, let&rsquo;s
-convert them to struct values.</p>
-<p>This is not just for the sake of it, structs have a performance and space
+they are only parsed and validated.</p><p>Still, let&rsquo;s convert them to JSON, it doesn&rsquo;t hurt.</p><p>Ideally, I&rsquo;d love to use this <code>alter</code> statement, but as of v0.8.1 it does not
+work:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>alter</span> <span style=font-weight:700>column</span> repo <span style=font-weight:700>set</span> <span style=font-weight:700>data</span> <span style=font-weight:700>type</span> JSON <span style=font-weight:700>using</span> json(repo);
+</span></span></code></pre></div><p>So we have to use this workaround:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>begin</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events <span style=font-weight:700>add</span> <span style=font-weight:700>column</span> temp JSON;
+</span></span><span style=display:flex><span><span style=font-weight:700>update</span> events <span style=font-weight:700>set</span> temp = json(repo);
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events <span style=font-weight:700>drop</span> repo;
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events <span style=font-weight:700>rename</span> temp <span style=font-weight:700>to</span> repo;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>commit</span>;
+</span></span></code></pre></div><p>Rinse and repeat for the <code>payload</code> and <code>org</code> columns.</p><h2 class=heading id=deriving-structure-from-json>Deriving structure from JSON
+<a href=#deriving-structure-from-json>#</a></h2><p>DuckDB provides the <code>json_structure</code> function to get the structure of a JSON
+value.</p><p>Let&rsquo;s start with <code>org</code>. I&rsquo;ve placed the query in file &lsquo;query.sql&rsquo; and piped the
+output to <code>jq</code> so that it&rsquo;ll pretty-print the json. The query is as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>copy</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-weight:700>distinct</span>
+</span></span><span style=display:flex><span>        json_structure(org) <span style=font-weight:700>as</span> <span style=font-weight:700>structure</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> org <span style=font-weight:700>is</span> <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>
+</span></span><span style=display:flex><span>) <span style=font-weight:700>to</span> <span style=font-style:italic>&#39;/dev/stdout&#39;</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>with</span> (format <span style=font-style:italic>&#39;json&#39;</span>)
+</span></span></code></pre></div><p>And the shell command:</p><pre tabindex=0><code>duckdb -json events.db &lt; query.sql  | jq .structure
+</code></pre><p>For <code>org</code>, this outputs:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;id&#34;</span>: <span style=font-style:italic>&#34;UBIGINT&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;url&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;login&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;avatar_url&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;gravatar_id&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Doing the same for <code>repo</code> we get:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;id&#34;</span>: <span style=font-style:italic>&#34;UBIGINT&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;url&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;name&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>However, <code>payload</code> isn&rsquo;t as straightforward, we&rsquo;ve got 415 different schemas:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span> <span style=font-weight:700>count</span>(*)
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-weight:700>distinct</span>
+</span></span><span style=display:flex><span>        json_structure(payload) <span style=font-weight:700>as</span> s
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-style:italic>-- 415
+</span></span></span></code></pre></div><p>We&rsquo;ll have to handle it differently.</p><h2 class=heading id=converting-json-to-struct>Converting JSON to struct
+<a href=#converting-json-to-struct>#</a></h2><p>Before going any further, since <code>repo</code> and <code>org</code> have a given structure, let&rsquo;s
+convert them to struct values.</p><p>This is not just for the sake of it, structs have a performance and space
 advantage over JSON since internally, the struct&rsquo;s fields are maintained as
 separate columns (which is DuckDB&rsquo;s bread and butter). Also querying struct
 values is more ergonomic: we use dot operators rather than JSON paths. Still,
 you should only consider converting JSON to struct if you&rsquo;re sure the schema is
-static and it&rsquo;s values aren&rsquo;t too nested.</p>
-<p>Recall we used <code>json_structure</code> to retrieve the structure for <code>repo</code> and <code>org</code>.
+static and it&rsquo;s values aren&rsquo;t too nested.</p><p>Recall we used <code>json_structure</code> to retrieve the structure for <code>repo</code> and <code>org</code>.
 We now plug the respective results into <code>json_transform_strict</code> to convert the
-JSON values into structs:</p>
-<p>For <code>repo</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">column</span> repo
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">set</span> <span style="font-weight:bold">data</span> <span style="font-weight:bold">type</span> struct(id uinteger, url varchar, name varchar)
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">using</span> json_transform_strict(
-</span></span><span style="display:flex;"><span>        repo, <span style="font-style:italic">&#39;{&#34;id&#34;:&#34;UBIGINT&#34;,&#34;url&#34;:&#34;VARCHAR&#34;,&#34;name&#34;:&#34;VARCHAR&#34;}&#39;</span>
-</span></span><span style="display:flex;"><span>    );
-</span></span></code></pre></div><p>For <code>org</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">table</span> events
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">alter</span> <span style="font-weight:bold">column</span> org
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">set</span> <span style="font-weight:bold">data</span> <span style="font-weight:bold">type</span> struct(
-</span></span><span style="display:flex;"><span>        id          uinteger,
-</span></span><span style="display:flex;"><span>        url         varchar,
-</span></span><span style="display:flex;"><span>        login       varchar,
-</span></span><span style="display:flex;"><span>        avatar_url  varchar,
-</span></span><span style="display:flex;"><span>        gravatar_id varchar
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">using</span> json_transform_strict(
-</span></span><span style="display:flex;"><span>        org,
-</span></span><span style="display:flex;"><span>        <span style="font-style:italic">&#39;{
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">          &#34;id&#34;: &#34;UBIGINT&#34;,
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">          &#34;url&#34;: &#34;VARCHAR&#34;,
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">          &#34;login&#34;: &#34;VARCHAR&#34;,
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">          &#34;avatar_url&#34;: &#34;VARCHAR&#34;,
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">          &#34;gravatar_id&#34;: &#34;VARCHAR&#34;
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic">        }&#39;</span>
-</span></span><span style="display:flex;"><span>    );
-</span></span></code></pre></div><h2 class="heading" id="handling-heterogeneous-json">
-  Handling heterogeneous JSON
-  <a href="#handling-heterogeneous-json">#</a>
-</h2>
-<p>Back to <code>payload</code> values. We could use <code>json_group_structure</code> to get the
-combined <code>json_structure</code> of all the payload values:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    json_group_structure(payload) <span style="font-weight:bold">as</span> <span style="font-weight:bold">structure</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> events
+JSON values into structs:</p><p>For <code>repo</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>column</span> repo
+</span></span><span style=display:flex><span>    <span style=font-weight:700>set</span> <span style=font-weight:700>data</span> <span style=font-weight:700>type</span> struct(id uinteger, url varchar, name varchar)
+</span></span><span style=display:flex><span>    <span style=font-weight:700>using</span> json_transform_strict(
+</span></span><span style=display:flex><span>        repo, <span style=font-style:italic>&#39;{&#34;id&#34;:&#34;UBIGINT&#34;,&#34;url&#34;:&#34;VARCHAR&#34;,&#34;name&#34;:&#34;VARCHAR&#34;}&#39;</span>
+</span></span><span style=display:flex><span>    );
+</span></span></code></pre></div><p>For <code>org</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>table</span> events
+</span></span><span style=display:flex><span><span style=font-weight:700>alter</span> <span style=font-weight:700>column</span> org
+</span></span><span style=display:flex><span>    <span style=font-weight:700>set</span> <span style=font-weight:700>data</span> <span style=font-weight:700>type</span> struct(
+</span></span><span style=display:flex><span>        id          uinteger,
+</span></span><span style=display:flex><span>        url         varchar,
+</span></span><span style=display:flex><span>        login       varchar,
+</span></span><span style=display:flex><span>        avatar_url  varchar,
+</span></span><span style=display:flex><span>        gravatar_id varchar
+</span></span><span style=display:flex><span>    )
+</span></span><span style=display:flex><span>    <span style=font-weight:700>using</span> json_transform_strict(
+</span></span><span style=display:flex><span>        org,
+</span></span><span style=display:flex><span>        <span style=font-style:italic>&#39;{
+</span></span></span><span style=display:flex><span><span style=font-style:italic>          &#34;id&#34;: &#34;UBIGINT&#34;,
+</span></span></span><span style=display:flex><span><span style=font-style:italic>          &#34;url&#34;: &#34;VARCHAR&#34;,
+</span></span></span><span style=display:flex><span><span style=font-style:italic>          &#34;login&#34;: &#34;VARCHAR&#34;,
+</span></span></span><span style=display:flex><span><span style=font-style:italic>          &#34;avatar_url&#34;: &#34;VARCHAR&#34;,
+</span></span></span><span style=display:flex><span><span style=font-style:italic>          &#34;gravatar_id&#34;: &#34;VARCHAR&#34;
+</span></span></span><span style=display:flex><span><span style=font-style:italic>        }&#39;</span>
+</span></span><span style=display:flex><span>    );
+</span></span></code></pre></div><h2 class=heading id=handling-heterogeneous-json>Handling heterogeneous JSON
+<a href=#handling-heterogeneous-json>#</a></h2><p>Back to <code>payload</code> values. We could use <code>json_group_structure</code> to get the
+combined <code>json_structure</code> of all the payload values:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    json_group_structure(payload) <span style=font-weight:700>as</span> <span style=font-weight:700>structure</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> events
 </span></span></code></pre></div><p>But this ends up being a really huge structure; piping it to <code>jq</code> then counting
 the lines with <code>wc</code>, I get 784 lines. Using <code>json_keys</code> (this returns the keys
-of a json object as a list of strings), there are 20 distinct top-level keys:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        json_group_structure(payload) <span style="font-weight:bold">as</span> <span style="font-weight:bold">structure</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span> 
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">count</span>(*)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span> <span style="font-weight:bold">unnest</span>(json_keys(<span style="font-weight:bold">structure</span>)) <span style="font-weight:bold">from</span> t
-</span></span><span style="display:flex;"><span>) <span style="font-style:italic">-- 20
+of a json object as a list of strings), there are 20 distinct top-level keys:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> t <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        json_group_structure(payload) <span style=font-weight:700>as</span> <span style=font-weight:700>structure</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span> 
+</span></span><span style=display:flex><span>    <span style=font-weight:700>count</span>(*)
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span> <span style=font-weight:700>unnest</span>(json_keys(<span style=font-weight:700>structure</span>)) <span style=font-weight:700>from</span> t
+</span></span><span style=display:flex><span>) <span style=font-style:italic>-- 20
 </span></span></span></code></pre></div><p>My hunch is that for each <code>event_type</code> we&rsquo;ve got a different structure for
-<code>payload</code>:</p>
-<p>Let&rsquo;s do a rough test:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        event_type,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">count</span>(<span style="font-weight:bold">distinct</span> json_structure(payload)) <span style="font-weight:bold">as</span> s_count,
-</span></span><span style="display:flex;"><span>        json_group_structure(payload) <span style="font-weight:bold">as</span> <span style="font-weight:bold">structure</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> 1
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    event_type,
-</span></span><span style="display:flex;"><span>    s_count,
-</span></span><span style="display:flex;"><span>    list_sort(json_keys(<span style="font-weight:bold">structure</span>))[:3] <span style="font-weight:bold">as</span> keys <span style="font-style:italic">-- pick first 3 only
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span><span style="font-weight:bold">from</span> t
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> s_count <span style="font-weight:bold">desc</span>;
-</span></span></code></pre></div><p>This results in:</p>
-<pre tabindex="0"><code>┌───────────────────────────────┬─────────┬───────────────────────────────────────────┐
+<code>payload</code>:</p><p>Let&rsquo;s do a rough test:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> t <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        event_type,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>count</span>(<span style=font-weight:700>distinct</span> json_structure(payload)) <span style=font-weight:700>as</span> s_count,
+</span></span><span style=display:flex><span>        json_group_structure(payload) <span style=font-weight:700>as</span> <span style=font-weight:700>structure</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>group</span> <span style=font-weight:700>by</span> 1
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    event_type,
+</span></span><span style=display:flex><span>    s_count,
+</span></span><span style=display:flex><span>    list_sort(json_keys(<span style=font-weight:700>structure</span>))[:3] <span style=font-weight:700>as</span> keys <span style=font-style:italic>-- pick first 3 only
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span style=font-weight:700>from</span> t
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> s_count <span style=font-weight:700>desc</span>;
+</span></span></code></pre></div><p>This results in:</p><pre tabindex=0><code>┌───────────────────────────────┬─────────┬───────────────────────────────────────────┐
 │          event_type           │ s_count │                   keys                    │
 │          event_type           │  int64  │                 varchar[]                 │
 ├───────────────────────────────┼─────────┼───────────────────────────────────────────┤
@@ -499,44 +257,37 @@ of a json object as a list of strings), there are 20 distinct top-level keys:</p
 </code></pre><p>Some event types like DeleteEvent and MemberEvent have a single structure while
 others (PullRequestEvent, IssueCommentEvent etc) have multiple structures. Since
 the data&rsquo;s from github, at this point the best step is to find where they&rsquo;ve
-documented payload&rsquo;s structure so as to understand it better.</p>
-<h2 class="heading" id="querying-json">
-  Querying JSON
-  <a href="#querying-json">#</a>
-</h2>
-<p>Let&rsquo;s query the payloads for push events. Using <code>json_group_structure</code>, we get
-the following schema for Push events:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;ref&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;head&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;size&#34;</span>: <span style="font-style:italic">&#34;UBIGINT&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;before&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;commits&#34;</span>: [
-</span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">&#34;sha&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">&#34;url&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">&#34;author&#34;</span>: {
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">&#34;name&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">&#34;email&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>
-</span></span><span style="display:flex;"><span>      },
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">&#34;message&#34;</span>: <span style="font-style:italic">&#34;VARCHAR&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">&#34;distinct&#34;</span>: <span style="font-style:italic">&#34;BOOLEAN&#34;</span>
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  ],
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;push_id&#34;</span>: <span style="font-style:italic">&#34;UBIGINT&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">&#34;distinct_size&#34;</span>: <span style="font-style:italic">&#34;UBIGINT&#34;</span>
-</span></span><span style="display:flex;"><span>}
+documented payload&rsquo;s structure so as to understand it better.</p><h2 class=heading id=querying-json>Querying JSON
+<a href=#querying-json>#</a></h2><p>Let&rsquo;s query the payloads for push events. Using <code>json_group_structure</code>, we get
+the following schema for Push events:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;ref&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;head&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;size&#34;</span>: <span style=font-style:italic>&#34;UBIGINT&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;before&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;commits&#34;</span>: [
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>      <span style=font-weight:700>&#34;sha&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=font-weight:700>&#34;url&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=font-weight:700>&#34;author&#34;</span>: {
+</span></span><span style=display:flex><span>        <span style=font-weight:700>&#34;name&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>&#34;email&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>
+</span></span><span style=display:flex><span>      },
+</span></span><span style=display:flex><span>      <span style=font-weight:700>&#34;message&#34;</span>: <span style=font-style:italic>&#34;VARCHAR&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=font-weight:700>&#34;distinct&#34;</span>: <span style=font-style:italic>&#34;BOOLEAN&#34;</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  ],
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;push_id&#34;</span>: <span style=font-style:italic>&#34;UBIGINT&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=font-weight:700>&#34;distinct_size&#34;</span>: <span style=font-style:italic>&#34;UBIGINT&#34;</span>
+</span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>Let&rsquo;s get the average number of commits per push. For this, we&rsquo;re using
-<a href="https://datatracker.ietf.org/doc/html/rfc6901">JSON Pointer</a> to specify the
-location of the <code>&quot;commits&quot;</code> field.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">avg</span>(
-</span></span><span style="display:flex;"><span>        json_array_length(payload, <span style="font-style:italic">&#39;/commits&#39;</span>)
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> average_num_commits,
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> event_type = <span style="font-style:italic">&#39;PushEvent&#39;</span>
-</span></span></code></pre></div><p>The result:</p>
-<pre tabindex="0"><code>┌─────────────────────┐
+<a href=https://datatracker.ietf.org/doc/html/rfc6901>JSON Pointer</a> to specify the
+location of the <code>"commits"</code> field.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>avg</span>(
+</span></span><span style=display:flex><span>        json_array_length(payload, <span style=font-style:italic>&#39;/commits&#39;</span>)
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> average_num_commits,
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> event_type = <span style=font-style:italic>&#39;PushEvent&#39;</span>
+</span></span></code></pre></div><p>The result:</p><pre tabindex=0><code>┌─────────────────────┐
 │ average_num_commits │
 │       double        │
 ├─────────────────────┤
@@ -544,41 +295,36 @@ location of the <code>&quot;commits&quot;</code> field.</p>
 └─────────────────────┘
 </code></pre><p>However this doesn&rsquo;t give us the &ldquo;true&rdquo; average since the list of commits in
 payload holds only up to 20 commits and the rest have to be fetched separately.
-We have to use the &ldquo;size&rdquo; field instead:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">avg</span>(
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">cast</span>(json_extract_string(payload,<span style="font-style:italic">&#39;size&#39;</span>) <span style="font-weight:bold">as</span> UINTEGER)
-</span></span><span style="display:flex;"><span>    ) <span style="font-weight:bold">as</span> average
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> event_type = <span style="font-style:italic">&#39;PushEvent&#39;</span>
-</span></span></code></pre></div><p>we get:</p>
-<pre tabindex="0"><code>┌────────────────────┐
+We have to use the &ldquo;size&rdquo; field instead:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700>avg</span>(
+</span></span><span style=display:flex><span>        <span style=font-weight:700>cast</span>(json_extract_string(payload,<span style=font-style:italic>&#39;size&#39;</span>) <span style=font-weight:700>as</span> UINTEGER)
+</span></span><span style=display:flex><span>    ) <span style=font-weight:700>as</span> average
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> event_type = <span style=font-style:italic>&#39;PushEvent&#39;</span>
+</span></span></code></pre></div><p>we get:</p><pre tabindex=0><code>┌────────────────────┐
 │      average       │
 │       double       │
 ├────────────────────┤
 │ 3.0845803826064664 │
 └────────────────────┘
-</code></pre><p>So on average, each push has around 3 commits.</p>
-<p>Next, each commit has an author. Let&rsquo;s get the top 5 authors by number of
-commits made. For this we&rsquo;ll use JSONPath to pluck out the fields.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">with</span> t <span style="font-weight:bold">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">unnest</span>(
-</span></span><span style="display:flex;"><span>            from_json(json_extract(payload, <span style="font-style:italic">&#39;$.commits&#39;</span>),
-</span></span><span style="display:flex;"><span>            <span style="font-style:italic">&#39;[&#34;JSON&#34;]&#39;</span>)
-</span></span><span style="display:flex;"><span>        ) <span style="font-weight:bold">as</span> v
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> event_type = <span style="font-style:italic">&#39;PushEvent&#39;</span>
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    v-&gt;&gt;<span style="font-style:italic">&#39;$.author.name&#39;</span> <span style="font-weight:bold">as</span> name,
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">as</span> num_commits
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> t
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">group</span> <span style="font-weight:bold">by</span> 1
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> 2 <span style="font-weight:bold">desc</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">limit</span> 5
-</span></span></code></pre></div><p>This gives:</p>
-<pre tabindex="0"><code>┌─────────────────────────┬─────────────┐
+</code></pre><p>So on average, each push has around 3 commits.</p><p>Next, each commit has an author. Let&rsquo;s get the top 5 authors by number of
+commits made. For this we&rsquo;ll use JSONPath to pluck out the fields.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>with</span> t <span style=font-weight:700>as</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700>unnest</span>(
+</span></span><span style=display:flex><span>            from_json(json_extract(payload, <span style=font-style:italic>&#39;$.commits&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=font-style:italic>&#39;[&#34;JSON&#34;]&#39;</span>)
+</span></span><span style=display:flex><span>        ) <span style=font-weight:700>as</span> v
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> event_type = <span style=font-style:italic>&#39;PushEvent&#39;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    v-&gt;&gt;<span style=font-style:italic>&#39;$.author.name&#39;</span> <span style=font-weight:700>as</span> name,
+</span></span><span style=display:flex><span>    <span style=font-weight:700>count</span>(*) <span style=font-weight:700>as</span> num_commits
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> t
+</span></span><span style=display:flex><span><span style=font-weight:700>group</span> <span style=font-weight:700>by</span> 1
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> 2 <span style=font-weight:700>desc</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>limit</span> 5
+</span></span></code></pre></div><p>This gives:</p><pre tabindex=0><code>┌─────────────────────────┬─────────────┐
 │          name           │ num_commits │
 │         varchar         │    int64    │
 ├─────────────────────────┼─────────────┤
@@ -588,64 +334,56 @@ commits made. For this we&rsquo;ll use JSONPath to pluck out the fields.</p>
 │ Junio C Hamano          │         395 │
 │ Jiang Xin               │         341 │
 └─────────────────────────┴─────────────┘
-</code></pre><p>Note that I used <code>-&gt;&gt;</code> to extract the authors&rsquo; names since I want it to be
-VARCHAR instead of JSON.</p>
-<p>Finally, let&rsquo;s search through commit messages</p>
-<p>First let&rsquo;s unnest the commit messages. We&rsquo;ll store the commit messages in a
+</code></pre><p>Note that I used <code>->></code> to extract the authors&rsquo; names since I want it to be
+VARCHAR instead of JSON.</p><p>Finally, let&rsquo;s search through commit messages</p><p>First let&rsquo;s unnest the commit messages. We&rsquo;ll store the commit messages in a
 temporary table to simplify querying. Temporary tables are session scoped and
 once we exit, they&rsquo;ll be deleted. We&rsquo;ll also set <code>temp_directory</code> so that the
-table can be spilled to disk if memory is constrained.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">create</span> <span style="font-weight:bold">temporary</span> <span style="font-weight:bold">table</span> commit_messages <span style="font-weight:bold">as</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    row_number() over() <span style="font-weight:bold">as</span> id, <span style="font-style:italic">-- assign sequential id
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span>    v-&gt;&gt;<span style="font-style:italic">&#39;sha&#39;</span> <span style="font-weight:bold">as</span> commit_hash,
-</span></span><span style="display:flex;"><span>    v-&gt;&gt;<span style="font-style:italic">&#39;message&#39;</span> <span style="font-weight:bold">as</span> msg,
-</span></span><span style="display:flex;"><span>    event_id <span style="font-style:italic">-- to retrieve associated event
-</span></span></span><span style="display:flex;"><span><span style="font-style:italic"></span><span style="font-weight:bold">from</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        event_id,
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">unnest</span>(
-</span></span><span style="display:flex;"><span>            from_json(json_extract(payload, <span style="font-style:italic">&#39;$.commits&#39;</span>),
-</span></span><span style="display:flex;"><span>            <span style="font-style:italic">&#39;[&#34;JSON&#34;]&#39;</span>)
-</span></span><span style="display:flex;"><span>        ) <span style="font-weight:bold">as</span> v
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> events
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">where</span> event_type = <span style="font-style:italic">&#39;PushEvent&#39;</span>
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">set</span> temp_directory=<span style="font-style:italic">&#39;.&#39;</span>;
+table can be spilled to disk if memory is constrained.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>create</span> <span style=font-weight:700>temporary</span> <span style=font-weight:700>table</span> commit_messages <span style=font-weight:700>as</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    row_number() over() <span style=font-weight:700>as</span> id, <span style=font-style:italic>-- assign sequential id
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    v-&gt;&gt;<span style=font-style:italic>&#39;sha&#39;</span> <span style=font-weight:700>as</span> commit_hash,
+</span></span><span style=display:flex><span>    v-&gt;&gt;<span style=font-style:italic>&#39;message&#39;</span> <span style=font-weight:700>as</span> msg,
+</span></span><span style=display:flex><span>    event_id <span style=font-style:italic>-- to retrieve associated event
+</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span style=font-weight:700>from</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        event_id,
+</span></span><span style=display:flex><span>        <span style=font-weight:700>unnest</span>(
+</span></span><span style=display:flex><span>            from_json(json_extract(payload, <span style=font-style:italic>&#39;$.commits&#39;</span>),
+</span></span><span style=display:flex><span>            <span style=font-style:italic>&#39;[&#34;JSON&#34;]&#39;</span>)
+</span></span><span style=display:flex><span>        ) <span style=font-weight:700>as</span> v
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> events
+</span></span><span style=display:flex><span>    <span style=font-weight:700>where</span> event_type = <span style=font-style:italic>&#39;PushEvent&#39;</span>
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700>set</span> temp_directory=<span style=font-style:italic>&#39;.&#39;</span>;
 </span></span></code></pre></div><p>Let&rsquo;s start by retrieving the percentage of commit messages that start with
-&lsquo;merge pull request&rsquo;:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    round((
-</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">count</span>(*) /
-</span></span><span style="display:flex;"><span>        (<span style="font-weight:bold">select</span> <span style="font-weight:bold">count</span>(*) <span style="font-weight:bold">from</span> commit_messages)
-</span></span><span style="display:flex;"><span>    ) * 100, 2) <span style="font-weight:bold">as</span> percentage
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> commit_messages m1,
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> starts_with(<span style="font-weight:bold">lower</span>(m1.msg), <span style="font-style:italic">&#39;merge pull request&#39;</span>)
-</span></span></code></pre></div><p>This gives:</p>
-<pre tabindex="0"><code>┌────────────┐
+&lsquo;merge pull request&rsquo;:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    round((
+</span></span><span style=display:flex><span>        <span style=font-weight:700>count</span>(*) /
+</span></span><span style=display:flex><span>        (<span style=font-weight:700>select</span> <span style=font-weight:700>count</span>(*) <span style=font-weight:700>from</span> commit_messages)
+</span></span><span style=display:flex><span>    ) * 100, 2) <span style=font-weight:700>as</span> percentage
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> commit_messages m1,
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> starts_with(<span style=font-weight:700>lower</span>(m1.msg), <span style=font-style:italic>&#39;merge pull request&#39;</span>)
+</span></span></code></pre></div><p>This gives:</p><pre tabindex=0><code>┌────────────┐
 │ percentage │
 │   double   │
 ├────────────┤
 │       4.47 │
 └────────────┘
-</code></pre><p>Next, let&rsquo;s build a full text search index over the commit messages:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>pragma create_fts_index(<span style="font-style:italic">&#39;commit_messages&#39;</span>, <span style="font-style:italic">&#39;id&#39;</span>, <span style="font-style:italic">&#39;msg&#39;</span>);
+</code></pre><p>Next, let&rsquo;s build a full text search index over the commit messages:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>pragma create_fts_index(<span style=font-style:italic>&#39;commit_messages&#39;</span>, <span style=font-style:italic>&#39;id&#39;</span>, <span style=font-style:italic>&#39;msg&#39;</span>);
 </span></span></code></pre></div><p>We can now search stuff. For example, to get commit messages containing the term
-&ldquo;sqlite&rdquo;:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>    event_id,
-</span></span><span style="display:flex;"><span>    msg
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">from</span> (
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">select</span>
-</span></span><span style="display:flex;"><span>        *,
-</span></span><span style="display:flex;"><span>        fts_main_commit_messages.match_bm25(id, <span style="font-style:italic">&#39;sqlite&#39;</span>) <span style="font-weight:bold">as</span> score
-</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">from</span> commit_messages
-</span></span><span style="display:flex;"><span>) t
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">where</span> score <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold">null</span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">order</span> <span style="font-weight:bold">by</span> score <span style="font-weight:bold">desc</span>
-</span></span></code></pre></div><p>This results in 31 rows:</p>
-<pre tabindex="0"><code>┌────────────┬──────────────────────────┐
+&ldquo;sqlite&rdquo;:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>    event_id,
+</span></span><span style=display:flex><span>    msg
+</span></span><span style=display:flex><span><span style=font-weight:700>from</span> (
+</span></span><span style=display:flex><span>    <span style=font-weight:700>select</span>
+</span></span><span style=display:flex><span>        *,
+</span></span><span style=display:flex><span>        fts_main_commit_messages.match_bm25(id, <span style=font-style:italic>&#39;sqlite&#39;</span>) <span style=font-weight:700>as</span> score
+</span></span><span style=display:flex><span>    <span style=font-weight:700>from</span> commit_messages
+</span></span><span style=display:flex><span>) t
+</span></span><span style=display:flex><span><span style=font-weight:700>where</span> score <span style=font-weight:700>is</span> <span style=font-weight:700>not</span> <span style=font-weight:700>null</span>
+</span></span><span style=display:flex><span><span style=font-weight:700>order</span> <span style=font-weight:700>by</span> score <span style=font-weight:700>desc</span>
+</span></span></code></pre></div><p>This results in 31 rows:</p><pre tabindex=0><code>┌────────────┬──────────────────────────┐
 │  event_id  │           msg            │
 │   int64    │         varchar          │
 ├────────────┼──────────────────────────┤
@@ -655,138 +393,10 @@ table can be spilled to disk if memory is constrained.</p>
 │ 4951123085 │ Update #11\n\nAdd SQLite │
 │ 4951201866 │ add sqlite config        │
 └────────────┴──────────────────────────┘
-</code></pre><h2 class="heading" id="wrapping-up">
-  Wrapping up
-  <a href="#wrapping-up">#</a>
-</h2>
-<p>There&rsquo;s lots of other queries to try out, especially on the full github dataset.
+</code></pre><h2 class=heading id=wrapping-up>Wrapping up
+<a href=#wrapping-up>#</a></h2><p>There&rsquo;s lots of other queries to try out, especially on the full github dataset.
 Querying JSON can be tricky since it involves a lot of plucking fields and
 unnesting entries, plus different values might not have the same schema. DuckDB
 does make things a bit easier though by providing various functions and helpers.
-And some SQL know-how really goes a long way when dealing with JSON.</p>
-<h2 class="heading" id="referencesfurther-reading">
-  References/Further Reading
-  <a href="#referencesfurther-reading">#</a>
-</h2>
-<ul>
-<li><a href="https://duckdb.org/2023/03/03/json.html">Shredding Deeply Nested JSON, One Vector at a Time</a></li>
-<li><a href="https://duckdb.org/docs/extensions/json">JSON - DuckDB docs</a></li>
-</ul>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/parquet-zstd/">
-                        Parquet &#43; Zstd: Smaller faster data formats
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/timeseries-filling-missing-values/">
-                        Handling Missing Values in Timeseries Datasets
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+And some SQL know-how really goes a long way when dealing with JSON.</p><h2 class=heading id=referencesfurther-reading>References/Further Reading
+<a href=#referencesfurther-reading>#</a></h2><ul><li><a href=https://duckdb.org/2023/03/03/json.html>Shredding Deeply Nested JSON, One Vector at a Time</a></li><li><a href=https://duckdb.org/docs/extensions/json>JSON - DuckDB docs</a></li></ul></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/parquet-zstd/>Parquet + Zstd: Smaller faster data formats</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/timeseries-filling-missing-values/>Handling Missing Values in Timeseries Datasets</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

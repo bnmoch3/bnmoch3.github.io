@@ -1,220 +1,33 @@
-<!DOCTYPE html>
-<html lang="en-us"
-  dir="ltr">
-
-  <head>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width">
-
-
-
-<link rel="icon" type="image/ico" href="https://bnm3k.github.io//favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://bnm3k.github.io//favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://bnm3k.github.io//favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="https://bnm3k.github.io//android-chrome-192x192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://bnm3k.github.io//apple-touch-icon.png">
-
-<meta name="description" content=""/>
-
-<title>
-    
-    Tiered Storage via 2-Tree | bnm 3000
-    
-</title>
-
-<link rel="canonical" href="https://bnm3k.github.io/blog/two-tree/"/>
-
-<meta property="og:url" content="https://bnm3k.github.io/blog/two-tree/">
-  <meta property="og:site_name" content="bnm 3000">
-  <meta property="og:title" content="Tiered Storage via 2-Tree">
-  <meta property="og:description" content="Split a data-structure into two: a memory-optimized ’top’-tree and a disk optimized ‘bottom’-tree. Implement a lightweight migration protocol for hot records to move up and cold records down.">
-  <meta property="og:locale" content="en_us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="notes">
-    <meta property="article:published_time" content="2024-06-10T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-06-10T00:00:00+00:00">
-    <meta property="article:tag" content="Database Internals">
-
-
-
-
-
-
-
-
-
-
-
-
-
-<link rel="stylesheet" href="/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css" media="all">
-
-
-
-
-
-
-
-
-
-  </head>
-
-  
-
-  
-  
-  
-
-  <body class="light">
-
-    <div class="content">
-      <header>
-        
-
-<div class="header">
-
-    
-
-    <h1 class="header-title">
-        <a href="https://bnm3k.github.io/">bnm 3000</a>
-    </h1>
-
-    <div class="flex">
-        
-
-        
-        
-      
-        <p class="small ">
-            <a href="/" >
-                /home
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/posts" >
-                /posts
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/notes" >
-                /notes
-            </a>
-        </p>
-        
-      
-        <p class="small ">
-            <a href="/tags" >
-                /tags
-            </a>
-        </p>
-        
-        
-    </div>
-
-    
-
-</div>
-
-      </header>
-
-      <main class="main">
-        
-
-
-
-
-
-<div class="breadcrumbs">
-    
-    <a href="/">Home</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a href="/notes/">Notes</a>
-    <span class="breadcrumbs-separator"> > </span>
-    
-    <a class="breadcrumbs-current" href="/blog/two-tree/">Tiered Storage via 2-Tree</a>
-</div>
-
-
-
-<div >
-
-  <div class="single-intro-container">
-
-    
-
-    <h1 class="single-title">Tiered Storage via 2-Tree</h1>
-    
-    <p class="single-summary">Split a data-structure into two: a memory-optimized &rsquo;top&rsquo;-tree and a disk optimized &lsquo;bottom&rsquo;-tree. Implement a lightweight migration protocol for hot records to move up and cold records down.</p>
-    
-
-    
-
-    <p class="single-readtime">
-      
-      
-      
-      <time datetime="2024-06-10T00:00:00&#43;00:00">June 10, 2024</time>
-      
-
-      
-      &nbsp; · &nbsp;
-      4 min read
-      
-    </p>
-
-  </div>
-
-  
-
-  
-
-  
-
-  
-
-  <div class="single-content">
-    <p>Paper:
-<a href="https://www.cidrdb.org/cidr2023/papers/p57-zhou.pdf">Two is Better Than One: The Case for 2-Tree for Skewed Data Sets -
-Xinjing Zhou, Xiangyao Yu, Goetz Graefe, Michael Stonebraker</a></p>
-<p>Here&rsquo;s a high-level overview of the 2-Tree approach:</p>
-<ul>
-<li>Take a logical data structure such as a tree (ordered map)</li>
-<li>Implement it as two separate physical data structures, a <em>top tree</em> that is
-memory optimized and a <em>bottom tree</em> that is optimized for disk access</li>
-<li>Put in place a lightweight migration protocol such that hot records move to
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Tiered Storage via 2-Tree | bnm 3000
+</title><link rel=canonical href=https://bnm3k.github.io/blog/two-tree/><meta property="og:url" content="https://bnm3k.github.io/blog/two-tree/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Tiered Storage via 2-Tree"><meta property="og:description" content="Split a data-structure into two: a memory-optimized ’top’-tree and a disk optimized ‘bottom’-tree. Implement a lightweight migration protocol for hot records to move up and cold records down."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2024-06-10T00:00:00+00:00"><meta property="article:modified_time" content="2024-06-10T00:00:00+00:00"><meta property="article:tag" content="Database Internals"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><h1 class=header-title><a href=https://bnm3k.github.io/>bnm 3000</a></h1><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/two-tree/>Tiered Storage via 2-Tree</a></div><div><div class=single-intro-container><h1 class=single-title>Tiered Storage via 2-Tree</h1><p class=single-summary>Split a data-structure into two: a memory-optimized &rsquo;top&rsquo;-tree and a disk optimized &lsquo;bottom&rsquo;-tree. Implement a lightweight migration protocol for hot records to move up and cold records down.</p><p class=single-readtime><time datetime=2024-06-10T00:00:00+00:00>June 10, 2024</time>
+&nbsp; · &nbsp;
+4 min read</p></div><div class=single-content><p>Paper:
+<a href=https://www.cidrdb.org/cidr2023/papers/p57-zhou.pdf>Two is Better Than One: The Case for 2-Tree for Skewed Data Sets -
+Xinjing Zhou, Xiangyao Yu, Goetz Graefe, Michael Stonebraker</a></p><p>Here&rsquo;s a high-level overview of the 2-Tree approach:</p><ul><li>Take a logical data structure such as a tree (ordered map)</li><li>Implement it as two separate physical data structures, a <em>top tree</em> that is
+memory optimized and a <em>bottom tree</em> that is optimized for disk access</li><li>Put in place a lightweight migration protocol such that hot records move to
 the top tree (up-migration) while cold records move to the bottom tree
-(down-migration)</li>
-<li>For up-migration, probabilstically determine whether to move a record to the
+(down-migration)</li><li>For up-migration, probabilstically determine whether to move a record to the
 top tree whenever it&rsquo;s fetched from the bottom tree. If a record is indeed
-hot, then it will have a higher chance of getting sampled</li>
-<li>For down-migration, use a lightweight cache eviction algorithm
+hot, then it will have a higher chance of getting sampled</li><li>For down-migration, use a lightweight cache eviction algorithm
 (clock/second-chance replacement in the paper) to evict LRU records to the
-bottom tree.</li>
-</ul>
-<p>2-Tree contrasts with the
-<a href="/blog/efficient-os-paging-hot-cold-db">R Stoica &amp; Ailamaki approach</a> in that
+bottom tree.</li></ul><p>2-Tree contrasts with the
+<a href=/blog/efficient-os-paging-hot-cold-db>R Stoica & Ailamaki approach</a> in that
 with the latter, you&rsquo;ve got a single physical (in-memory) data-structure with
 hot records being placed in an <code>mlock</code>-ed region of virtual memory while the
 cold records are placed in regions that can be paged in and out by the OS as
-needed. The R. Stoica &amp; Ailamaki also uses a more accurate though offline method
-to categorize hot vs cold records.</p>
-<p>For <strong>downward migration</strong>: &ldquo;A clock handle, i.e., a key value indicating the
+needed. The R. Stoica & Ailamaki also uses a more accurate though offline method
+to categorize hot vs cold records.</p><p>For <strong>downward migration</strong>: &ldquo;A clock handle, i.e., a key value indicating the
 current progress of the eviction scan, is maintained in memory. When eviction is
 needed, the system cycles through every record starting after the clock handle.
 It collects records with the reference bit off for eviction. It also clears the
 reference bit of records examined. The scan stops when the desired number of
-records has been collected&rdquo;.</p>
-<p>For <strong>Upward Migration</strong>, the authors describe it as follows: &ldquo;we adopt a
+records has been collected&rdquo;.</p><p>For <strong>Upward Migration</strong>, the authors describe it as follows: &ldquo;we adopt a
 sampling-based approach where we move only a sample of accessed records upwards.
 We define a sampling rate as D (0 &lt; D ≤ 1). For data that is becoming hot, its
 frequency of access increases, and therefore it will be more likely to end up in
-the sample set&rdquo;.</p>
-<p>If upward migration is performed eagerly rather than probablistically, then
+the sample set&rdquo;.</p><p>If upward migration is performed eagerly rather than probablistically, then
 during scans, hot records in the top tree might be evicted by cold entries that
 are only accessed once, thus reducing memory utilization. Therefore, the <code>D</code>
 parameter should be thought of as a lightweight means (in terms of CPU and
@@ -223,176 +36,27 @@ quickly while providing little thrash resistance. In contrast, a small sampling
 rate delivers thrash resistance by sacrificing the warm-up rate&rdquo;. More
 heavy-weight approaches can be considered though as the authors point out:
 &ldquo;These strategies typically employ some form of cache partitioning and/or
-frequency tracking that incur non-trivial per-record bookkeeping&rdquo;.</p>
-<p>Another aspect worth considering when carrying out migrations is whether a
+frequency tracking that incur non-trivial per-record bookkeeping&rdquo;.</p><p>Another aspect worth considering when carrying out migrations is whether a
 record can exist in both the top tree and bottom tree. With an <strong>exclusive
 policy</strong>: &ldquo;the system only keeps one copy of the record in either the top or
 bottom tree. When migrating data from the bottom tree upwards, the record is
 erased from the bottom tree&rdquo;. On the other hand, with an <strong>inclusive policy</strong>,
 the bottom tree is not modified during migration - the top tree maintains the
 freshest version of the record. Inclusive policy minimizes IO costs though it
-uses up more disk space.</p>
-<p>Figure from 2-Tree paper:
-
-
-
-
-
-
-
-
-
-
-
-
-<figure class="">
-
-    <div>
-        <img loading="lazy" alt="image description" src="/assets/images/larger_than_mem/two_tree.png" >
-    </div>
-
-    
-</figure>
-</p>
-<p>Additional details to consider:</p>
-<ul>
-<li>If the logical data structure should provide atomicity, consistency and
+uses up more disk space.</p><p>Figure from 2-Tree paper:<figure><div><img loading=lazy alt="image description" src=/assets/images/larger_than_mem/two_tree.png></div></figure></p><p>Additional details to consider:</p><ul><li>If the logical data structure should provide atomicity, consistency and
 durability guarantees (such as in database indexes), then modifications to the
-2-Tree and migrations should be carried out transactionally.</li>
-<li>Range scans need to account for instances where a record is both in the top
+2-Tree and migrations should be carried out transactionally.</li><li>Range scans need to account for instances where a record is both in the top
 tree and the bottom tree. In such cases, the top tree version is emitted since
-it&rsquo;s fresher.</li>
-<li>Deletes are carried out in a lazy/deferred manner. That is, if a record is in
+it&rsquo;s fresher.</li><li>Deletes are carried out in a lazy/deferred manner. That is, if a record is in
 the top tree, the delete bit is set and the operation returns immediately. If
 a record is not in the top tree, then a tombstone entry is inserted to the top
 tree. In both cases, the actual delete is carried out later on during
-evictions.</li>
-<li>Updates are also carried out in a lazy/deferred manner in cases where the
+evictions.</li><li>Updates are also carried out in a lazy/deferred manner in cases where the
 record resides in the bottom tree. A <em>dirty bit</em> is used to indicate that the
-stale record in the bottom tree should be updated during evictions.</li>
-</ul>
-<p>Overall, one thing I appreciate with 2-Tree is that like the R. Stoica &amp;
+stale record in the bottom tree should be updated during evictions.</li></ul><p>Overall, one thing I appreciate with 2-Tree is that like the R. Stoica &
 Ailamaki approach, it&rsquo;s quite simple to understand and implement. Also, just as
 with Leanstore, the authors favour low-overhead low-complexity approaches.
 Future directions might entail extending 2-Tree to other data-structures such as
 hash-maps, figuring out a way to dynamically tune the <code>D</code> sampling parameter and
 incorporating concurrency control such that migrations can even be carried out
-in parallel.</p>
-
-    
-  </div>
-
-  
-
-
-  
-
-  
-  
-
-<div class="single-pagination">
-    <hr />
-
-    <div class="flex">
-
-        <div class="single-pagination-prev">
-            
-            <div class="single-pagination-container-prev">
-                <div class="single-pagination-text">←</div>
-                <div class="single-pagination-text">
-                    <a href="/blog/pointer-swizzling/">
-                        Pointer Swizzling Buffer Pools
-                    </a>
-                </div>
-            </div>
-            
-        </div>
-
-        <div class="single-pagination-next">
-            
-            <div class="single-pagination-container-next">
-                <div class="single-pagination-text">
-                    <a href="/blog/large-scale-analysis-caching-twitter/">
-                         Notes on &#39;A large scale analysis of hundreds of in-memory cache clusters at Twitter&#39;
-                    </a>
-                </div>
-                <div class="single-pagination-text">→</div>
-            </div>
-            
-        </div>
-
-    </div>
-
-    <hr />
-</div>
-
-
-
-  
-
-  
-
-  
-  <div class="back-to-top">
-    <a href="#top">
-      back to top
-    </a>
-  </div>
-  
-
-</div>
-
-
-      </main>
-    </div>
-
-    <footer>
-      
-
-    
-    
-    
-    <p>&hellip;</p>
-    
-
-
-    </footer>
-
-    
-
-  </body>
-
-  <script>
-
-  function isAuto() {
-    return document.body.classList.contains("auto");
-  }
-
-  function setTheme() {
-    if (!isAuto()) {
-      return
-    }
-
-    document.body.classList.remove("auto");
-    let cls = "light";
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      cls = "dark";
-    }
-
-    document.body.classList.add(cls);
-  }
-
-  function invertBody() {
-    document.body.classList.toggle("dark");
-    document.body.classList.toggle("light");
-  }
-
-  if (isAuto()) {
-    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
-  }
-
-  setTheme();
-
-</script>
-
-</html>
+in parallel.</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/pointer-swizzling/>Pointer Swizzling Buffer Pools</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/large-scale-analysis-caching-twitter/>Notes on 'A large scale analysis of hundreds of in-memory cache clusters at Twitter'</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>
