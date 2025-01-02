@@ -1,0 +1,159 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Handling panics from goroutines you've spawned | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/notes/2023/goroutine-panics/><meta property="og:url" content="https://www.bnmoch3.org/notes/2023/goroutine-panics/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Handling panics from goroutines you've spawned"><meta property="og:description" content="It’s one thing to handle a panic that’s occured within a function. It’s an entirely different affair to handle a panic that occured within a goroutine that’s been spawned."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2023-05-11T00:00:00+00:00"><meta property="article:modified_time" content="2023-05-11T00:00:00+00:00"><meta property="article:tag" content="Golang"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/notes/2023/goroutine-panics/>Handling panics from goroutines you've spawned</a></div><div><div class=single-intro-container><h1 class=single-title>Handling panics from goroutines you've spawned</h1><p class=single-readtime><time datetime=2023-05-11T00:00:00+00:00>May 11, 2023</time>
+&nbsp; · &nbsp;
+5 min read</p></div><div class=single-content><h2 class=heading id=overview>Overview
+<a href=#overview>#</a></h2><p>I need to run a given function before exiting from a Go program, either during
+graceful shutdown or whenever a panic occurs. If a panic occurs within a
+goroutine, it&rsquo;s a bit tricky to get the exit/clean-up function at the caller to
+be run. As it&rsquo;s critical for the restarting of the program and it involves
+persisting some state to disk, the correct approach would be one of the
+following:</p><ol><li>Implement a recovery protocol: This is something DB system
+implementers/researchers would recommend since it&rsquo;s right up their alley.
+Recovery entails checkpointing some metadata during runtime and on restart,
+carry out a procedure to restore the system back into a consistent state.
+It&rsquo;s quite hard to get right. For example, what exactly would &lsquo;consistent&rsquo;
+mean for a given system, or what if another crash occurs during recovery.
+Therefore, rather than haphazardly re-invent the wheel, a better approach
+would be to:</li><li>Use a database: Keep it simple, preferably a local/embedded one such as
+SQLite. After all, <a href=https://danluu.com/file-consistency/>files are hard</a>.</li></ol><p>Option 1 is infeasible (for now :D). Option 2 is what I ended up going with but
+not before running into the problem I mentioned in the introduction.</p><h2 class=heading id=of-defers-panics-and-recovers>Of Defers, Panics and Recovers
+<a href=#of-defers-panics-and-recovers>#</a></h2><p>There are two kinds of errors: those that you expect and have accounted for, and
+the unforeseen ones. And yes, this is very much obvious and should go without
+saying. Now, given I&rsquo;m in the early phase of this project, I tend to encounter
+more of the latter as I&rsquo;m still mapping out the problem space.</p><p>When a Go program encounters an unexpected error for which the best option is to
+exit, the best course of action is to, well, exit:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>() <span style=color:#902000>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>return</span> fmt.<span style=color:#06287e>Errorf</span>(<span style=color:#4070a0>&#34;whoops&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;Clean up&#34;</span>)
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>if</span> err <span style=color:#666>:=</span> <span style=color:#06287e>doSomething</span>(); err <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		fmt.<span style=color:#06287e>Fprintf</span>(os.Stderr, <span style=color:#4070a0>&#34;Err occured: %v\n&#34;</span>, err)
+</span></span><span style=display:flex><span>		os.<span style=color:#06287e>Exit</span>(<span style=color:#40a070>1</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;OK&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>This outputs:</p><pre tabindex=0><code>Err occured: whoops
+exit status 1
+</code></pre><p>However, explicit exits aren&rsquo;t a good idea when you&rsquo;ve got deferred statements,
+since they don&rsquo;t get run (such as in the preceding code sample). Hence the
+preference for <code>panic</code> where need be:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>() <span style=color:#902000>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>return</span> fmt.<span style=color:#06287e>Errorf</span>(<span style=color:#4070a0>&#34;whoops&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;Clean up&#34;</span>)
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>if</span> err <span style=color:#666>:=</span> <span style=color:#06287e>doSomething</span>(); err <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#007020>panic</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;OK&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>This outputs:</p><pre tabindex=0><code>Clean up
+panic: whoops
+
+goroutine 1 [running]:
+main.main()
+        .../main.go:14 +0xed
+exit status 2
+</code></pre><p>If required, we can also recover from a panic and either handle the unexpected
+error or return it to the caller who can figure out what to do with it. This is
+quite useful and idiomatic for library code:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomethingElse</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020>panic</span>(<span style=color:#4070a0>&#34;whoops&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>() (err <span style=color:#902000>error</span>) {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> <span style=color:#007020;font-weight:700>func</span>() {
+</span></span><span style=display:flex><span>		<span style=color:#007020;font-weight:700>if</span> r <span style=color:#666>:=</span> <span style=color:#007020>recover</span>(); r <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>			err = fmt.<span style=color:#06287e>Errorf</span>(<span style=color:#4070a0>&#34;Unexpected error: %v&#34;</span>, r)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}()
+</span></span><span style=display:flex><span>	<span style=color:#06287e>doSomethingElse</span>()
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>return</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>	err <span style=color:#666>:=</span> <span style=color:#06287e>doSomething</span>()
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>if</span> err <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;err&#34;</span>, err)
+</span></span><span style=display:flex><span>	} <span style=color:#007020;font-weight:700>else</span> {
+</span></span><span style=display:flex><span>		fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;OK&#34;</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>As an aside, while named returns should be avoided, this is one case where they
+are useful (and necessary). If <code>doSomething</code> was written this way instead:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>() <span style=color:#902000>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>var</span> err <span style=color:#902000>error</span>
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> <span style=color:#007020;font-weight:700>func</span>() {
+</span></span><span style=display:flex><span>		<span style=color:#007020;font-weight:700>if</span> r <span style=color:#666>:=</span> <span style=color:#007020>recover</span>(); r <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>			err = fmt.<span style=color:#06287e>Errorf</span>(<span style=color:#4070a0>&#34;Unexpected error: %v&#34;</span>, r)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}()
+</span></span><span style=display:flex><span>	<span style=color:#06287e>doSomethingElse</span>()
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>return</span> err
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>The caller would incorrectly get <code>nil</code> error. The best explanation I&rsquo;ve found as
+to why this is the case is from this
+<a href="https://news.ycombinator.com/item?id=14669443">HN Comment</a>:</p><blockquote><p>In Go &ldquo;return v&rdquo; copies v into the return location before calling the deferred
+code. If that location is not named, the deferred function has no way to
+change it</p></blockquote><h2 class=heading id=handling-panics-from-goroutines>Handling panics from goroutines
+<a href=#handling-panics-from-goroutines>#</a></h2><p>If the panic occurs within a goroutine, any deferred statements in the
+spawner/parent don&rsquo;t get run. This is the problem I encountered:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomethingElse</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020>panic</span>(<span style=color:#4070a0>&#34;whoops&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>(wg <span style=color:#666>*</span>sync.WaitGroup) {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> wg.<span style=color:#06287e>Done</span>() <span style=color:#60a0b0;font-style:italic>// ✅ gets run
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>	<span style=color:#06287e>doSomethingElse</span>()
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;Clean up&#34;</span>) <span style=color:#60a0b0;font-style:italic>// ❌ doesn&#39;t get run
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>	<span style=color:#007020;font-weight:700>var</span> wg sync.WaitGroup
+</span></span><span style=display:flex><span>	wg.<span style=color:#06287e>Add</span>(<span style=color:#40a070>1</span>)
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>doSomething</span>(<span style=color:#666>&amp;</span>wg)
+</span></span><span style=display:flex><span>	wg.<span style=color:#06287e>Wait</span>()
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Recover within <code>main</code> doesn&rsquo;t cut it out since it only &lsquo;works when called from
+the same goroutine as the panic is called in&rsquo; as pointed out in this
+<a href=https://stackoverflow.com/a/50409138>SO answer</a>. The are a couple of
+solutions:</p><ul><li>On panic, figure out a way to return control back to main (iow, use recover
+within the goroutine)</li><li>Have the goroutine call the cleanup function</li></ul><p>I prefer the first solution since I want to centralize the responsibility for
+cleaning up:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomethingElse</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020>panic</span>(<span style=color:#4070a0>&#34;whoops&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>doSomething</span>(done <span style=color:#007020;font-weight:700>chan</span><span style=color:#666>&lt;-</span> <span style=color:#902000>error</span>) {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> <span style=color:#007020;font-weight:700>func</span>() {
+</span></span><span style=display:flex><span>		<span style=color:#007020;font-weight:700>if</span> r <span style=color:#666>:=</span> <span style=color:#007020>recover</span>(); r <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>			done <span style=color:#666>&lt;-</span> fmt.<span style=color:#06287e>Errorf</span>(<span style=color:#4070a0>&#34;Unexpected error: %v&#34;</span>, r)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#007020>close</span>(done)
+</span></span><span style=display:flex><span>	}()
+</span></span><span style=display:flex><span>	<span style=color:#06287e>doSomethingElse</span>()
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>defer</span> fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;Clean up&#34;</span>)
+</span></span><span style=display:flex><span>	done <span style=color:#666>:=</span> <span style=color:#007020>make</span>(<span style=color:#007020;font-weight:700>chan</span> <span style=color:#902000>error</span>)
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>doSomething</span>(done)
+</span></span><span style=display:flex><span>	<span style=color:#007020;font-weight:700>if</span> err <span style=color:#666>:=</span> <span style=color:#666>&lt;-</span>done; err <span style=color:#666>!=</span> <span style=color:#007020;font-weight:700>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#007020>panic</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	fmt.<span style=color:#06287e>Println</span>(<span style=color:#4070a0>&#34;OK&#34;</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=just-use-a-recovery-protocol-or-a-database>Just use a Recovery Protocol, or a Database
+<a href=#just-use-a-recovery-protocol-or-a-database>#</a></h2><p>Note, in the above code sample and as previously mentioned, I have to use
+<code>panic</code>. If I call <code>os.Exit</code> or a function such as <code>log.Fatal</code> (that in turn
+calls <code>os.Exit</code>), the deferred statement doesn&rsquo;t get run and I&rsquo;m back to square
+one. Keeping track of all that is intractable for me. So for my case, I ended up
+making it <a href=https://www.sqlite.org/wal.html>someone else&rsquo;s</a> problem, and from
+the look of things, they seem pretty great at
+<a href=https://www.sqlite.org/testing.html>handling it</a> :)</p><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li>Files are hard</li><li>Go by Example - Mark McGranaghan, Eli Bendersky:
+<a href=https://gobyexample.com/panic>Panic</a>,
+<a href=https://gobyexample.com/defer>Defer</a> and
+<a href=https://gobyexample.com/recover>Recover</a></li><li>Defer, Panic and Recover - Andrew Gerran
+<a href=https://go.dev/blog/defer-panic-and-recover>link</a></li><li>Panics in libraries that spawn goroutines:
+<a href=https://stackoverflow.com/questions/70533828/panics-in-libraries-that-spawn-goroutines>stack-overflow</a></li><li>How do I handle panic in goroutines?
+<a href=https://stackoverflow.com/questions/54559189/how-do-i-handle-panic-in-goroutines>stack-overflow</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/notes/2023/duckdb-arrow-data-types/>Programmatically creating a DuckDB table from an Arrow schema</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/notes/2023/sqlite-benchmarking-writes/>Benchmarking SQLite inserts</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

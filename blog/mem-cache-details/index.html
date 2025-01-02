@@ -1,5 +1,5 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Retrieving Memory and Cache Organization | bnm 3000
-</title><link rel=canonical href=https://bnm3k.github.io/blog/mem-cache-details/><meta property="og:url" content="https://bnm3k.github.io/blog/mem-cache-details/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Retrieving Memory and Cache Organization"><meta property="og:description" content="Memory, Cache levels, Cache sizes, TLB, associativity and so on"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-04T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-04T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Retrieving Memory and Cache Organization | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/blog/mem-cache-details/><meta property="og:url" content="https://www.bnmoch3.org/blog/mem-cache-details/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Retrieving Memory and Cache Organization"><meta property="og:description" content="Memory, Cache levels, Cache sizes, TLB, associativity and so on"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-04T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-04T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/mem-cache-details/>Retrieving Memory and Cache Organization</a></div><div><div class=single-intro-container><h1 class=single-title>Retrieving Memory and Cache Organization</h1><p class=single-readtime><time datetime=2024-01-04T00:00:00+00:00>January 4, 2024</time>
 &nbsp; · &nbsp;
@@ -16,16 +16,16 @@ it&rsquo;s not much of an issue since there&rsquo;s only one NUMA node.</p><p><c
 tools:</p><h2 class=heading id=lscpu>lscpu
 <a href=#lscpu>#</a></h2><p>Next let&rsquo;s use the <a href=https://man7.org/linux/man-pages/man1/lscpu.1.html>lscpu</a>
 command. Filtering out the output that&rsquo;s not related to the memory system, I get
-the following:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu
+the following:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span>Architecture:                       x86_64
-</span></span><span style=display:flex><span>Address sizes:                      39 bits physical, 48 bits virtual
-</span></span><span style=display:flex><span>NUMA node(s):                       1
-</span></span><span style=display:flex><span>L1d cache:                          192 KiB
-</span></span><span style=display:flex><span>L1i cache:                          192 KiB
+</span></span><span style=display:flex><span>Address sizes:                      <span style=color:#40a070>39</span> bits physical, <span style=color:#40a070>48</span> bits virtual
+</span></span><span style=display:flex><span>NUMA node<span style=color:#666>(</span>s<span style=color:#666>)</span>:                       <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L1d cache:                          <span style=color:#40a070>192</span> KiB
+</span></span><span style=display:flex><span>L1i cache:                          <span style=color:#40a070>192</span> KiB
 </span></span><span style=display:flex><span>L2 cache:                           1.5 MiB
-</span></span><span style=display:flex><span>L3 cache:                           12 MiB
-</span></span><span style=display:flex><span>NUMA node0 CPU(s):                  0-11
+</span></span><span style=display:flex><span>L3 cache:                           <span style=color:#40a070>12</span> MiB
+</span></span><span style=display:flex><span>NUMA node0 CPU<span style=color:#666>(</span>s<span style=color:#666>)</span>:                  0-11
 </span></span></code></pre></div><p><code>lscpu</code> doesn&rsquo;t give us the main memory details since it&rsquo;s solely focused on the
 CPU, of which the caches are part of. From its man page: &ldquo;lscpu gathers CPU
 architecture information from sysfs, /proc/cpuinfo and any applicable
@@ -61,13 +61,13 @@ virtual to physical addresses.</li><li>Support larger than memory workloads: The
 deals with might exceed the available physical memory - with virtual
 addressing, physical memory instead serves as a cache on pages allocated on
 the disk and also those that are unallocated.</li></ol><p>Of course there are more reasons.</p><p>Back to caches, for the caches, we can get extended information via the <code>-C</code>
-flag:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu -C
+flag:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu -C
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span>NAME ONE-SIZE ALL-SIZE WAYS TYPE        LEVEL
-</span></span><span style=display:flex><span>L1d       32K     192K    8 Data            1
-</span></span><span style=display:flex><span>L1i       32K     192K    8 Instruction     1
-</span></span><span style=display:flex><span>L2       256K     1.5M    4 Unified         2
-</span></span><span style=display:flex><span>L3        12M      12M   16 Unified         3
+</span></span><span style=display:flex><span>L1d       32K     192K    <span style=color:#40a070>8</span> Data            <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L1i       32K     192K    <span style=color:#40a070>8</span> Instruction     <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L2       256K     1.5M    <span style=color:#40a070>4</span> Unified         <span style=color:#40a070>2</span>
+</span></span><span style=display:flex><span>L3        12M      12M   <span style=color:#40a070>16</span> Unified         <span style=color:#40a070>3</span>
 </span></span></code></pre></div><p>Here&rsquo;s what the columns mean, (from lscpu&rsquo;s man page):</p><pre tabindex=0><code>Available output columns for -C:
           NAME  cache name
       ONE-SIZE  size of one cache

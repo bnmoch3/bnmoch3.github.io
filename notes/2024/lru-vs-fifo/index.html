@@ -1,0 +1,58 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>LRU vs FIFO (with Lazy Promotion and Quick Demotion) | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/notes/2024/lru-vs-fifo/><meta property="og:url" content="https://www.bnmoch3.org/notes/2024/lru-vs-fifo/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="LRU vs FIFO (with Lazy Promotion and Quick Demotion)"><meta property="og:description" content="Sprinkling some lazy promotion and quick demotion on FIFO"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2024-09-23T00:00:00+00:00"><meta property="article:modified_time" content="2024-09-23T00:00:00+00:00"><meta property="article:tag" content="Cache Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/notes/2024/lru-vs-fifo/>LRU vs FIFO (with Lazy Promotion and Quick Demotion)</a></div><div><div class=single-intro-container><h1 class=single-title>LRU vs FIFO (with Lazy Promotion and Quick Demotion)</h1><p class=single-readtime><time datetime=2024-09-23T00:00:00+00:00>September 23, 2024</time>
+&nbsp; · &nbsp;
+4 min read</p></div><div class=single-content><p>Today&rsquo;s paper is
+&ldquo;<a href=https://dl.acm.org/doi/10.1145/3593856.3595887>FIFO can be Better than LRU: the Power of Lazy Promotion and Quick Demotion</a>&rdquo;
+authored by Juncheng Yang and co. With FIFO, the oldest object in the cache is
+the first one to be evicted; with LRU, it&rsquo;s the least recently used object The
+advantages of FIFO over LRU were already teased out in their previous
+<a href=https://www.usenix.org/conference/osdi20/presentation/yang>paper</a>, what we&rsquo;re
+getting here is a much more extensive evaluation plus two new-ish techniques.</p><p>When analyzing cache efficiency, the two key metrics usually considered are
+<em>miss ratio</em> and <em>throughput</em> (number of requests served per a given period).
+With the latter metric, FIFO has the following advantages over LRU [1]:</p><ul><li>Less computation particularly on cache hits</li><li>Fewer metadata to keep track of and update per object cached</li><li>More scalable - less likely to be the bottleneck as number of threads
+increases</li></ul><p>However, it&rsquo;s often assumed that plain FIFO has worse performance (higher miss
+ratio) compared to LRU. The question then is how can this performance gap be
+addressed. The authors propose two techniques: <strong>lazy promotion</strong> and <strong>quick
+demotion</strong>.</p><p>To understand these 2 techniques, let&rsquo;s consider a generic cache. As users, we
+can insert objects into the cache and remove them either explicitly or
+implicitly via TTLs. Regardless of the underlying algorithm, all caches maintain
+some internal notion or measurement for which objects are more valuable and
+which ones are less valuable and can be evicted if need be. Whenever the cache
+increases its valuation of some object, we say that the object has been
+<em>promoted</em>; when the value is decreased, we say it&rsquo;s been <em>demoted</em>.</p><p>Let&rsquo;s consider textbook LRU. Whenever there&rsquo;s a cache hit, the object accessed
+is moved to the head of the list. As such, LRU carries out promotion explicitly
+(moving the object to the head) - demotion is implicit, passive and kind of
+drawn-out (all other objects are shifted backwards).</p><p>The authors argue that we should gun for the opposite: lazy promotion and quick
+demotion.</p><h2 class=heading id=lazy-promotion>Lazy Promotion
+<a href=#lazy-promotion>#</a></h2><p>Let&rsquo;s start with Lazy Promotion. With plain FIFO, regardless of how popular an
+object is, as newer objects get inserted, the popular object gets closer and
+closer to eviction. We don&rsquo;t want to carry out some form of promotion with every
+cache hit since it means we&rsquo;re doing more work per request hence we end up
+handling fewer requests per second. Instead, we keep around some tiny metadata,
+even a bit or two-bits that indicate the object is popular. Then when it&rsquo;s about
+to get evicted, we instead re-insert it (i.e. promote it) and reset the
+popularity metrics. In fact, if you took LRU, applied lazy promotion and instead
+of a queue, you&rsquo;ve got a circular buffer and a &lsquo;hand&rsquo;, you&rsquo;d end up with
+<a href=https://en.wikipedia.org/wiki/Page_replacement_algorithm#Clock>Clock</a>.</p><h2 class=heading id=quick-demotion>Quick Demotion
+<a href=#quick-demotion>#</a></h2><p>Quick Demotion entails removing low value objects as soon as possible rather
+than keeping them around in the cache. The authors make the following
+observation: &ldquo;Because demotion happens passively in most eviction algorithms, an
+object typically traverses through the cache before being evicted. Such
+traversal gives each object a good chance to prove its value to be kept in the
+cache. However, cache workloads often follow Zipf popularity distribution with
+most objects being unpopular &mldr; We believe the opportunity cost of new objects
+demonstrating their values is often too high: the object being evicted at the
+tail of the queue may be more valuable than the objects recently inserted&rdquo; [1].
+I&rsquo;d rephrase it as follows: newer objects are more likely to be of low value
+compared to older objects hence caching algorithms should first consider newer
+ones for eviction. Also, the authors point out that QD delivers the most gain
+when the cache size is large, objects are short-lived and the underlying cache
+algorithm is not quite efficient.</p><h2 class=heading id=implementing-qd>Implementing QD
+<a href=#implementing-qd>#</a></h2><p><figure><div><img loading=lazy alt="Implementing quick demotion" src=/notes/2024/lru-vs-fifo/images/quick_demotion.svg></div></figure></p><p>The diagram above provides an overview of how QD can be implemented. A couple of
+points worth adding: the main cache uses 90% of the space and the probationary
+queue uses 10%. Also, the ghost queue stores as many entries as the main cache.
+On configuring the size of the ghost queue, you&rsquo;d have to assume all objects
+have the same size; veering off from this assumption seems to be left as an
+exercise for the dear reader :)</p></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/notes/2024/pg-create-read-only-group/>PostgreSQL: Create a Read-only User/Group</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/notes/2024/large-scale-analysis-caching-twitter/>Notes on 'A large scale analysis of hundreds of in-memory cache clusters at Twitter'</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

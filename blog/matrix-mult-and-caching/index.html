@@ -1,5 +1,5 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Optimizing CPU & Memory Interaction: Matrix Multiplication | bnm 3000
-</title><link rel=canonical href=https://bnm3k.github.io/blog/matrix-mult-and-caching/><meta property="og:url" content="https://bnm3k.github.io/blog/matrix-mult-and-caching/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Optimizing CPU & Memory Interaction: Matrix Multiplication"><meta property="og:description" content="Same algo, different memory access patterns, what could go wrong (or right)!"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-07T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-07T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Optimizing CPU & Memory Interaction: Matrix Multiplication | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/blog/matrix-mult-and-caching/><meta property="og:url" content="https://www.bnmoch3.org/blog/matrix-mult-and-caching/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Optimizing CPU & Memory Interaction: Matrix Multiplication"><meta property="og:description" content="Same algo, different memory access patterns, what could go wrong (or right)!"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-07T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-07T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/matrix-mult-and-caching/>Optimizing CPU & Memory Interaction: Matrix Multiplication</a></div><div><div class=single-intro-container><h1 class=single-title>Optimizing CPU & Memory Interaction: Matrix Multiplication</h1><p class=single-readtime><time datetime=2024-01-07T00:00:00+00:00>January 7, 2024</time>
 &nbsp; · &nbsp;
@@ -12,29 +12,29 @@ runtime by as much as 40x.</p><h2 class=heading id=straightforward-algorithm>Str
 into a new matrix C.</p><p><figure><div><img loading=lazy alt="matrix multiplication diagram" src=/blog/matrix-mult-and-caching/images/matrix_multiplication_diagram.png width=330px height=290px></div></figure><em>credits wikipedia</em></p><p>For each element in C, we take the dot product of the associated row in A with
 the associated column in B. The mathematical definition from wikipedia is
 definitely clearer and more precise:</p><p><figure><div><img loading=lazy alt="matrix multiplication formula" src=/blog/matrix-mult-and-caching/images/matrix_multiplication_formula.svg></div></figure><em>credits wikipedia</em></p><p>This definition also lends itself to the following straightforward algorithm
-[1]:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>#define N 2
-</span></span></span><span style=display:flex><span><span></span><span style=font-weight:700>typedef</span> <span>double</span> matrix[N][N];
+[1]:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#007020>#define N 2
+</span></span></span><span style=display:flex><span><span style=color:#007020></span><span style=color:#007020;font-weight:700>typedef</span> <span style=color:#902000>double</span> matrix[N][N];
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span>void</span> multiply(matrix A, matrix B, matrix C, <span>int</span> n) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (<span>int</span> i = 0; i &lt; n; i++) {
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (<span>int</span> j = 0; j &lt; n; j++) {
-</span></span><span style=display:flex><span>            <span>double</span> res = 0.0;
-</span></span><span style=display:flex><span>            <span style=font-weight:700>for</span> (<span>int</span> k = 0; k &lt; n; k++) {
-</span></span><span style=display:flex><span>                res += A[i][k] * B[k][j];
+</span></span><span style=display:flex><span><span style=color:#902000>void</span> <span style=color:#06287e>multiply</span>(matrix A, matrix B, matrix C, <span style=color:#902000>int</span> n) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>int</span> i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> n; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>int</span> j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> n; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            <span style=color:#902000>double</span> res <span style=color:#666>=</span> <span style=color:#40a070>0.0</span>;
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>int</span> k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> n; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>                res <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>            }
-</span></span><span style=display:flex><span>            C[i][j] = res;
+</span></span><span style=display:flex><span>            C[i][j] <span style=color:#666>=</span> res;
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span>int</span> main() {
-</span></span><span style=display:flex><span>    matrix A = { { 1, 2}, { 3, 4} };
-</span></span><span style=display:flex><span>    matrix B = { { 5, 6}, { 7, 8} };
-</span></span><span style=display:flex><span>    matrix C = { 0 };
-</span></span><span style=display:flex><span>    multiply(A, B, C, N);
-</span></span><span style=display:flex><span>    <span style=font-style:italic>// C: [ 19.0  22.0
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-style:italic>//      43.0  50.0 ]
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>    <span style=font-weight:700>return</span> 0;
+</span></span><span style=display:flex><span><span style=color:#902000>int</span> <span style=color:#06287e>main</span>() {
+</span></span><span style=display:flex><span>    matrix A <span style=color:#666>=</span> { { <span style=color:#40a070>1</span>, <span style=color:#40a070>2</span>}, { <span style=color:#40a070>3</span>, <span style=color:#40a070>4</span>} };
+</span></span><span style=display:flex><span>    matrix B <span style=color:#666>=</span> { { <span style=color:#40a070>5</span>, <span style=color:#40a070>6</span>}, { <span style=color:#40a070>7</span>, <span style=color:#40a070>8</span>} };
+</span></span><span style=display:flex><span>    matrix C <span style=color:#666>=</span> { <span style=color:#40a070>0</span> };
+</span></span><span style=display:flex><span>    <span style=color:#06287e>multiply</span>(A, B, C, N);
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic>// C: [ 19.0  22.0
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>    <span style=color:#60a0b0;font-style:italic>//      43.0  50.0 ]
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>    <span style=color:#007020;font-weight:700>return</span> <span style=color:#40a070>0</span>;
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>A couple of points worth pointing out from the above code snippet:</p><ul><li>Its complexity is <code>O(N^3)</code> where N is the length/width of the matrix. For each
 entry in C, we do N amount of work, there are N^2 entries, thus N^3.</li><li>Every entry per source element (A & B) is read N times</li></ul><p>The goal of this post is to detail how the straightforward approach can be
@@ -86,14 +86,14 @@ used (cache pollution).</li></ul></li></ul><p>Since write-back and write-allocat
 locality, they are often paired.</p><h2 class=heading id=exploiting-locality>Exploiting locality
 <a href=#exploiting-locality>#</a></h2><p>Given that caches leverage locality, for optimal performance, we need to exploit
 both temporal & spatial locality when writing our programs. Let&rsquo;s start with a
-simple example, summing up all the values in a two dimensional array:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>double</span> get_sum(<span>double</span> a[M][N]){
-</span></span><span style=display:flex><span>  <span>double</span> res = 0.0;
-</span></span><span style=display:flex><span>  <span style=font-weight:700>for</span> (<span>double</span> i = 0; i &lt; M; i++){
-</span></span><span style=display:flex><span>      <span style=font-weight:700>for</span> (<span>double</span> j = 0; j &lt; N; j++){
-</span></span><span style=display:flex><span>          res += a[i][j];
+simple example, summing up all the values in a two dimensional array:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#902000>double</span> <span style=color:#06287e>get_sum</span>(<span style=color:#902000>double</span> a[M][N]){
+</span></span><span style=display:flex><span>  <span style=color:#902000>double</span> res <span style=color:#666>=</span> <span style=color:#40a070>0.0</span>;
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>double</span> i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> M; i<span style=color:#666>++</span>){
+</span></span><span style=display:flex><span>      <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>double</span> j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>){
+</span></span><span style=display:flex><span>          res <span style=color:#666>+=</span> a[i][j];
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>  <span style=font-weight:700>return</span> res; 
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>return</span> res; 
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>This seemingly simple snippet takes advantage of both temporal and spatial
 locality. The 2-D array consists of <code>M</code> rows each containing <code>N</code> columns (i.e. N
@@ -104,14 +104,14 @@ iterates through the first row, then the second row and so forth [1]. The local
 variable <code>res</code> should be cached in the CPU register by the compiler therefore
 making iterative writes to it fast (temporal locality). Upon a cache miss,
 chunks of the array are loaded into memory block by block. Thus, the next read
-is a cache hit enabling the program to take advantage of spatial locality.</p><p>Now, suppose we interchange the i and j loops as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>double</span> get_sum(<span>double</span> a[M][N]){
-</span></span><span style=display:flex><span>  <span>double</span> res = 0.0;
-</span></span><span style=display:flex><span>  <span style=font-weight:700>for</span> (<span>double</span> j = 0; j &lt; N; j++){
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (<span>double</span> i = 0; i &lt; M; i++){
-</span></span><span style=display:flex><span>          res += a[i][j];
+is a cache hit enabling the program to take advantage of spatial locality.</p><p>Now, suppose we interchange the i and j loops as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#902000>double</span> <span style=color:#06287e>get_sum</span>(<span style=color:#902000>double</span> a[M][N]){
+</span></span><span style=display:flex><span>  <span style=color:#902000>double</span> res <span style=color:#666>=</span> <span style=color:#40a070>0.0</span>;
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>double</span> j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>){
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (<span style=color:#902000>double</span> i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> M; i<span style=color:#666>++</span>){
+</span></span><span style=display:flex><span>          res <span style=color:#666>+=</span> a[i][j];
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>  <span style=font-weight:700>return</span> res; 
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>return</span> res; 
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>The program traverses the 2-D array by going down the first column, then the
 second and so on.</p><p><figure><div><img loading=lazy alt="row-major traversal vs column-major traversal" src=/blog/matrix-mult-and-caching/images/traversals.svg></div></figure></p><p>It&rsquo;s still the same from a correctness perspective (though I&rsquo;m not quite sure
@@ -142,14 +142,14 @@ linux, you can use the <a href=https://linux.die.net/man/8/dmidecode>dmidecode</
 to check your cache info(<code>dmidecode -t cache</code>)</li><li>for nested loops, pay attention to the innermost loop since it&rsquo;s where the
 bulk of the work is done.</li></ul><p>Now, back to matrix multiplication:</p><h2 class=heading id=ab-routines-for-matrix-multiplication>AB Routines for Matrix Multiplication
 <a href=#ab-routines-for-matrix-multiplication>#</a></h2><p>Recall we started with the following straightforward matrix multiplication
-routine:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = 0.0;
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>            r += A[i][k] * B[k][j];
+routine:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> <span style=color:#40a070>0.0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            r <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>        C[i][j] = r;
+</span></span><span style=display:flex><span>        C[i][j] <span style=color:#666>=</span> r;
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>The outermost loop increments i, then the middle loop increments j, then the
@@ -165,14 +165,14 @@ block and cache hits on the next 7 values. Therefore each iteration will involve
 reference per iteration will result in a cache miss. We ignore the store
 involving C since it&rsquo;s done outside and majority of the work/time spent will be
 inside the loop. In total, there will be 1.125 misses per iteration.</p><p>Now that we have a bit of experience interchanging for-loops, we could switch
-i-j to j-i as follows. This will be the <code>jik</code> version:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = 0.0;
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>            r += A[i][k] * B[k][j];
+i-j to j-i as follows. This will be the <code>jik</code> version:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> <span style=color:#40a070>0.0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            r <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>        C[i][j] = r;
+</span></span><span style=display:flex><span>        C[i][j] <span style=color:#666>=</span> r;
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>As we&rsquo;ll see in the benchmark results section, <code>ijk</code> and <code>jik</code> have essentially
@@ -181,39 +181,39 @@ per innermost iteration) in the innermost for-loop. Thus, they both fall under
 the same equivalence class of AB.</p><p>Can we do better? Yes, definitely:</p><h2 class=heading id=bc-routines-for-matrix-multiplication>BC Routines for Matrix Multiplication
 <a href=#bc-routines-for-matrix-multiplication>#</a></h2><p>Let&rsquo;s start with the following diagram:</p><p><figure><div><img loading=lazy alt="Loop directions for i,j,k" src=/blog/matrix-mult-and-caching/images/loop_directions.svg></div></figure></p><p>Observe that if we make the for-loop for j the innermost one, we&rsquo;ll get a
 row-wise traversal of matrix B and C which will be of stride-1, thus maximizing
-spatial locality.</p><p>Translating this into code, we get:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>          C[i][j] += A[i][k] * B[k][j];
+spatial locality.</p><p>Translating this into code, we get:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>          C[i][j] <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p><code>A[i][k]</code> remains constant in the innermost loop therefore we can place it in a
-temporary variable and the compiler will cache it in one of the CPU registers:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=font-style:italic>// kij
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = A[i][k];
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>          C[i][j] += r * B[k][j];
+temporary variable and the compiler will cache it in one of the CPU registers:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// kij
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> A[i][k];
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>          C[i][j] <span style=color:#666>+=</span> r <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>As is the case for the AB class, we can permute the k and i for-loops to get
-<code>kij</code> and <code>ikj</code> versions:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=font-style:italic>// ikj
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = A[i][k];
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>            C[i][j] += r * B[k][j];
+<code>kij</code> and <code>ikj</code> versions:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// ikj
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> A[i][k];
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            C[i][j] <span style=color:#666>+=</span> r <span style=color:#666>*</span> B[k][j];
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>Both versions should have the same performance since they entail the same memory
 access patterns:</p><p><figure><div><img loading=lazy alt="BC traversals" src=/blog/matrix-mult-and-caching/images/BC.svg></div></figure></p><p>Let&rsquo;s analyze the work getting done per each iteration (of the innermost
-for-loop):</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span>C[i][j] += r * B[k][j];
+for-loop):</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span>C[i][j] <span style=color:#666>+=</span> r <span style=color:#666>*</span> B[k][j];
 </span></span></code></pre></div><p>Suppose the cache is write-back, write-allocate and a cache line holds 64 bytes.
 Both B and C are being traversed row-wise with a stride of 1. We&rsquo;ve got two
 loads: one for <code>B[k][j]</code>, and one for <code>C[i][j]</code>, which has to be loaded before
@@ -231,24 +231,24 @@ we can get way worse performance.</p><h2 class=heading id=ac-routines-for-matrix
 <a href=#ac-routines-for-matrix-multiplication>#</a></h2><p>By making the innermost for-loop be the one that increments <code>i</code>, we get the AC
 routines: <code>jki</code> and <code>kji</code>. These traverse A and C column by column:</p><p><figure><div><img loading=lazy alt="AC traversals" src=/blog/matrix-mult-and-caching/images/AC.svg></div></figure></p><p>Applying the same kind of analysis as for AB and BC routines, there will be 2
 loads and a store per iteration and 2 cache misses per iteration due to the
-stride of n.</p><p>For the sake of completion, here&rsquo;s the code sample for <code>jki</code> and <code>kji</code></p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=font-style:italic>// jki
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = B[k][j];
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>            C[i][j] += A[i][k] * r;
+stride of n.</p><p>For the sake of completion, here&rsquo;s the code sample for <code>jki</code> and <code>kji</code></p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// jki
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> B[k][j];
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            C[i][j] <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> r;
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic>// kji
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span><span>int</span> i, j, k;
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> (k = 0; k &lt; N; k++) {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> (j = 0; j &lt; N; j++) {
-</span></span><span style=display:flex><span>        <span>double</span> r = B[k][j];
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (i = 0; i &lt; N; i++) {
-</span></span><span style=display:flex><span>            C[i][j] += A[i][k] * r;
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// kji
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#902000>int</span> i, j, k;
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> (k <span style=color:#666>=</span> <span style=color:#40a070>0</span>; k <span style=color:#666>&lt;</span> N; k<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> (j <span style=color:#666>=</span> <span style=color:#40a070>0</span>; j <span style=color:#666>&lt;</span> N; j<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#902000>double</span> r <span style=color:#666>=</span> B[k][j];
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (i <span style=color:#666>=</span> <span style=color:#40a070>0</span>; i <span style=color:#666>&lt;</span> N; i<span style=color:#666>++</span>) {
+</span></span><span style=display:flex><span>            C[i][j] <span style=color:#666>+=</span> A[i][k] <span style=color:#666>*</span> r;
 </span></span><span style=display:flex><span>        }
 </span></span><span style=display:flex><span>    }
 </span></span><span style=display:flex><span>}

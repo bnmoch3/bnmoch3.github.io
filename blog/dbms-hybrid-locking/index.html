@@ -1,5 +1,5 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Hybrid Locking & Synchronization | bnm 3000
-</title><link rel=canonical href=https://bnm3k.github.io/blog/dbms-hybrid-locking/><meta property="og:url" content="https://bnm3k.github.io/blog/dbms-hybrid-locking/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Hybrid Locking & Synchronization"><meta property="og:description" content="Fast-path optimistic locking with fallback to pessimistic RW locks under contention"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-05-26T00:00:00+00:00"><meta property="article:modified_time" content="2024-05-26T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Hybrid Locking & Synchronization | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/blog/dbms-hybrid-locking/><meta property="og:url" content="https://www.bnmoch3.org/blog/dbms-hybrid-locking/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Hybrid Locking & Synchronization"><meta property="og:description" content="Fast-path optimistic locking with fallback to pessimistic RW locks under contention"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-05-26T00:00:00+00:00"><meta property="article:modified_time" content="2024-05-26T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/dbms-hybrid-locking/>Hybrid Locking & Synchronization</a></div><div><div class=single-intro-container><h1 class=single-title>Hybrid Locking & Synchronization</h1><p class=single-readtime><time datetime=2024-05-26T00:00:00+00:00>May 26, 2024</time>
 &nbsp; · &nbsp;
@@ -89,71 +89,71 @@ latches - I&rsquo;ve done so to keep the details here as simple as possible.</p>
 locks. In my case I&rsquo;ll implement it in Rust and use the
 <a href=https://docs.rs/parking_lot/latest/parking_lot/index.html>parking_lot</a> RW lock
 implementation since it is &ldquo;smaller, faster and more flexible&rdquo; than its Rust
-standard library equivalent. Here&rsquo;s the code:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-rust data-lang=rust><span style=display:flex><span><span style=font-weight:700>use</span> parking_lot::lock_api::RawRwLock;
-</span></span><span style=display:flex><span><span style=font-weight:700>use</span> std::sync::atomic::{AtomicU64, Ordering};
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-weight:700>struct</span> <span style=font-weight:700>HybridLock</span> {
-</span></span><span style=display:flex><span>    rw_lock: <span style=font-weight:700>parking_lot</span>::RawRwLock,
-</span></span><span style=display:flex><span>    version: <span style=font-weight:700>AtomicU64</span>,
-</span></span><span style=display:flex><span>}
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-weight:700>impl</span> HybridLock {
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> new() -&gt; <span style=font-weight:700>HybridLock</span> {
-</span></span><span style=display:flex><span>        Self {
-</span></span><span style=display:flex><span>            rw_lock: <span style=font-weight:700>RawRwLock</span>::INIT,
-</span></span><span style=display:flex><span>            version: <span style=font-weight:700>AtomicU64</span>::new(0),
-</span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> lock_shared(&amp;self) {
-</span></span><span style=display:flex><span>        self.rw_lock.lock_shared();
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> unlock_shared(&amp;self) {
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// SAFETY: this method should only be invoked by caller if lock was
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-style:italic>// acquired in shared mode
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-weight:700>unsafe</span> { self.rw_lock.unlock_shared() };
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> lock_exclusive(&amp;self) {
-</span></span><span style=display:flex><span>        self.rw_lock.lock_exclusive();
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> unlock_exclusive(&amp;self) {
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// TODO overflow checking?
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-weight:700>let</span> _ = self.version.fetch_add(1, Ordering::SeqCst);
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// SAFETY: this method should only be called if lock was acquired in
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-style:italic>// exclusive mode
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-weight:700>unsafe</span> { self.rw_lock.unlock_exclusive() };
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-weight:700>fn</span> try_read_optimistically(&amp;self, read_callback: <span>&amp;</span><span style=font-weight:700>dyn</span> Fn()) -&gt; <span>bool</span> {
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> self.rw_lock.is_locked_exclusive() {
-</span></span><span style=display:flex><span>            <span style=font-weight:700>return</span> <span style=font-weight:700>false</span>;
-</span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>        <span style=font-weight:700>let</span> pre_version = self.version.load(Ordering::Acquire);
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// execute read callback
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        read_callback();
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// was locked meanwhile?
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-weight:700>if</span> self.rw_lock.is_locked_exclusive() {
-</span></span><span style=display:flex><span>            <span style=font-weight:700>return</span> <span style=font-weight:700>false</span>;
-</span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-style:italic>// version is still the same?
-</span></span></span><span style=display:flex><span><span style=font-style:italic></span>        <span style=font-weight:700>let</span> curr_version = self.version.load(Ordering::Acquire);
-</span></span><span style=display:flex><span>        <span style=font-weight:700>return</span> pre_version == curr_version;
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-weight:700>pub</span> <span style=font-weight:700>fn</span> read_optimistic_if_possible(&amp;self, read_callback: <span>&amp;</span><span style=font-weight:700>dyn</span> Fn()) {
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> self.try_read_optimistically(read_callback) == <span style=font-weight:700>false</span> {
-</span></span><span style=display:flex><span>            self.lock_shared();
-</span></span><span style=display:flex><span>            read_callback();
-</span></span><span style=display:flex><span>            self.unlock_shared();
-</span></span><span style=display:flex><span>        }
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><p>Now the code above is not quite idiomatic Rust since it&rsquo;s a one-to-one
+standard library equivalent. Here&rsquo;s the code:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-rust data-lang=rust><span style=display:flex><span><span style=color:#007020;font-weight:700>use</span><span style=color:#bbb> </span>parking_lot::lock_api::RawRwLock;<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>use</span><span style=color:#bbb> </span>std::sync::atomic::{AtomicU64,<span style=color:#bbb> </span>Ordering};<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>struct</span> <span style=color:#0e84b5;font-weight:700>HybridLock</span><span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>rw_lock: <span style=color:#0e84b5;font-weight:700>parking_lot</span>::RawRwLock,<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>version: <span style=color:#0e84b5;font-weight:700>AtomicU64</span>,<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>impl</span><span style=color:#bbb> </span>HybridLock<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>new</span>()<span style=color:#bbb> </span>-&gt; <span style=color:#0e84b5;font-weight:700>HybridLock</span><span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>Self<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span>rw_lock: <span style=color:#0e84b5;font-weight:700>RawRwLock</span>::<span style=color:#60add5>INIT</span>,<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span>version: <span style=color:#0e84b5;font-weight:700>AtomicU64</span>::new(<span style=color:#40a070>0</span>),<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>lock_shared</span>(<span style=color:#666>&amp;</span>self)<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>self.rw_lock.lock_shared();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>unlock_shared</span>(<span style=color:#666>&amp;</span>self)<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// SAFETY: this method should only be invoked by caller if lock was
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// acquired in shared mode
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>unsafe</span><span style=color:#bbb> </span>{<span style=color:#bbb> </span>self.rw_lock.unlock_shared()<span style=color:#bbb> </span>};<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>lock_exclusive</span>(<span style=color:#666>&amp;</span>self)<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>self.rw_lock.lock_exclusive();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>unlock_exclusive</span>(<span style=color:#666>&amp;</span>self)<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// TODO overflow checking?
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>let</span><span style=color:#bbb> </span>_<span style=color:#bbb> </span><span style=color:#666>=</span><span style=color:#bbb> </span>self.version.fetch_add(<span style=color:#40a070>1</span>,<span style=color:#bbb> </span>Ordering::SeqCst);<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// SAFETY: this method should only be called if lock was acquired in
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// exclusive mode
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>unsafe</span><span style=color:#bbb> </span>{<span style=color:#bbb> </span>self.rw_lock.unlock_exclusive()<span style=color:#bbb> </span>};<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>try_read_optimistically</span>(<span style=color:#666>&amp;</span>self,<span style=color:#bbb> </span>read_callback: <span style=color:#007020>&amp;</span><span style=color:#0e84b5;font-weight:700>dyn</span><span style=color:#bbb> </span><span style=color:#007020>Fn</span>())<span style=color:#bbb> </span>-&gt; <span style=color:#902000>bool</span> {<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>if</span><span style=color:#bbb> </span>self.rw_lock.is_locked_exclusive()<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span><span style=color:#007020;font-weight:700>return</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>false</span>;<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>let</span><span style=color:#bbb> </span>pre_version<span style=color:#bbb> </span><span style=color:#666>=</span><span style=color:#bbb> </span>self.version.load(Ordering::Acquire);<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// execute read callback
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span>read_callback();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// was locked meanwhile?
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>if</span><span style=color:#bbb> </span>self.rw_lock.is_locked_exclusive()<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span><span style=color:#007020;font-weight:700>return</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>false</span>;<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#60a0b0;font-style:italic>// version is still the same?
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>let</span><span style=color:#bbb> </span>curr_version<span style=color:#bbb> </span><span style=color:#666>=</span><span style=color:#bbb> </span>self.version.load(Ordering::Acquire);<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>return</span><span style=color:#bbb> </span>pre_version<span style=color:#bbb> </span><span style=color:#666>==</span><span style=color:#bbb> </span>curr_version;<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span><span style=color:#007020;font-weight:700>pub</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>fn</span> <span style=color:#06287e>read_optimistic_if_possible</span>(<span style=color:#666>&amp;</span>self,<span style=color:#bbb> </span>read_callback: <span style=color:#007020>&amp;</span><span style=color:#0e84b5;font-weight:700>dyn</span><span style=color:#bbb> </span><span style=color:#007020>Fn</span>())<span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span><span style=color:#007020;font-weight:700>if</span><span style=color:#bbb> </span>self.try_read_optimistically(read_callback)<span style=color:#bbb> </span><span style=color:#666>==</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>false</span><span style=color:#bbb> </span>{<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span>self.lock_shared();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span>read_callback();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>            </span>self.unlock_shared();<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>        </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb>    </span>}<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span>}<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Now the code above is not quite idiomatic Rust since it&rsquo;s a one-to-one
 translation of the pseudocode in the paper. More seasoned rust library authors
 would make it ergonomic and misuse resistant e.g. by providing
 <a href=https://doc.rust-lang.org/std/sync/struct.MutexGuard.html>Mutex Guards</a>, but

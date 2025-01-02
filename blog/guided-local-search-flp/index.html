@@ -1,5 +1,5 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Guided Local Search for the Capacitated Facility Location Problem | bnm 3000
-</title><link rel=canonical href=https://bnm3k.github.io/blog/guided-local-search-flp/><meta property="og:url" content="https://bnm3k.github.io/blog/guided-local-search-flp/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Guided Local Search for the Capacitated Facility Location Problem"><meta property="og:description" content="Overview of Guided Local Search plus how it can be applied to the capacitated facility location problem."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-03-21T00:00:00+00:00"><meta property="article:modified_time" content="2024-03-21T00:00:00+00:00"><meta property="article:tag" content="Discrete Optimization"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Guided Local Search for the Capacitated Facility Location Problem | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/blog/guided-local-search-flp/><meta property="og:url" content="https://www.bnmoch3.org/blog/guided-local-search-flp/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Guided Local Search for the Capacitated Facility Location Problem"><meta property="og:description" content="Overview of Guided Local Search plus how it can be applied to the capacitated facility location problem."><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-03-21T00:00:00+00:00"><meta property="article:modified_time" content="2024-03-21T00:00:00+00:00"><meta property="article:tag" content="Discrete Optimization"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/guided-local-search-flp/>Guided Local Search for the Capacitated Facility Location Problem</a></div><div><div class=single-intro-container><h1 class=single-title>Guided Local Search for the Capacitated Facility Location Problem</h1><p class=single-readtime><time datetime=2024-03-21T00:00:00+00:00>March 21, 2024</time>
 &nbsp; · &nbsp;
@@ -62,32 +62,32 @@ experiment around for each problem.</p><p>It goes without saying, as with local 
 solution found so far and after a given duration or number of iterations, we
 return that as the final solution - it probably won&rsquo;t be the optimal solution
 but if we&rsquo;ve set everything fine it should be a good enough solution.</p><h2 class=heading id=gls-implementation-preliminaries>GLS Implementation: Preliminaries
-<a href=#gls-implementation-preliminaries>#</a></h2><p>We start with the following input:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_facilities = 25
-</span></span><span style=display:flex><span>num_customers = 50
-</span></span><span style=display:flex><span>facility_capacities = [7500.0, ... ]
-</span></span><span style=display:flex><span>facility_setup_costs = [58268, ... ]
-</span></span><span style=display:flex><span>facility_locations = [(430582.903998, 430582.903998), ... ]
-</span></span><span style=display:flex><span>customer_demands = [146, ... ]
-</span></span><span style=display:flex><span>customer_locations = [(416189.973974, 279924.793498), ... ]
+<a href=#gls-implementation-preliminaries>#</a></h2><p>We start with the following input:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_facilities <span style=color:#666>=</span> <span style=color:#40a070>25</span>
+</span></span><span style=display:flex><span>num_customers <span style=color:#666>=</span> <span style=color:#40a070>50</span>
+</span></span><span style=display:flex><span>facility_capacities <span style=color:#666>=</span> [<span style=color:#40a070>7500.0</span>, <span style=color:#666>...</span> ]
+</span></span><span style=display:flex><span>facility_setup_costs <span style=color:#666>=</span> [<span style=color:#40a070>58268</span>, <span style=color:#666>...</span> ]
+</span></span><span style=display:flex><span>facility_locations <span style=color:#666>=</span> [(<span style=color:#40a070>430582.903998</span>, <span style=color:#40a070>430582.903998</span>), <span style=color:#666>...</span> ]
+</span></span><span style=display:flex><span>customer_demands <span style=color:#666>=</span> [<span style=color:#40a070>146</span>, <span style=color:#666>...</span> ]
+</span></span><span style=display:flex><span>customer_locations <span style=color:#666>=</span> [(<span style=color:#40a070>416189.973974</span>, <span style=color:#40a070>279924.793498</span>), <span style=color:#666>...</span> ]
 </span></span></code></pre></div><p>The cost of assigning a facility to a customer is the euclidean distance between
-the two. Therefore, we derive the <code>dist_matrix</code> for quick lookups of this cost:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>math</span>
+the two. Therefore, we derive the <code>dist_matrix</code> for quick lookups of this cost:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>math</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>length = <span style=font-weight:700>lambda</span> p0,p1: math.sqrt((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2)
-</span></span><span style=display:flex><span>dist_matrix = [
-</span></span><span style=display:flex><span>    [0.0 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_customers)] <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_facilities)
+</span></span><span style=display:flex><span>length <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>lambda</span> p0,p1: math<span style=color:#666>.</span>sqrt((p0[<span style=color:#40a070>0</span>] <span style=color:#666>-</span> p1[<span style=color:#40a070>0</span>]) <span style=color:#666>**</span> <span style=color:#40a070>2</span> <span style=color:#666>+</span> (p0[<span style=color:#40a070>1</span>] <span style=color:#666>-</span> p1[<span style=color:#40a070>1</span>]) <span style=color:#666>**</span> <span style=color:#40a070>2</span>)
+</span></span><span style=display:flex><span>dist_matrix <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    [<span style=color:#40a070>0.0</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_customers)] <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_facilities)
 </span></span><span style=display:flex><span>]
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> f_i, f_loc <span style=font-weight:700>in</span> enumerate(facility_locations):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> c_i, c_loc <span style=font-weight:700>in</span> enumerate(customer_locations):
-</span></span><span style=display:flex><span>        dist_matrix[f_i][c_i] = length(f_loc, c_loc)
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> f_i, f_loc <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(facility_locations):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> c_i, c_loc <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(customer_locations):
+</span></span><span style=display:flex><span>        dist_matrix[f_i][c_i] <span style=color:#666>=</span> length(f_loc, c_loc)
 </span></span></code></pre></div><p>The overall cost of an assignment is the sum of all the setup costs for
 facilities that are assigned 1 or more customers plus the sum of all the
 distances between customers and the facilities they are assigned to. Recall that
 that goal is to minimize this cost as much as possible. We&rsquo;ll use the following
-function to calculate this cost:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>def</span> calc_cost(assignments, dist_matrix, facility_setup_costs):
-</span></span><span style=display:flex><span>    overall_cost = sum(
-</span></span><span style=display:flex><span>        dist_matrix[f][c] <span style=font-weight:700>for</span> c, f <span style=font-weight:700>in</span> enumerate(assignments)
-</span></span><span style=display:flex><span>    ) + sum(facility_setup_costs[f] <span style=font-weight:700>for</span> f <span style=font-weight:700>in</span> set(assignments))
-</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> overall_cost
+function to calculate this cost:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>calc_cost</span>(assignments, dist_matrix, facility_setup_costs):
+</span></span><span style=display:flex><span>    overall_cost <span style=color:#666>=</span> <span style=color:#007020>sum</span>(
+</span></span><span style=display:flex><span>        dist_matrix[f][c] <span style=color:#007020;font-weight:700>for</span> c, f <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(assignments)
+</span></span><span style=display:flex><span>    ) <span style=color:#666>+</span> <span style=color:#007020>sum</span>(facility_setup_costs[f] <span style=color:#007020;font-weight:700>for</span> f <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>set</span>(assignments))
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> overall_cost
 </span></span></code></pre></div><p>The decision variable is <code>assignments</code>. This is an array of length
 <code>num_customers</code> whereby the index is the customer&rsquo;s ID and the value at that
 index is the facility ID that the customer is assigned to. Since this is the
@@ -107,22 +107,22 @@ print(initial_cost) # 8364601.587374086
 <a href=#gls-implementation-state-variables>#</a></h2><p>We&rsquo;ll start of with the state variables. These include the decision variables
 plus any ancillary variables we have to modify any time we make a move (moving a
 customer from one facility to another) so as to reflect our current state.
-<code>assignments</code> is initialized with the <code>initial_assignments</code> we calculated above.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>assignments = initial_assignments
+<code>assignments</code> is initialized with the <code>initial_assignments</code> we calculated above.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>assignments <span style=color:#666>=</span> initial_assignments
 </span></span></code></pre></div><p>We also keep around a bunch of derived values from <code>assignments</code> so as to speed
 up some computations. <code>facility_current_capacities</code> is used to keep track of how
-much unassigned capacity a facility has; this should not go below 0.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>facility_current_capacities = facility_capacities.copy()
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> c, f <span style=font-weight:700>in</span> enumerate(initial_assignments):
-</span></span><span style=display:flex><span>    facility_current_capacities[f] -= customer_demands[c]
-</span></span><span style=display:flex><span><span style=font-weight:700>assert</span> all(c &gt;= 0 <span style=font-weight:700>for</span> c <span style=font-weight:700>in</span> facility_current_capacities)
+much unassigned capacity a facility has; this should not go below 0.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>facility_current_capacities <span style=color:#666>=</span> facility_capacities<span style=color:#666>.</span>copy()
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> c, f <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(initial_assignments):
+</span></span><span style=display:flex><span>    facility_current_capacities[f] <span style=color:#666>-=</span> customer_demands[c]
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>assert</span> <span style=color:#007020>all</span>(c <span style=color:#666>&gt;=</span> <span style=color:#40a070>0</span> <span style=color:#007020;font-weight:700>for</span> c <span style=color:#007020;font-weight:700>in</span> facility_current_capacities)
 </span></span></code></pre></div><p>There&rsquo;s also <code>facility_to_customer_num</code> which keeps track of the number of
 customers a facility has - if it&rsquo;s 0, the facility should remain unopened, if
 it&rsquo;s 1 or more, we need to include its setup costs. As I am writing this, I&rsquo;ve
 just realized I don&rsquo;t need this variable: since both demands and capacities are
 integers, I could compare a facility&rsquo;s initial capacity with its current used
-capacity and if both values are the same it remains unopened.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>facility_to_customer_num = [0 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_facilities)]
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> f <span style=font-weight:700>in</span> initial_assignments:
-</span></span><span style=display:flex><span>    facility_to_customer_num[f] += 1
-</span></span><span style=display:flex><span><span style=font-weight:700>assert</span>(sum(facility_to_customer_num) == num_customers)
+capacity and if both values are the same it remains unopened.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>facility_to_customer_num <span style=color:#666>=</span> [<span style=color:#40a070>0</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_facilities)]
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> f <span style=color:#007020;font-weight:700>in</span> initial_assignments:
+</span></span><span style=display:flex><span>    facility_to_customer_num[f] <span style=color:#666>+=</span> <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>assert</span>(<span style=color:#007020>sum</span>(facility_to_customer_num) <span style=color:#666>==</span> num_customers)
 </span></span></code></pre></div><h2 class=heading id=gls-implementation-parameters-features-and-penalties>GLS Implementation: Parameters, Features and Penalties
 <a href=#gls-implementation-parameters-features-and-penalties>#</a></h2><p>GLS requires that the implementer decide on which features to use. In my case, I
 used the facility setup costs as the features - with all credits to github user
@@ -135,18 +135,18 @@ got <code>penalities</code> which is initialized to 0 for all features and incre
 whenever a particular feature is penalized. We&rsquo;ve got <code>num_steps</code> which is the
 number of iterations we want to carry out local search. Lastly we&rsquo;ve got the
 lambda parameter which for now is set to a magic number but we&rsquo;ll see how we can
-tune it dynamically based on where we are in the search space:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>features = facility_setup_costs.copy()
-</span></span><span style=display:flex><span>feature_indicators = [int(n &gt; 0) <span style=font-weight:700>for</span> n <span style=font-weight:700>in</span> facility_to_customer_num] <span style=font-style:italic># 0 or 1</span>
-</span></span><span style=display:flex><span>penalties = [0 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> features]
-</span></span><span style=display:flex><span>num_steps = 100
-</span></span><span style=display:flex><span>lambda_ = 27.5
+tune it dynamically based on where we are in the search space:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>features <span style=color:#666>=</span> facility_setup_costs<span style=color:#666>.</span>copy()
+</span></span><span style=display:flex><span>feature_indicators <span style=color:#666>=</span> [<span style=color:#007020>int</span>(n <span style=color:#666>&gt;</span> <span style=color:#40a070>0</span>) <span style=color:#007020;font-weight:700>for</span> n <span style=color:#007020;font-weight:700>in</span> facility_to_customer_num] <span style=color:#60a0b0;font-style:italic># 0 or 1</span>
+</span></span><span style=display:flex><span>penalties <span style=color:#666>=</span> [<span style=color:#40a070>0</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> features]
+</span></span><span style=display:flex><span>num_steps <span style=color:#666>=</span> <span style=color:#40a070>100</span>
+</span></span><span style=display:flex><span>lambda_ <span style=color:#666>=</span> <span style=color:#40a070>27.5</span>
 </span></span></code></pre></div><p>A point worth noting is that in GLS, we don&rsquo;t use the cost function directly to
 guide search. Instead, we augment the cost function with the penalties (weighted
 by lambda) so as to guide the search. When a feature is present, <code>I</code> will be 1
 hence the penalty associated with that feature will be included. When a feature
-is absent, <code>I</code> will be 0 and the penalty won&rsquo;t be included:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>cost = calc_cost(assignments, dist_matrix, facility_setup_costs)
-</span></span><span style=display:flex><span>augmented_cost = cost + (
-</span></span><span style=display:flex><span>    lambda_ * sum(I * p <span style=font-weight:700>for</span> (I, p) <span style=font-weight:700>in</span> zip(feature_indicators, penalties))
+is absent, <code>I</code> will be 0 and the penalty won&rsquo;t be included:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>cost <span style=color:#666>=</span> calc_cost(assignments, dist_matrix, facility_setup_costs)
+</span></span><span style=display:flex><span>augmented_cost <span style=color:#666>=</span> cost <span style=color:#666>+</span> (
+</span></span><span style=display:flex><span>    lambda_ <span style=color:#666>*</span> <span style=color:#007020>sum</span>(I <span style=color:#666>*</span> p <span style=color:#007020;font-weight:700>for</span> (I, p) <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(feature_indicators, penalties))
 </span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p>Any time we make a move, we also check whether it has resulted in the best
 solution seen so far based on its augmented cost, so we need variables to keep
@@ -172,16 +172,16 @@ more efficient at the expense of increased complexity.</p><p>Now, for the move. 
 pairs. We&rsquo;ll also keep track of the best move and best diff seen so far at each
 iteration. <code>f_old</code> is a customer&rsquo;s currently assigned facility and <code>f_new</code> is
 the new facility we want to assign it to. We skip over facilities that don&rsquo;t
-have enough unused capacity.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>best_augm_diff = <span style=font-weight:700>None</span>
-</span></span><span style=display:flex><span>best_move = <span style=font-weight:700>None</span>
+have enough unused capacity.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>best_augm_diff <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>None</span>
+</span></span><span style=display:flex><span>best_move <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>None</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> c <span style=font-weight:700>in</span> range(num_customers):
-</span></span><span style=display:flex><span>    f_old = assignments[c]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> f_new <span style=font-weight:700>in</span> range(num_facilities):
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> f_old == f_new:
-</span></span><span style=display:flex><span>            <span style=font-weight:700>continue</span>
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> customer_demands[c] &gt; facility_current_capacities[f_new]:
-</span></span><span style=display:flex><span>            <span style=font-weight:700>continue</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> c <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_customers):
+</span></span><span style=display:flex><span>    f_old <span style=color:#666>=</span> assignments[c]
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> f_new <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_facilities):
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> f_old <span style=color:#666>==</span> f_new:
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>continue</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> customer_demands[c] <span style=color:#666>&gt;</span> facility_current_capacities[f_new]:
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>continue</span>
 </span></span></code></pre></div><p>To calculate the diff of a move, we subtract the cost of moving a customer out
 of the old facility and add the newly incurred cost of moving a customer to the
 new facility. If the old facility had just that one customer, then moving the
@@ -195,50 +195,50 @@ steepest descent approach, we won&rsquo;t make any moves if all of them result i
 increasing the cost. When we&rsquo;re in such a state (local minima), courtesy of GLS,
 we&rsquo;ll rely on penalizing the features present in that state to bail us out and
 move us to a different minima. Also worth reiterating, GLS requires us to use
-the augmented cost rather than the actual cost when evaluating moves:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>        <span style=font-style:italic># calc augmented cost of move</span>
-</span></span><span style=display:flex><span>        augm_diff = 0
+the augmented cost rather than the actual cost when evaluating moves:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>        <span style=color:#60a0b0;font-style:italic># calc augmented cost of move</span>
+</span></span><span style=display:flex><span>        augm_diff <span style=color:#666>=</span> <span style=color:#40a070>0</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-style:italic># leave f_old</span>
-</span></span><span style=display:flex><span>        augm_diff -= dist_matrix[f_old][c]
-</span></span><span style=display:flex><span>        <span style=font-style:italic># check if move results in shutting down f_old</span>
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> facility_to_customer_num[f_old] == 1:
-</span></span><span style=display:flex><span>            augm_diff -= facility_setup_costs[f_old]
-</span></span><span style=display:flex><span>            augm_diff -= lambda_ * penalities[f_old]
+</span></span><span style=display:flex><span>        <span style=color:#60a0b0;font-style:italic># leave f_old</span>
+</span></span><span style=display:flex><span>        augm_diff <span style=color:#666>-=</span> dist_matrix[f_old][c]
+</span></span><span style=display:flex><span>        <span style=color:#60a0b0;font-style:italic># check if move results in shutting down f_old</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> facility_to_customer_num[f_old] <span style=color:#666>==</span> <span style=color:#40a070>1</span>:
+</span></span><span style=display:flex><span>            augm_diff <span style=color:#666>-=</span> facility_setup_costs[f_old]
+</span></span><span style=display:flex><span>            augm_diff <span style=color:#666>-=</span> lambda_ <span style=color:#666>*</span> penalities[f_old]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-style:italic># go to f_new</span>
-</span></span><span style=display:flex><span>        augm_diff += dist_matrix[f_new][c]
-</span></span><span style=display:flex><span>        <span style=font-style:italic># check if move results in opening up f_new</span>
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> facility_to_customer_num[f_new] == 0:
-</span></span><span style=display:flex><span>            augm_diff += facility_setup_costs[f_new]
-</span></span><span style=display:flex><span>            augm_diff += lambda_ * penalities[f_new]
+</span></span><span style=display:flex><span>        <span style=color:#60a0b0;font-style:italic># go to f_new</span>
+</span></span><span style=display:flex><span>        augm_diff <span style=color:#666>+=</span> dist_matrix[f_new][c]
+</span></span><span style=display:flex><span>        <span style=color:#60a0b0;font-style:italic># check if move results in opening up f_new</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> facility_to_customer_num[f_new] <span style=color:#666>==</span> <span style=color:#40a070>0</span>:
+</span></span><span style=display:flex><span>            augm_diff <span style=color:#666>+=</span> facility_setup_costs[f_new]
+</span></span><span style=display:flex><span>            augm_diff <span style=color:#666>+=</span> lambda_ <span style=color:#666>*</span> penalities[f_new]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> best_augm_diff <span style=font-weight:700>is</span> <span style=font-weight:700>None</span> <span style=font-weight:700>or</span> augm_diff &lt; best_augm_diff:
-</span></span><span style=display:flex><span>            best_augm_diff = augm_diff
-</span></span><span style=display:flex><span>            best_move = (c, f_old, f_new)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> best_augm_diff <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>None</span> <span style=color:#007020;font-weight:700>or</span> augm_diff <span style=color:#666>&lt;</span> best_augm_diff:
+</span></span><span style=display:flex><span>            best_augm_diff <span style=color:#666>=</span> augm_diff
+</span></span><span style=display:flex><span>            best_move <span style=color:#666>=</span> (c, f_old, f_new)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># if the diff is positive (results in an increase of costs), we do not make</span>
-</span></span><span style=display:flex><span><span style=font-style:italic># the move as per steepest descent approach</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>if</span> best_augm_diff <span style=font-weight:700>is</span> <span style=font-weight:700>not</span> <span style=font-weight:700>None</span> <span style=font-weight:700>and</span> best_augm_diff &gt; 0:
-</span></span><span style=display:flex><span>    best_move = <span style=font-weight:700>None</span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># if the diff is positive (results in an increase of costs), we do not make</span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># the move as per steepest descent approach</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>if</span> best_augm_diff <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>None</span> <span style=color:#007020;font-weight:700>and</span> best_augm_diff <span style=color:#666>&gt;</span> <span style=color:#40a070>0</span>:
+</span></span><span style=display:flex><span>    best_move <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>None</span>
 </span></span></code></pre></div><p>If we&rsquo;ve got a move we can make, we make that move and update the state
-variables accordingly:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>if</span> best_move <span style=font-weight:700>is</span> <span style=font-weight:700>not</span> <span style=font-weight:700>None</span>:  <span style=font-style:italic># make move</span>
-</span></span><span style=display:flex><span>    (c, f_old, f_new) = best_move
+variables accordingly:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>if</span> best_move <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>None</span>:  <span style=color:#60a0b0;font-style:italic># make move</span>
+</span></span><span style=display:flex><span>    (c, f_old, f_new) <span style=color:#666>=</span> best_move
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-style:italic># move from old facility</span>
-</span></span><span style=display:flex><span>    facility_to_customer_num[f_old] -= 1
-</span></span><span style=display:flex><span>    facility_current_capacities[f_old] -= customer_demands[c]
-</span></span><span style=display:flex><span>    feature_indicators[f_old] = int(facility_to_customer_num[f_old] &gt; 0)
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># move from old facility</span>
+</span></span><span style=display:flex><span>    facility_to_customer_num[f_old] <span style=color:#666>-=</span> <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>    facility_current_capacities[f_old] <span style=color:#666>-=</span> customer_demands[c]
+</span></span><span style=display:flex><span>    feature_indicators[f_old] <span style=color:#666>=</span> <span style=color:#007020>int</span>(facility_to_customer_num[f_old] <span style=color:#666>&gt;</span> <span style=color:#40a070>0</span>)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-style:italic># move to new facility</span>
-</span></span><span style=display:flex><span>    assignments[c] = f_new
-</span></span><span style=display:flex><span>    facility_to_customer_num[f_new] += 1
-</span></span><span style=display:flex><span>    facility_current_capacities[f_new] += customer_demands[c]
-</span></span><span style=display:flex><span>    feature_indicators[f_new] = int(facility_to_customer_num[f_new] &gt; 0)
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># move to new facility</span>
+</span></span><span style=display:flex><span>    assignments[c] <span style=color:#666>=</span> f_new
+</span></span><span style=display:flex><span>    facility_to_customer_num[f_new] <span style=color:#666>+=</span> <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>    facility_current_capacities[f_new] <span style=color:#666>+=</span> customer_demands[c]
+</span></span><span style=display:flex><span>    feature_indicators[f_new] <span style=color:#666>=</span> <span style=color:#007020>int</span>(facility_to_customer_num[f_new] <span style=color:#666>&gt;</span> <span style=color:#40a070>0</span>)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    augmented_cost += augm_diff
-</span></span><span style=display:flex><span>    <span style=font-weight:700>if</span> augmented_cost &lt; best_augm_cost:
-</span></span><span style=display:flex><span>        best_augm_cost = augmented_cost
-</span></span><span style=display:flex><span>        best_assignment = assignments.copy()
+</span></span><span style=display:flex><span>    augmented_cost <span style=color:#666>+=</span> augm_diff
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> augmented_cost <span style=color:#666>&lt;</span> best_augm_cost:
+</span></span><span style=display:flex><span>        best_augm_cost <span style=color:#666>=</span> augmented_cost
+</span></span><span style=display:flex><span>        best_assignment <span style=color:#666>=</span> assignments<span style=color:#666>.</span>copy()
 </span></span></code></pre></div><p>If we can&rsquo;t make a move (we&rsquo;re at a local minima), it&rsquo;s time to penalize the
 features present at state (tracked via the <code>feature_indicators</code> list). We don&rsquo;t
 penalize all the features, just those for which we&rsquo;ll get the greatest bang for
@@ -250,15 +250,15 @@ the lower the cost the lower its utility. Additionally, if we&rsquo;ve already
 penalized that feature a lot already, then the lower the utility we&rsquo;ll derive
 from penalizing it again - if we haven&rsquo;t penalized it that much yet, then the
 utility will be higher. From there, we get the max utility and increment the
-penalties of all the features with <code>max_util</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>else</span>: <span style=font-style:italic># best_move is None and we&#39;re at a local minima</span>
-</span></span><span style=display:flex><span>    utils = [
-</span></span><span style=display:flex><span>        I * (cost / (1 + penalty)) <span style=font-style:italic># 1 is there to prevent division by zero</span>
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (I, cost, penalty) <span style=font-weight:700>in</span> zip(feature_indicators, features, penalties)
+penalties of all the features with <code>max_util</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>else</span>: <span style=color:#60a0b0;font-style:italic># best_move is None and we&#39;re at a local minima</span>
+</span></span><span style=display:flex><span>    utils <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>        I <span style=color:#666>*</span> (cost <span style=color:#666>/</span> (<span style=color:#40a070>1</span> <span style=color:#666>+</span> penalty)) <span style=color:#60a0b0;font-style:italic># 1 is there to prevent division by zero</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (I, cost, penalty) <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(feature_indicators, features, penalties)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>    max_util = max(utils)
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> i, util <span style=font-weight:700>in</span> enumerate(utils):
-</span></span><span style=display:flex><span>        <span style=font-weight:700>if</span> util == max_util:
-</span></span><span style=display:flex><span>            penalties[i] += 1
+</span></span><span style=display:flex><span>    max_util <span style=color:#666>=</span> <span style=color:#007020>max</span>(utils)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> i, util <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(utils):
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> util <span style=color:#666>==</span> max_util:
+</span></span><span style=display:flex><span>            penalties[i] <span style=color:#666>+=</span> <span style=color:#40a070>1</span>
 </span></span></code></pre></div><h2 class=heading id=gls-implementation-deriving-lambda>GLS Implementation: Deriving Lambda
 <a href=#gls-implementation-deriving-lambda>#</a></h2><p>Determining a value for lambda seems to involve a lot of fiddling around. Also,
 just because a particular value of lambda worked quite well for one problem does
@@ -269,8 +269,8 @@ following formula:</p><pre tabindex=0><code class=language-math data-lang=math>\
 lambda can be found by dividing the value of the objective function of a local
 minimum with the number of features present in it&rdquo;.</p><p>Translating this into code, it&rsquo;ll mean we also have to update the actual cost
 also every time we make a move. Therefore, when we&rsquo;re stuck at a local minima,
-we update lambda as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_features = sum(feature_indicators)
-</span></span><span style=display:flex><span>lambda_ = alpha * (cost / num_features)
+we update lambda as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_features <span style=color:#666>=</span> <span style=color:#007020>sum</span>(feature_indicators)
+</span></span><span style=display:flex><span>lambda_ <span style=color:#666>=</span> alpha <span style=color:#666>*</span> (cost <span style=color:#666>/</span> num_features)
 </span></span></code></pre></div><p>Now we just have to determine what alpha should be set to :) - after all, to
 quote Butler Lampson, &ldquo;all problems in computer science can be solved by another
 level of indirection&rdquo;.</p><h2 class=heading id=evaluation--results>Evaluation & Results

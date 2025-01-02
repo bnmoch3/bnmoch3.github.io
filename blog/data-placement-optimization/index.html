@@ -1,5 +1,5 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnm3k.github.io//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://bnm3k.github.io//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://bnm3k.github.io//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://bnm3k.github.io//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://bnm3k.github.io//apple-touch-icon.png><meta name=description content><title>Optimizing Data Placement for Distributed OLAP Systems | bnm 3000
-</title><link rel=canonical href=https://bnm3k.github.io/blog/data-placement-optimization/><meta property="og:url" content="https://bnm3k.github.io/blog/data-placement-optimization/"><meta property="og:site_name" content="bnm 3000"><meta property="og:title" content="Optimizing Data Placement for Distributed OLAP Systems"><meta property="og:description" content="Using MIP solvers to model and optimize shard placement"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-04-16T00:00:00+00:00"><meta property="article:modified_time" content="2024-04-16T00:00:00+00:00"><meta property="article:tag" content="Distributed Systems"><link rel=stylesheet href=/assets/combined.min.186794b3399a702d3092949042cdc215dea303c17e71e7c0254768448de11db8.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Optimizing Data Placement for Distributed OLAP Systems | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/blog/data-placement-optimization/><meta property="og:url" content="https://www.bnmoch3.org/blog/data-placement-optimization/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Optimizing Data Placement for Distributed OLAP Systems"><meta property="og:description" content="Using MIP solvers to model and optimize shard placement"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-04-16T00:00:00+00:00"><meta property="article:modified_time" content="2024-04-16T00:00:00+00:00"><meta property="article:tag" content="Distributed Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/blog/data-placement-optimization/>Optimizing Data Placement for Distributed OLAP Systems</a></div><div><div class=single-intro-container><h1 class=single-title>Optimizing Data Placement for Distributed OLAP Systems</h1><p class=single-readtime><time datetime=2024-04-16T00:00:00+00:00>April 16, 2024</time>
 &nbsp; · &nbsp;
@@ -41,25 +41,25 @@ minimizing data movement while maintaining the optimal query parallelism values
 we&rsquo;ve obtained from the first step. For this, we model the transfer costs of
 placing a given shard at a specific server and minimize the overall cost across
 all placements.</p><p>To reiterate, the optimization problem is divided into two steps:</p><ol><li>Maximize Query Parallelism</li><li>Minimize Data movement</li></ol><p>Now for the implementation:</p><h2 class=heading id=relevant-variables>Relevant Variables
-<a href=#relevant-variables>#</a></h2><p>Let&rsquo;s consider a setup with 6 servers and 200 shards:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_servers = 6
-</span></span><span style=display:flex><span>num_shards = 200
+<a href=#relevant-variables>#</a></h2><p>Let&rsquo;s consider a setup with 6 servers and 200 shards:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>num_servers <span style=color:#666>=</span> <span style=color:#40a070>6</span>
+</span></span><span style=display:flex><span>num_shards <span style=color:#666>=</span> <span style=color:#40a070>200</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>shards = list(range(num_shards))
-</span></span><span style=display:flex><span>servers = list(range(num_servers))
+</span></span><span style=display:flex><span>shards <span style=color:#666>=</span> <span style=color:#007020>list</span>(<span style=color:#007020>range</span>(num_shards))
+</span></span><span style=display:flex><span>servers <span style=color:#666>=</span> <span style=color:#007020>list</span>(<span style=color:#007020>range</span>(num_servers))
 </span></span></code></pre></div><p>Each server has a max memory capacity and each shard takes up some amount of
 memory. To keep things simple, every shard will have a size of 1 memory unit and
 all servers will have the same amount of memory which when summed up will be
-1.5x the size of the entire dataset:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># memory usage of each shard</span>
-</span></span><span style=display:flex><span>shard_memory_usages = [1 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_shards)]
-</span></span><span style=display:flex><span>server_max_memory = int(
-</span></span><span style=display:flex><span>    (num_shards / num_servers) * 1.5
-</span></span><span style=display:flex><span>)  <span style=font-style:italic># maximum server memory</span>
+1.5x the size of the entire dataset:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># memory usage of each shard</span>
+</span></span><span style=display:flex><span>shard_memory_usages <span style=color:#666>=</span> [<span style=color:#40a070>1</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)]
+</span></span><span style=display:flex><span>server_max_memory <span style=color:#666>=</span> <span style=color:#007020>int</span>(
+</span></span><span style=display:flex><span>    (num_shards <span style=color:#666>/</span> num_servers) <span style=color:#666>*</span> <span style=color:#40a070>1.5</span>
+</span></span><span style=display:flex><span>)  <span style=color:#60a0b0;font-style:italic># maximum server memory</span>
 </span></span></code></pre></div><p>Next, right before the data placement is ran, let&rsquo;s assume that shards are
-placed across the servers randomly:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># entry[x][y] is 1 if server x has a copy of shard y and 0 otherwise</span>
-</span></span><span style=display:flex><span>init_locations = [[0 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_shards)] <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_servers)]
+placed across the servers randomly:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># entry[x][y] is 1 if server x has a copy of shard y and 0 otherwise</span>
+</span></span><span style=display:flex><span>init_locations <span style=color:#666>=</span> [[<span style=color:#40a070>0</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)] <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># assign shards to servers randomly</span>
-</span></span><span style=display:flex><span>init_locations = gen_init_locations( ... )
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># assign shards to servers randomly</span>
+</span></span><span style=display:flex><span>init_locations <span style=color:#666>=</span> gen_init_locations( <span style=color:#666>...</span> )
 </span></span></code></pre></div><p>Now for the workload. After a given interval, let&rsquo;s say every 10 minutes, we
 collect the statistics of the queries that have been ran. For optimizing data
 placement, what we care about are the shards a query hits and the number of
@@ -75,82 +75,82 @@ downstream destinations for workload statistics will have their own
 classifications and what-nots.</p><p>Given that some queries tend to occur more than others, I&rsquo;ve used a generation
 scheme whereby 20% of the queries are assigned a higher frequency than the rest.
 One might use a more complicated workload model to reflect real-life settings
-but for now this will have to do for the sake of example:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>query_shard_set_size = 5
-</span></span><span style=display:flex><span>queries = []
-</span></span><span style=display:flex><span>hot_queries = int(0.2 * num_shards)
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> q_id <span style=font-weight:700>in</span> range(num_queries):
-</span></span><span style=display:flex><span>    frequency = 1
-</span></span><span style=display:flex><span>    <span style=font-weight:700>if</span> q_id &lt; hot_queries:
-</span></span><span style=display:flex><span>        frequency = 50
-</span></span><span style=display:flex><span>    shard_set = set()
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> i <span style=font-weight:700>in</span> range(query_shard_set_size):
-</span></span><span style=display:flex><span>        shard = (q_id + i) % num_shards
-</span></span><span style=display:flex><span>        shard_set.add(shard)
-</span></span><span style=display:flex><span>    queries.append(Query(q_id, shard_set, frequency))
+but for now this will have to do for the sake of example:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>query_shard_set_size <span style=color:#666>=</span> <span style=color:#40a070>5</span>
+</span></span><span style=display:flex><span>queries <span style=color:#666>=</span> []
+</span></span><span style=display:flex><span>hot_queries <span style=color:#666>=</span> <span style=color:#007020>int</span>(<span style=color:#40a070>0.2</span> <span style=color:#666>*</span> num_shards)
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> q_id <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_queries):
+</span></span><span style=display:flex><span>    frequency <span style=color:#666>=</span> <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> q_id <span style=color:#666>&lt;</span> hot_queries:
+</span></span><span style=display:flex><span>        frequency <span style=color:#666>=</span> <span style=color:#40a070>50</span>
+</span></span><span style=display:flex><span>    shard_set <span style=color:#666>=</span> <span style=color:#007020>set</span>()
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> i <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(query_shard_set_size):
+</span></span><span style=display:flex><span>        shard <span style=color:#666>=</span> (q_id <span style=color:#666>+</span> i) <span style=color:#666>%</span> num_shards
+</span></span><span style=display:flex><span>        shard_set<span style=color:#666>.</span>add(shard)
+</span></span><span style=display:flex><span>    queries<span style=color:#666>.</span>append(Query(q_id, shard_set, frequency))
 </span></span></code></pre></div><p>Aside from the queries in the workload, we also need to keep track of the load
 per shard. For this procedure, all shards will be initialized with a load of 1.
 Once we&rsquo;ve got the query workloads, the loads of the shards per a given query
-are updated accordingly:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>shard_loads = [1 <span style=font-weight:700>for</span> _ <span style=font-weight:700>in</span> range(num_shards)]
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> query <span style=font-weight:700>in</span> queries:
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> query.shard_set:
-</span></span><span style=display:flex><span>        shard_loads[shard] += query.frequency
+are updated accordingly:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>shard_loads <span style=color:#666>=</span> [<span style=color:#40a070>1</span> <span style=color:#007020;font-weight:700>for</span> _ <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)]
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> query <span style=color:#007020;font-weight:700>in</span> queries:
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> query<span style=color:#666>.</span>shard_set:
+</span></span><span style=display:flex><span>        shard_loads[shard] <span style=color:#666>+=</span> query<span style=color:#666>.</span>frequency
 </span></span></code></pre></div><p>The load per shard is key in balancing the total load across all the servers.
-The average load per server before optimization is 1,833.33 units.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>average_load_per_server = sum(shard_loads) / num_servers
-</span></span><span style=display:flex><span>print(average_load_per_server)
-</span></span><span style=display:flex><span><span style=font-style:italic># 1833.3333333333333</span>
-</span></span></code></pre></div><p>However, if we calculate the actual load per server, we get the following:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>def</span> get_server_loads(num_servers, shard_to_server_map, shard_loads):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> [
-</span></span><span style=display:flex><span>        sum(
+The average load per server before optimization is 1,833.33 units.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>average_load_per_server <span style=color:#666>=</span> <span style=color:#007020>sum</span>(shard_loads) <span style=color:#666>/</span> num_servers
+</span></span><span style=display:flex><span><span style=color:#007020>print</span>(average_load_per_server)
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># 1833.3333333333333</span>
+</span></span></code></pre></div><p>However, if we calculate the actual load per server, we get the following:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>get_server_loads</span>(num_servers, shard_to_server_map, shard_loads):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> [
+</span></span><span style=display:flex><span>        <span style=color:#007020>sum</span>(
 </span></span><span style=display:flex><span>            shard_loads[shard]
-</span></span><span style=display:flex><span>            <span style=font-weight:700>for</span> shard, present <span style=font-weight:700>in</span> enumerate(shard_to_server_map[server])
-</span></span><span style=display:flex><span>            <span style=font-weight:700>if</span> present == 1
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>for</span> shard, present <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(shard_to_server_map[server])
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>if</span> present <span style=color:#666>==</span> <span style=color:#40a070>1</span>
 </span></span><span style=display:flex><span>        )
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>    ]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>init_server_loads = get_server_loads(
+</span></span><span style=display:flex><span>init_server_loads <span style=color:#666>=</span> get_server_loads(
 </span></span><span style=display:flex><span>    num_servers, init_locations, shard_loads
 </span></span><span style=display:flex><span>)
-</span></span><span style=display:flex><span>print(<span style=font-style:italic>&#34;init server loads: &#34;</span>, init_server_loads)
-</span></span><span style=display:flex><span><span style=font-style:italic># init server loads:  [1668, 1130, 1961, 2048, 2573, 1620]</span>
+</span></span><span style=display:flex><span><span style=color:#007020>print</span>(<span style=color:#4070a0>&#34;init server loads: &#34;</span>, init_server_loads)
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># init server loads:  [1668, 1130, 1961, 2048, 2573, 1620]</span>
 </span></span></code></pre></div><p>The load is distributed quite unevenly - the 1st server (zero-indexing) has a
-load of 1130 while the 4th one has a load of 2573.</p><p>Let&rsquo;s also collect the query clustering:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># the set of shards in each server</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>def</span> get_server_shard_sets(num_servers, shard_to_server_map):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> [
-</span></span><span style=display:flex><span>        set(
+load of 1130 while the 4th one has a load of 2573.</p><p>Let&rsquo;s also collect the query clustering:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># the set of shards in each server</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>get_server_shard_sets</span>(num_servers, shard_to_server_map):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> [
+</span></span><span style=display:flex><span>        <span style=color:#007020>set</span>(
 </span></span><span style=display:flex><span>            shard
-</span></span><span style=display:flex><span>            <span style=font-weight:700>for</span> shard, present <span style=font-weight:700>in</span> enumerate(shard_to_server_map[server])
-</span></span><span style=display:flex><span>            <span style=font-weight:700>if</span> present == 1
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>for</span> shard, present <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>enumerate</span>(shard_to_server_map[server])
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>if</span> present <span style=color:#666>==</span> <span style=color:#40a070>1</span>
 </span></span><span style=display:flex><span>        )
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>init_server_shard_sets = get_server_shard_sets(num_servers, init_locations)
+</span></span><span style=display:flex><span>init_server_shard_sets <span style=color:#666>=</span> get_server_shard_sets(num_servers, init_locations)
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># for each query, get its clustering</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>def</span> get_query_clustering(num_servers, server_shard_sets, queries):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> [
-</span></span><span style=display:flex><span>        max(
-</span></span><span style=display:flex><span>            len(query.shard_set.intersection(server_shard_sets[s]))
-</span></span><span style=display:flex><span>            <span style=font-weight:700>for</span> s <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># for each query, get its clustering</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>get_query_clustering</span>(num_servers, server_shard_sets, queries):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> [
+</span></span><span style=display:flex><span>        <span style=color:#007020>max</span>(
+</span></span><span style=display:flex><span>            <span style=color:#007020>len</span>(query<span style=color:#666>.</span>shard_set<span style=color:#666>.</span>intersection(server_shard_sets[s]))
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>for</span> s <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>        )
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> query <span style=font-weight:700>in</span> queries
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> query <span style=color:#007020;font-weight:700>in</span> queries
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>init_query_clustering_vals = get_query_clustering(
+</span></span><span style=display:flex><span>init_query_clustering_vals <span style=color:#666>=</span> get_query_clustering(
 </span></span><span style=display:flex><span>    num_servers, init_server_shard_sets, queries
 </span></span><span style=display:flex><span>)
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># for each query, get the weighted clustering, that is: if a query is more </span>
-</span></span><span style=display:flex><span><span style=font-style:italic># frequent, its weighted clustering should be higher and if it&#39;s less freqeuent</span>
-</span></span><span style=display:flex><span><span style=font-style:italic># its weighted clustering should be relatively lower even if the non-weighted</span>
-</span></span><span style=display:flex><span><span style=font-style:italic># clustering is higher</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>def</span> get_weighted_query_clustering_sum(queries, query_clustering_vals):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>return</span> sum(
-</span></span><span style=display:flex><span>        (q.frequency * cs) <span style=font-weight:700>for</span> q, cs <span style=font-weight:700>in</span> zip(queries, query_clustering_vals)
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># for each query, get the weighted clustering, that is: if a query is more </span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># frequent, its weighted clustering should be higher and if it&#39;s less freqeuent</span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># its weighted clustering should be relatively lower even if the non-weighted</span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># clustering is higher</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>get_weighted_query_clustering_sum</span>(queries, query_clustering_vals):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> <span style=color:#007020>sum</span>(
+</span></span><span style=display:flex><span>        (q<span style=color:#666>.</span>frequency <span style=color:#666>*</span> cs) <span style=color:#007020;font-weight:700>for</span> q, cs <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(queries, query_clustering_vals)
 </span></span><span style=display:flex><span>    )
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>init_query_clustering_vals = get_query_clustering(
+</span></span><span style=display:flex><span>init_query_clustering_vals <span style=color:#666>=</span> get_query_clustering(
 </span></span><span style=display:flex><span>    num_servers, init_server_shard_sets, queries
 </span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p>Raw query clustering values might not be as useful since queries with low
@@ -164,17 +164,17 @@ tail latency via minimizing query clustering. Let&rsquo;s start by defining the
 decision variables that will hold the the n-cluster values for the
 <code>sample_queries</code> plus the objective. The minimum n-cluster value is 1 in which
 case all the shards a frequent query accesses are spread uniformly across all
-the servers available:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pulp</span>
+the servers available:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>pulp</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>model = pulp.LpProblem(<span style=font-style:italic>&#34;p1&#34;</span>, pulp.LpMinimize)
+</span></span><span style=display:flex><span>model <span style=color:#666>=</span> pulp<span style=color:#666>.</span>LpProblem(<span style=color:#4070a0>&#34;p1&#34;</span>, pulp<span style=color:#666>.</span>LpMinimize)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>query_clustering_vars = [
-</span></span><span style=display:flex><span>    pulp.LpVariable(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;c_</span><span style=font-weight:700;font-style:italic>{</span>query.id<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>, lowBound=1, cat=<span style=font-style:italic>&#34;Integer&#34;</span>) <span style=font-weight:700>for</span> query <span style=font-weight:700>in</span> queries
+</span></span><span style=display:flex><span>query_clustering_vars <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    pulp<span style=color:#666>.</span>LpVariable(<span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;c_</span><span style=color:#70a0d0>{</span>query<span style=color:#666>.</span>id<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>, lowBound<span style=color:#666>=</span><span style=color:#40a070>1</span>, cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Integer&#34;</span>) <span style=color:#007020;font-weight:700>for</span> query <span style=color:#007020;font-weight:700>in</span> queries
 </span></span><span style=display:flex><span>]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># minimize the n-cluster values</span>
-</span></span><span style=display:flex><span>p1_objective = pulp.lpSum(query_clustering_vars)
-</span></span><span style=display:flex><span>model += p1_objective
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># minimize the n-cluster values</span>
+</span></span><span style=display:flex><span>p1_objective <span style=color:#666>=</span> pulp<span style=color:#666>.</span>lpSum(query_clustering_vars)
+</span></span><span style=display:flex><span>model <span style=color:#666>+=</span> p1_objective
 </span></span></code></pre></div><p>Without any constraints, the solver will simply set all the
 <code>query_clustering_vars</code> to 1 and call it a day since that will minimize the
 overall sum of the n-cluster variables. But don&rsquo;t worry, we&rsquo;ll add the
@@ -182,52 +182,52 @@ constraints quite soon. For now, there are a couple of aspects that can be
 improved upon in the above objective definition.</p><p>Let&rsquo;s start by adding an upper bound to make the solver&rsquo;s work easier. The
 upper-bound will be the largest number of shards that a single server can host.
 Since all servers have the same memory capacity and all shards take up the same
-amount of memory (1 unit), the upper bound is obtained as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>math</span>
-</span></span><span style=display:flex><span>ub = math.ceil(num_shards / num_servers)
-</span></span><span style=display:flex><span>print(ub)
-</span></span><span style=display:flex><span><span style=font-style:italic># 20</span>
+amount of memory (1 unit), the upper bound is obtained as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>math</span>
+</span></span><span style=display:flex><span>ub <span style=color:#666>=</span> math<span style=color:#666>.</span>ceil(num_shards <span style=color:#666>/</span> num_servers)
+</span></span><span style=display:flex><span><span style=color:#007020>print</span>(ub)
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># 20</span>
 </span></span></code></pre></div><p>Next: we&rsquo;ve got the frequencies of the queries, we ought to weigh the clustering
 variables by their respective frequencies so that the solver can focus more on
-minimizing the clustering for the most frequent queries:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model += pulp.lpSum(
+minimizing the clustering for the most frequent queries:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model <span style=color:#666>+=</span> pulp<span style=color:#666>.</span>lpSum(
 </span></span><span style=display:flex><span>    [
-</span></span><span style=display:flex><span>        q.frequency * n_cluster
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> (q, n_cluster) <span style=font-weight:700>in</span> zip(queries, query_clustering_vars)
+</span></span><span style=display:flex><span>        q<span style=color:#666>.</span>frequency <span style=color:#666>*</span> n_cluster
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> (q, n_cluster) <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(queries, query_clustering_vars)
 </span></span><span style=display:flex><span>    ]
 </span></span><span style=display:flex><span>)
 </span></span></code></pre></div><p><code>lpSum</code> works fine but with such cases, it&rsquo;s more common to use the dot product
-which you&rsquo;ll come across in lots of the MIP code out there.</p><p>Overall, we end up with the following:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>pulp</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>import</span> <span style=font-weight:700>math</span>
+which you&rsquo;ll come across in lots of the MIP code out there.</p><p>Overall, we end up with the following:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>pulp</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>math</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>model = pulp.LpProblem(<span style=font-style:italic>&#34;p1&#34;</span>, pulp.LpMinimize)
+</span></span><span style=display:flex><span>model <span style=color:#666>=</span> pulp<span style=color:#666>.</span>LpProblem(<span style=color:#4070a0>&#34;p1&#34;</span>, pulp<span style=color:#666>.</span>LpMinimize)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>query_clustering_vars = [
-</span></span><span style=display:flex><span>    pulp.LpVariable(
-</span></span><span style=display:flex><span>        <span style=font-style:italic>f</span><span style=font-style:italic>&#34;c_</span><span style=font-weight:700;font-style:italic>{</span>query.id<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>,
-</span></span><span style=display:flex><span>        lowBound=1,
-</span></span><span style=display:flex><span>        upBound=math.ceil(num_shards / num_servers),
-</span></span><span style=display:flex><span>        cat=<span style=font-style:italic>&#34;Integer&#34;</span>,
+</span></span><span style=display:flex><span>query_clustering_vars <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    pulp<span style=color:#666>.</span>LpVariable(
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;c_</span><span style=color:#70a0d0>{</span>query<span style=color:#666>.</span>id<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>,
+</span></span><span style=display:flex><span>        lowBound<span style=color:#666>=</span><span style=color:#40a070>1</span>,
+</span></span><span style=display:flex><span>        upBound<span style=color:#666>=</span>math<span style=color:#666>.</span>ceil(num_shards <span style=color:#666>/</span> num_servers),
+</span></span><span style=display:flex><span>        cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Integer&#34;</span>,
 </span></span><span style=display:flex><span>    )
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> query <span style=font-weight:700>in</span> queries
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> query <span style=color:#007020;font-weight:700>in</span> queries
 </span></span><span style=display:flex><span>]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># minimize sum of query clustering weighted by query frequency</span>
-</span></span><span style=display:flex><span>objective = pulp.lpDot(
-</span></span><span style=display:flex><span>    query_clustering_vars, [query.frequency <span style=font-weight:700>for</span> query <span style=font-weight:700>in</span> queries]
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># minimize sum of query clustering weighted by query frequency</span>
+</span></span><span style=display:flex><span>objective <span style=color:#666>=</span> pulp<span style=color:#666>.</span>lpDot(
+</span></span><span style=display:flex><span>    query_clustering_vars, [query<span style=color:#666>.</span>frequency <span style=color:#007020;font-weight:700>for</span> query <span style=color:#007020;font-weight:700>in</span> queries]
 </span></span><span style=display:flex><span>)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>model += objective
+</span></span><span style=display:flex><span>model <span style=color:#666>+=</span> objective
 </span></span></code></pre></div><p>There are two addition classes of decision variables we need to define. The
 first is the <code>assn_vars</code> which will determine where the shards are placed after
 the solver runs. For example, given server 6 and shard 100, if
 <code>assn_vars[6][100] == 1</code> then server 6 will be assigned shard 100. If server 6
 already hosted shard 100 before the new assignments were carried out then
 nothing happens; otherwise, it will have to either pull the shard from a node
-that hosts it or have the coordinator or another node push the shard to it:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>assn_vars = [
+that hosts it or have the coordinator or another node push the shard to it:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>assn_vars <span style=color:#666>=</span> [
 </span></span><span style=display:flex><span>    [
-</span></span><span style=display:flex><span>        pulp.LpVariable(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;a_</span><span style=font-weight:700;font-style:italic>{</span>server<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>_</span><span style=font-weight:700;font-style:italic>{</span>shard<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>, 0, 1, cat=<span style=font-style:italic>&#34;Binary&#34;</span>)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>LpVariable(<span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;a_</span><span style=color:#70a0d0>{</span>server<span style=color:#70a0d0>}</span><span style=color:#4070a0>_</span><span style=color:#70a0d0>{</span>shard<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>, <span style=color:#40a070>0</span>, <span style=color:#40a070>1</span>, cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Binary&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
 </span></span></code></pre></div><p>We&rsquo;ve also got the <code>p_vars</code>. This is the proportion or probabilities with which
 the coordinator should route a query pertaining a given shard to a specific
@@ -236,25 +236,25 @@ server. Suppose we&rsquo;ve got 5 shards. If the proportion row for server 2 is
 should be routed to server 2 and a quarter of the queries accessing the 3rd
 shard should be routed to server 2. Server 2 should not expect to process
 queries accessing the 1st, 2nd and 4th shards. On the same note, once the shards
-are placed optimally, server 2 should only host the 0th and 3rd shard.</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>p_vars = [
+are placed optimally, server 2 should only host the 0th and 3rd shard.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>p_vars <span style=color:#666>=</span> [
 </span></span><span style=display:flex><span>    [
-</span></span><span style=display:flex><span>        pulp.LpVariable(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;p_</span><span style=font-weight:700;font-style:italic>{</span>server<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>_</span><span style=font-weight:700;font-style:italic>{</span>shard<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>, 0, 1, cat=<span style=font-style:italic>&#34;Continuous&#34;</span>)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>LpVariable(<span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;p_</span><span style=color:#70a0d0>{</span>server<span style=color:#70a0d0>}</span><span style=color:#4070a0>_</span><span style=color:#70a0d0>{</span>shard<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>, <span style=color:#40a070>0</span>, <span style=color:#40a070>1</span>, cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Continuous&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
 </span></span></code></pre></div><p>With the decision variables in place, it&rsquo;s time to add the constraints.</p><h2 class=heading id=constraints>Constraints
 <a href=#constraints>#</a></h2><p>The first constraint is as follows: for every query, no server should host more
 shards than that query&rsquo;s clustering. The solver will figure out the optimal
 clustering for each query so as to minimize the objective and as it&rsquo;s doing so,
 the shard assignments should be consistent with the clustering values. When
-formulating MIP, we need to make all our assumptions and constraints explicit:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>for</span> query, query_clusering_var <span style=font-weight:700>in</span> zip(queries, query_clustering_vars):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers):
-</span></span><span style=display:flex><span>        model += (
-</span></span><span style=display:flex><span>            pulp.lpSum(
-</span></span><span style=display:flex><span>                [assn_vars[server][shard] <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> query.shard_set]
+formulating MIP, we need to make all our assumptions and constraints explicit:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> query, query_clusering_var <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(queries, query_clustering_vars):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers):
+</span></span><span style=display:flex><span>        model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>            pulp<span style=color:#666>.</span>lpSum(
+</span></span><span style=display:flex><span>                [assn_vars[server][shard] <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> query<span style=color:#666>.</span>shard_set]
 </span></span><span style=display:flex><span>            )
-</span></span><span style=display:flex><span>            &lt;= query_clusering_var
+</span></span><span style=display:flex><span>            <span style=color:#666>&lt;=</span> query_clusering_var
 </span></span><span style=display:flex><span>        )
 </span></span></code></pre></div><p>To ensure that the values <code>p_vars</code> and <code>assn_vars</code> take up also remain
 consistent, we need to add the following constraints:</p><ul><li>for a given shard, the proportions (which are in essence probabilities) with
@@ -262,58 +262,58 @@ which queries accessing it are routed to different servers should all add up
 to 1</li><li>If the rate/probability at which a server should expect a query accessing a
 given shard is greater than 0, then that server should be assigned that shard.
 To phrase it differently, if <code>assn_vars[server][shard] == 0</code> then
-<code>p_vars[server][shard] == 0</code></li></ul><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># for a given shard, ensure if assn is 0 then p is 0</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards):
-</span></span><span style=display:flex><span>        model += (
-</span></span><span style=display:flex><span>            p_vars[server][shard] &lt;= assn_vars[server][shard]
+<code>p_vars[server][shard] == 0</code></li></ul><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># for a given shard, ensure if assn is 0 then p is 0</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards):
+</span></span><span style=display:flex><span>        model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>            p_vars[server][shard] <span style=color:#666>&lt;=</span> assn_vars[server][shard]
 </span></span><span style=display:flex><span>        )
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-style:italic># for a given shard, the sum of all p should equal 1</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards):
-</span></span><span style=display:flex><span>    model += (
-</span></span><span style=display:flex><span>        pulp.lpSum(p_vars[server][shard] <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers))
-</span></span><span style=display:flex><span>        == 1
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># for a given shard, the sum of all p should equal 1</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards):
+</span></span><span style=display:flex><span>    model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>lpSum(p_vars[server][shard] <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers))
+</span></span><span style=display:flex><span>        <span style=color:#666>==</span> <span style=color:#40a070>1</span>
 </span></span><span style=display:flex><span>    )
 </span></span></code></pre></div><p>Whichever assignment the solver figures out, each shard should be placed on at
 least one server. In cases where the system must provide durability guarantees
 via replication, this constraint could be modified to ensure the shards are
-stored in say at least 3 servers if that&rsquo;s the replication factor:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># require each shard to appear on at least one server</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards):
-</span></span><span style=display:flex><span>    model += (
-</span></span><span style=display:flex><span>        pulp.lpSum(
+stored in say at least 3 servers if that&rsquo;s the replication factor:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># require each shard to appear on at least one server</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards):
+</span></span><span style=display:flex><span>    model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>lpSum(
 </span></span><span style=display:flex><span>            assn_vars[server][shard]
-</span></span><span style=display:flex><span>            <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>        )
-</span></span><span style=display:flex><span>        &gt;= 1
+</span></span><span style=display:flex><span>        <span style=color:#666>&gt;=</span> <span style=color:#40a070>1</span>
 </span></span><span style=display:flex><span>    )
 </span></span></code></pre></div><p>Lest we forget, we&rsquo;ve also got server memory constraints that must be adhered
-to:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># server memory constraints</span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers):
-</span></span><span style=display:flex><span>    model += (
-</span></span><span style=display:flex><span>        pulp.lpDot(shard_memory_usages, assn_vars[server])
-</span></span><span style=display:flex><span>        &lt;= server_max_memory
+to:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># server memory constraints</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers):
+</span></span><span style=display:flex><span>    model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>lpDot(shard_memory_usages, assn_vars[server])
+</span></span><span style=display:flex><span>        <span style=color:#666>&lt;=</span> server_max_memory
 </span></span><span style=display:flex><span>    )
 </span></span></code></pre></div><p>Lastly, we&rsquo;ve got the load balancing constraints. Setting the epsilon value is
 tricky. We can make it smaller but that also risks making the problem
 infeasible. On the other hand, making it too large and the load ends up
-imbalanced across all the servers:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-style:italic># load constraints</span>
-</span></span><span style=display:flex><span>average_load_per_server = sum(shard_loads) / num_servers
-</span></span><span style=display:flex><span>epsilon = 0.05 * average_load_per_server
-</span></span><span style=display:flex><span>server_load_bound = {
-</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;lower&#34;</span>: average_load_per_server - epsilon,
-</span></span><span style=display:flex><span>    <span style=font-style:italic>&#34;upper&#34;</span>: average_load_per_server + epsilon,
+imbalanced across all the servers:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#60a0b0;font-style:italic># load constraints</span>
+</span></span><span style=display:flex><span>average_load_per_server <span style=color:#666>=</span> <span style=color:#007020>sum</span>(shard_loads) <span style=color:#666>/</span> num_servers
+</span></span><span style=display:flex><span>epsilon <span style=color:#666>=</span> <span style=color:#40a070>0.05</span> <span style=color:#666>*</span> average_load_per_server
+</span></span><span style=display:flex><span>server_load_bound <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>    <span style=color:#4070a0>&#34;lower&#34;</span>: average_load_per_server <span style=color:#666>-</span> epsilon,
+</span></span><span style=display:flex><span>    <span style=color:#4070a0>&#34;upper&#34;</span>: average_load_per_server <span style=color:#666>+</span> epsilon,
 </span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers):
-</span></span><span style=display:flex><span>    <span style=font-style:italic># min load constraint</span>
-</span></span><span style=display:flex><span>    model += pulp.lpDot(shard_loads, p_vars[server]) &gt;= (
-</span></span><span style=display:flex><span>        server_load_lowerbound[<span style=font-style:italic>&#34;lower&#34;</span>]
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers):
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># min load constraint</span>
+</span></span><span style=display:flex><span>    model <span style=color:#666>+=</span> pulp<span style=color:#666>.</span>lpDot(shard_loads, p_vars[server]) <span style=color:#666>&gt;=</span> (
+</span></span><span style=display:flex><span>        server_load_lowerbound[<span style=color:#4070a0>&#34;lower&#34;</span>]
 </span></span><span style=display:flex><span>    )
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=font-style:italic># max load constraint</span>
-</span></span><span style=display:flex><span>    model += pulp.lpDot(shard_loads, p_vars[server]) &lt;= (
-</span></span><span style=display:flex><span>        server_load_upperbound[<span style=font-style:italic>&#34;upper&#34;</span>]
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># max load constraint</span>
+</span></span><span style=display:flex><span>    model <span style=color:#666>+=</span> pulp<span style=color:#666>.</span>lpDot(shard_loads, p_vars[server]) <span style=color:#666>&lt;=</span> (
+</span></span><span style=display:flex><span>        server_load_upperbound[<span style=color:#4070a0>&#34;upper&#34;</span>]
 </span></span><span style=display:flex><span>    )
 </span></span></code></pre></div><p>With some ad-hoc experimentation here and there, I&rsquo;ve figured that I can make
 epsilon smaller by either increasing the server capacities (memory in this
@@ -326,13 +326,13 @@ most frequently queried shard set is <code>{10,11,12,20,25}</code> with a freque
 we split it into two logical shard sets that all have the same shards but each
 with a frequency of 50. With the current configurations though, none of this is
 required.</p><p>Back to the problem at hand. With the objective and constraints in place, it&rsquo;s
-time to run the solver:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>status = model.solve(pulp.PULP_CBC_CMD(msg=<span style=font-weight:700>False</span>))
-</span></span><span style=display:flex><span><span style=font-weight:700>assert</span> (
-</span></span><span style=display:flex><span>    status == pulp.constants.LpStatusOptimal
-</span></span><span style=display:flex><span>), <span style=font-style:italic>f</span><span style=font-style:italic>&#34;Unexpected non-optimal status </span><span style=font-weight:700;font-style:italic>{</span>status<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>
+time to run the solver:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>status <span style=color:#666>=</span> model<span style=color:#666>.</span>solve(pulp<span style=color:#666>.</span>PULP_CBC_CMD(msg<span style=color:#666>=</span><span style=color:#007020;font-weight:700>False</span>))
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>assert</span> (
+</span></span><span style=display:flex><span>    status <span style=color:#666>==</span> pulp<span style=color:#666>.</span>constants<span style=color:#666>.</span>LpStatusOptimal
+</span></span><span style=display:flex><span>), <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;Unexpected non-optimal status </span><span style=color:#70a0d0>{</span>status<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>optimal_query_clustering_vals = [
-</span></span><span style=display:flex><span>    int(v.varValue) <span style=font-weight:700>for</span> v <span style=font-weight:700>in</span> query_clustering_vars
+</span></span><span style=display:flex><span>optimal_query_clustering_vals <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#007020>int</span>(v<span style=color:#666>.</span>varValue) <span style=color:#007020;font-weight:700>for</span> v <span style=color:#007020;font-weight:700>in</span> query_clustering_vars
 </span></span><span style=display:flex><span>]
 </span></span></code></pre></div><p>Once done, <code>assn_vars</code> should hold the optimal shard placements and <code>p_vars</code>
 should hold the optimal proportions with which the queries should be routed by
@@ -342,32 +342,32 @@ and the system might end up spending more time shuffling data around for
 non-query work rather than for executing actual queries.</p><p>With <code>init_locations</code>, let&rsquo;s derive a next-<code>assn_vars</code> that minimizes data
 movement while maintaining the optimal clustering values for the top-K queries.</p><p>Let&rsquo;s start with the decision variables. We&rsquo;ll have the <code>p_vars</code> and <code>assn_vars</code>
 once more but no <code>query_clustering_vars</code> since we already obtained the optimal
-values from the first part:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>p_vars = [
+values from the first part:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>p_vars <span style=color:#666>=</span> [
 </span></span><span style=display:flex><span>    [
-</span></span><span style=display:flex><span>        pulp.LpVariable(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;p_</span><span style=font-weight:700;font-style:italic>{</span>server<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>_</span><span style=font-weight:700;font-style:italic>{</span>shard<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>, 0, 1, cat=<span style=font-style:italic>&#34;Continuous&#34;</span>)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>LpVariable(<span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;p_</span><span style=color:#70a0d0>{</span>server<span style=color:#70a0d0>}</span><span style=color:#4070a0>_</span><span style=color:#70a0d0>{</span>shard<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>, <span style=color:#40a070>0</span>, <span style=color:#40a070>1</span>, cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Continuous&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>assn_vars = [
+</span></span><span style=display:flex><span>assn_vars <span style=color:#666>=</span> [
 </span></span><span style=display:flex><span>    [
-</span></span><span style=display:flex><span>        pulp.LpVariable(<span style=font-style:italic>f</span><span style=font-style:italic>&#34;a_</span><span style=font-weight:700;font-style:italic>{</span>server<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>_</span><span style=font-weight:700;font-style:italic>{</span>shard<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>, 0, 1, cat=<span style=font-style:italic>&#34;Binary&#34;</span>)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
+</span></span><span style=display:flex><span>        pulp<span style=color:#666>.</span>LpVariable(<span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;a_</span><span style=color:#70a0d0>{</span>server<span style=color:#70a0d0>}</span><span style=color:#4070a0>_</span><span style=color:#70a0d0>{</span>shard<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>, <span style=color:#40a070>0</span>, <span style=color:#40a070>1</span>, cat<span style=color:#666>=</span><span style=color:#4070a0>&#34;Binary&#34;</span>)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
 </span></span><span style=display:flex><span>    ]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
-</span></span></code></pre></div><p>As for the objective function, the authors define it as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model2 = pulp.LpProblem(<span style=font-style:italic>&#34;p2&#34;</span>, pulp.LpMinimize)
+</span></span></code></pre></div><p>As for the objective function, the authors define it as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model2 <span style=color:#666>=</span> pulp<span style=color:#666>.</span>LpProblem(<span style=color:#4070a0>&#34;p2&#34;</span>, pulp<span style=color:#666>.</span>LpMinimize)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>p2_objective = pulp.lpSum(
-</span></span><span style=display:flex><span>    list(
-</span></span><span style=display:flex><span>        init_locations[server][shard] * assn_vars[server][shard]
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>p2_objective <span style=color:#666>=</span> pulp<span style=color:#666>.</span>lpSum(
+</span></span><span style=display:flex><span>    <span style=color:#007020>list</span>(
+</span></span><span style=display:flex><span>        init_locations[server][shard] <span style=color:#666>*</span> assn_vars[server][shard]
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>    )
 </span></span><span style=display:flex><span>)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>model2 += p2_objective
+</span></span><span style=display:flex><span>model2 <span style=color:#666>+=</span> p2_objective
 </span></span></code></pre></div><p>I might be wrong, but I reckon this definition achieves the exact opposite -
 we&rsquo;re maximizing shard movement instead! From the paper:</p><blockquote><p>To model shard locations before assignment, we also define a matrix 𝑡 where 𝑡
 𝑖 𝑗 is 0 if server 𝑖 currently hosts a replica of shard 𝑗 and 1 otherwise. The
@@ -386,46 +386,46 @@ it can get away with (i.e. increase data movement). It&rsquo;s only in the case 
 the objective as defined aligns with minimizing data movement.</p><p>To actualize minimize data movement, we need to think of the costs of assigning
 a particular shard at a given server. If the server already hosted that shard,
 the cost is zero, otherwise, it&rsquo;s non-zero. For the sake of modeling, we can
-derive the transfer costs from <code>init_locations</code> as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>transfer_costs = [
-</span></span><span style=display:flex><span>    [1 - init_locations[server][shard] <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+derive the transfer costs from <code>init_locations</code> as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>transfer_costs <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    [<span style=color:#40a070>1</span> <span style=color:#666>-</span> init_locations[server][shard] <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)]
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
-</span></span></code></pre></div><p>Rewriting the objective:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model = pulp.LpProblem(<span style=font-style:italic>&#34;p2&#34;</span>, pulp.LpMinimize)
+</span></span></code></pre></div><p>Rewriting the objective:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>model <span style=color:#666>=</span> pulp<span style=color:#666>.</span>LpProblem(<span style=color:#4070a0>&#34;p2&#34;</span>, pulp<span style=color:#666>.</span>LpMinimize)
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>objective = pulp.lpSum(
-</span></span><span style=display:flex><span>    list(
-</span></span><span style=display:flex><span>        transfer_costs[server][shard] * assn_vars[server][shard]
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)
-</span></span><span style=display:flex><span>        <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>objective <span style=color:#666>=</span> pulp<span style=color:#666>.</span>lpSum(
+</span></span><span style=display:flex><span>    <span style=color:#007020>list</span>(
+</span></span><span style=display:flex><span>        transfer_costs[server][shard] <span style=color:#666>*</span> assn_vars[server][shard]
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>    )
 </span></span><span style=display:flex><span>)
-</span></span><span style=display:flex><span>model += objective
+</span></span><span style=display:flex><span>model <span style=color:#666>+=</span> objective
 </span></span></code></pre></div><p>And now for the rest of the constraints.</p><p>We already obtained the optimal clustering values from part 1; let&rsquo;s extract it
 from the decision variables then use it now as a constraint to ensure that
-performance is maintained regardless of re-assignment:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=font-weight:700>for</span> query, query_clustering_val <span style=font-weight:700>in</span> zip(
+performance is maintained regardless of re-assignment:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>for</span> query, query_clustering_val <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>zip</span>(
 </span></span><span style=display:flex><span>    queries, optimal_query_clustering_vals
 </span></span><span style=display:flex><span>):
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers):
-</span></span><span style=display:flex><span>        model += (
-</span></span><span style=display:flex><span>            pulp.lpSum(
-</span></span><span style=display:flex><span>                [assn_vars[server][shard] <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> query.shard_set]
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers):
+</span></span><span style=display:flex><span>        model <span style=color:#666>+=</span> (
+</span></span><span style=display:flex><span>            pulp<span style=color:#666>.</span>lpSum(
+</span></span><span style=display:flex><span>                [assn_vars[server][shard] <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> query<span style=color:#666>.</span>shard_set]
 </span></span><span style=display:flex><span>            )
-</span></span><span style=display:flex><span>            &lt;= query_clustering_val
+</span></span><span style=display:flex><span>            <span style=color:#666>&lt;=</span> query_clustering_val
 </span></span><span style=display:flex><span>        )
 </span></span></code></pre></div><p>The rest of the constraints are the same from part 1:</p><ul><li>server load constraints for load balancing</li><li>ensure <code>p_vars</code> and <code>assn_vars</code> are consistent</li><li>ensure server memory constraints are adhered to</li><li>require each shard to appear on at least one server</li></ul><p>Once the solver runs and we&rsquo;ve successfully obtained an optimal solution, it&rsquo;s
-time to extract the assignments:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>status = model.solve(pulp.PULP_CBC_CMD(msg=<span style=font-weight:700>False</span>))
-</span></span><span style=display:flex><span><span style=font-weight:700>assert</span> (
-</span></span><span style=display:flex><span>    status == pulp.constants.LpStatusOptimal
-</span></span><span style=display:flex><span>), <span style=font-style:italic>f</span><span style=font-style:italic>&#34;Unexpected non-optimal status </span><span style=font-weight:700;font-style:italic>{</span>status<span style=font-weight:700;font-style:italic>}</span><span style=font-style:italic>&#34;</span>
+time to extract the assignments:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>status <span style=color:#666>=</span> model<span style=color:#666>.</span>solve(pulp<span style=color:#666>.</span>PULP_CBC_CMD(msg<span style=color:#666>=</span><span style=color:#007020;font-weight:700>False</span>))
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>assert</span> (
+</span></span><span style=display:flex><span>    status <span style=color:#666>==</span> pulp<span style=color:#666>.</span>constants<span style=color:#666>.</span>LpStatusOptimal
+</span></span><span style=display:flex><span>), <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;Unexpected non-optimal status </span><span style=color:#70a0d0>{</span>status<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#34;</span>
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>next_locations = [
-</span></span><span style=display:flex><span>    [int(assn_vars[server][shard].varValue) <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>next_locations <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    [<span style=color:#007020>int</span>(assn_vars[server][shard]<span style=color:#666>.</span>varValue) <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)]
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>next_query_routing_map = [
-</span></span><span style=display:flex><span>    [p_vars[server][shard].varValue <span style=font-weight:700>for</span> shard <span style=font-weight:700>in</span> range(num_shards)]
-</span></span><span style=display:flex><span>    <span style=font-weight:700>for</span> server <span style=font-weight:700>in</span> range(num_servers)
+</span></span><span style=display:flex><span>next_query_routing_map <span style=color:#666>=</span> [
+</span></span><span style=display:flex><span>    [p_vars[server][shard]<span style=color:#666>.</span>varValue <span style=color:#007020;font-weight:700>for</span> shard <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_shards)]
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>for</span> server <span style=color:#007020;font-weight:700>in</span> <span style=color:#007020>range</span>(num_servers)
 </span></span><span style=display:flex><span>]
 </span></span></code></pre></div><p><code>next_locations</code> is used to place shards into the requisite servers and once
 done, <code>next_query_routing_map</code> is used by the leader node to route queries to

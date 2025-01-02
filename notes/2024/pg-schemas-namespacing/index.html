@@ -1,0 +1,68 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>PostgreSQL Schemas: Namespacing for Objects | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/notes/2024/pg-schemas-namespacing/><meta property="og:url" content="https://www.bnmoch3.org/notes/2024/pg-schemas-namespacing/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="PostgreSQL Schemas: Namespacing for Objects"><meta property="og:description" content="For organizing objects in your DB, or setting up multi-tenancy"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2024-12-09T00:00:00+00:00"><meta property="article:modified_time" content="2024-12-09T00:00:00+00:00"><meta property="article:tag" content="SQL"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/notes/2024/pg-schemas-namespacing/>PostgreSQL Schemas: Namespacing for Objects</a></div><div><div class=single-intro-container><h1 class=single-title>PostgreSQL Schemas: Namespacing for Objects</h1><p class=single-readtime><time datetime=2024-12-09T00:00:00+00:00>December 9, 2024</time>
+&nbsp; · &nbsp;
+4 min read</p></div><div class=single-content><p>Postgres offers schemas as a means for organizing objects (tables, views,
+indexes etc) into separate namespaces. Worth noting that schemas here are
+entirely different from the general notion of a schema in databases (DDL,
+defining the table stuctures, data types, relationships, indexes etc). This post
+will focus on the former, schemas as namespaces. I got interested in schemas
+since I&rsquo;m currently exploring various approaches for multi-tenancy in Postgres
+(one of the approaches is setting up a schema for each customer). Let&rsquo;s start
+with an overview:</p><h2 class=heading id=overview-of-schemas>Overview of Schemas
+<a href=#overview-of-schemas>#</a></h2><p>Per a Postgres instance, we&rsquo;ve got the following hierarchy:</p><ol><li><strong>Databases</strong>, which contain:</li><li><strong>Schemas</strong>, which contain:</li><li><strong>Tables, Indexes, Views, Functions etc</strong>* (database objects)</li></ol><p>Let&rsquo;s start with the basics. First, create a database, then connect to it:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#666>&gt;</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>create</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>database</span><span style=color:#bbb> </span>hotel;<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#666>&gt;</span><span style=color:#bbb> </span><span>\</span><span style=color:#007020;font-weight:700>c</span><span style=color:#bbb> </span>hotel<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Next, let&rsquo;s create a schema:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>create</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>schema</span><span style=color:#bbb> </span>app;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Lastly, some table:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>create</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>table</span><span style=color:#bbb> </span>hotel.app.bookings<span style=color:#bbb> </span>(id<span style=color:#bbb> </span><span style=color:#007020>int</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>primary</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>key</span>);<span style=color:#bbb>
+</span></span></span></code></pre></div><p>On querying this table, we get an error:</p><pre tabindex=0><code>&gt; select * from bookings;
+ERROR:  42P01: relation &#34;bookings&#34; does not exist
+LINE 1: select * from bookings;
+                      ^
+LOCATION:  parserOpenTable, parse_relation.c:1449
+</code></pre><p>That&rsquo;s because of what PG calls the <em>schema search path</em>. From the
+<a href=https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATH>docs</a>:</p><blockquote><p>&mldr; tables are often referred to by unqualified names, which consist of just
+the table name. The system determines which table is meant by following a
+search path, which is a list of schemas to look in. The first matching table
+in the search path is taken to be the one wanted. If there is no match in the
+search path, an error is reported, even if matching table names exist in other
+schemas in the database.</p></blockquote><p>Let&rsquo;s check our search path, which by default should return:</p><pre tabindex=0><code>&gt; show search_path;
+   search_path
+═════════════════
+ &#34;$user&#34;, public
+(1 row)
+</code></pre><p>From the docs: &ldquo;The first element specifies that a schema with the same name as
+the current user is to be searched. If no such schema exists, the entry is
+ignored. The second element refers to the public schema that we have seen
+already&rdquo;.</p><p>So Postgres first checks for the existence of <code>"$user".bookings</code>. I hadn&rsquo;t
+created that schema so it moves on to check for <code>public.bookings</code> which does not
+exist. Finally, it errors out.</p><p>One fix is to use the fully qualified name as we did when creating the table,
+<code>database.schema.table</code>:</p><pre tabindex=0><code>&gt; select * from hotel.app.bookings;
+</code></pre><p>The database part is superfluous, we don&rsquo;t need to add <code>hotel.&lt;schema>.&lt;table></code>
+since each Postgres connection is associated with one and only one database
+which can be inferred by Postgres. Specifying the schema is necessary though for
+disambiguation since a database can have multiple schemas.</p><p>Another fix is to alter the <code>search_path</code> and make our schema <code>app</code> the first
+path where Postgres checks. This also lets us use unqualified names:</p><pre tabindex=0><code>&gt; set search_path to app,public;
+&gt; select * from bookings;
+</code></pre><p>This is a per-session config, when we restart our client we&rsquo;ll have to set it
+again. To make the config persist across future sessions:</p><pre tabindex=0><code>&gt; alter role &lt;role&gt; set search_path to app,public;
+</code></pre><p>Also, some notes on the <code>public</code> schema:</p><ul><li>whenever we create a database, Postgres also creates a default schema for us,
+the <code>public</code> schema</li><li>if we don&rsquo;t alter the default search path, then any time we create a database
+object, it will be placed in the <code>public</code> schema</li><li>thanks to the <code>public</code> schema and the default search path, beginners can use
+Postgres without ever being cognizant of schemas</li><li>there&rsquo;s nothing special about the <code>public</code> schema, we can drop it if we don&rsquo;t
+need it.</li></ul><p>Given that schemas are namespaces, we can create the same table with the same
+name but in a different schema entirely:</p><pre tabindex=0><code>&gt; create schema analytics;
+&gt; create table analytics.bookings as select * from app.bookings;
+&gt; select count(*) from analytics.bookings;
+</code></pre><p>Which leads us to why Postgres gives us schemas, from the docs [1]:</p><ul><li>allow many users to use one database without interfering with each other</li><li>organize database objects into logical groups to make them more manageable</li><li>third-party applications can be put into separate schemas so they do not
+collide with the names of other objects</li></ul><p>If need be, we can move tables from one schema to another:</p><pre tabindex=0><code>&gt; create table stats (count int);
+/* oops, we meant for this table to be in the analytics schema */
+
+&gt; alter table app.stats set schema analytics;
+</code></pre><p>Or rename schemas:</p><pre tabindex=0><code>alter schema app rename to main;
+</code></pre><p>This means we&rsquo;ll also have to sync our search path for both the current session
+and future sessions (search_path still set to app then public):</p><pre tabindex=0><code>&gt; set search_path to main,public; /* current session */
+&gt; alter role &lt;role&gt; set search_path to main,public; /* future sessions */
+</code></pre><p>Also we&rsquo;re not really using the public schema, let&rsquo;s drop it:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#666>&gt;</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>drop</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>schema</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>public</span>;<span style=color:#bbb>
+</span></span></span></code></pre></div><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li><a href=https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATTERNS>PG Docs - Schemas</a></li><li><a href=https://aaronoellis.com/articles/using-postgres-schemas>Using Postgres Schemas - Aaron Ellis</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/notes/2024/pg-kill-connection/>Killing a PostgreSQL Connection</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/notes/2024/pg-create-read-only-group/>PostgreSQL: Create a Read-only User/Group</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>
