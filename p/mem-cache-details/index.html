@@ -1,0 +1,193 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Retrieving Memory and Cache Organization | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/p/mem-cache-details/><meta property="og:url" content="https://www.bnmoch3.org/p/mem-cache-details/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Retrieving Memory and Cache Organization"><meta property="og:description" content="Memory, Cache levels, Cache sizes, TLB, associativity and so on"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-01-04T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-04T00:00:00+00:00"><meta property="article:tag" content="Computer Systems"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/p/mem-cache-details/>Retrieving Memory and Cache Organization</a></div><div><div class=single-intro-container><h1 class=single-title>Retrieving Memory and Cache Organization</h1><p class=single-readtime><time datetime=2024-01-04T00:00:00+00:00>January 4, 2024</time>
+&nbsp; · &nbsp;
+12 min read</p></div><div class=single-content><p>This post will go over various tools for retrieving memory and cache info in
+linux.</p><h2 class=heading id=lstopo>lstopo
+<a href=#lstopo>#</a></h2><p>Let&rsquo;s start with the output from
+<a href=https://iq.opengenus.org/lstopo-in-linux/>lstopo</a>. This is a tool that &lsquo;shows
+the topology of a system&rsquo;:</p><p><figure><div><img loading=lazy alt="lstopo output" src=/p/mem-cache-details/images/lstopo_output.png width=976px height=990px></div></figure></p><p>From the diagram:</p><ul><li>The main memory consists of 1 NUMA node of 62 GB</li><li>There&rsquo;s three levels of caching between the memory and the CPU</li><li>At the first level (closest to the CPU), each core has a 32KB L1d cache and
+32KB L1i cache</li><li>At the second level, each core has a larger L2 256KB cache</li><li>At the third level, the L3 cache is shared across all cores. It&rsquo;s 12MB</li><li>There are 6 cores in total</li></ul><p>It&rsquo;s worth briefly introducing what <strong>NUMA</strong> means. From
+<a href=https://en.wikipedia.org/wiki/Non-uniform_memory_access>wikipedia</a>: &ldquo;s a
+computer memory design used in multiprocessing, where the memory access time
+depends on the memory location relative to the processor&rdquo;. In my case though,
+it&rsquo;s not much of an issue since there&rsquo;s only one NUMA node.</p><p><code>lstopo</code> provides a brief overview, to get more details, we&rsquo;ll need to use other
+tools:</p><h2 class=heading id=lscpu>lscpu
+<a href=#lscpu>#</a></h2><p>Next let&rsquo;s use the <a href=https://man7.org/linux/man-pages/man1/lscpu.1.html>lscpu</a>
+command. Filtering out the output that&rsquo;s not related to the memory system, I get
+the following:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Architecture:                       x86_64
+</span></span><span style=display:flex><span>Address sizes:                      <span style=color:#40a070>39</span> bits physical, <span style=color:#40a070>48</span> bits virtual
+</span></span><span style=display:flex><span>NUMA node<span style=color:#666>(</span>s<span style=color:#666>)</span>:                       <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L1d cache:                          <span style=color:#40a070>192</span> KiB
+</span></span><span style=display:flex><span>L1i cache:                          <span style=color:#40a070>192</span> KiB
+</span></span><span style=display:flex><span>L2 cache:                           1.5 MiB
+</span></span><span style=display:flex><span>L3 cache:                           <span style=color:#40a070>12</span> MiB
+</span></span><span style=display:flex><span>NUMA node0 CPU<span style=color:#666>(</span>s<span style=color:#666>)</span>:                  0-11
+</span></span></code></pre></div><p><code>lscpu</code> doesn&rsquo;t give us the main memory details since it&rsquo;s solely focused on the
+CPU, of which the caches are part of. From its man page: &ldquo;lscpu gathers CPU
+architecture information from sysfs, /proc/cpuinfo and any applicable
+architecture-specific libraries (e.g. librtas on Powerpc)&rdquo;.</p><p>There&rsquo;s also a bit of discrepancy between the size of the L1 & L2 caches as
+reported by <code>lscpu</code> (L1: 192KB, L2: 1.5MiB) and those reported by <code>lstopo</code> (L1:
+32KB, L2: 256KB). It&rsquo;s easy to see where this difference comes from: since we
+have 6 cores and L1 and L2 caches are private to each core, lscpu by default
+sums them up (192 = 32 * 6, 1.5 ≈ 0.256 * 6).</p><p>For the address sizes, we see that there are two kinds of addresses: <strong>physical
+and virtual addresses</strong>. Every byte of main memory has an address (i.e. the
+memory is byte-addressable). That address is what&rsquo;s called the physical address.
+Main memory is then divided into physical pages. With 39 bits of physical
+addressing, we can address up to 512 GB of main memory.</p><p>We&rsquo;ve also got 48 bits of virtual addressing which can address up to 256 TB of
+virtual memory. Virtual memory is also divided into pages and any virtual page
+can be held in any physical memory page (i.e. as a cache in virtual memory
+systems, physical memory is fully associative). Since virtual addresses are
+stored in 64 bits, if needed we can use the extra 16 bits to store all kinds of
+stuff as detailed in this blog post:
+<a href=https://muxup.com/2023q4/storing-data-in-pointers>Storing data in pointers</a>.
+Computer systems use virtual addresses that are translated to physical addresses
+for 2 key reasons:</p><ol><li>Process isolation: main memory has to be shared amongst multiple processes
+and with virtual addressing, each process&rsquo;s view of memory is isolated from
+all others. A virtual address for process A might point to a given physical
+page at a given moment, and later on, that same page might be used by a
+different process B (A&rsquo;s contents were swapped out). When the contents for
+process A are swapped in, they might be held in an entirely different
+physical memory page. If physical addressing were used, either process A
+would have to hold on to the same physical page for the entirety of its
+lifetime OR we&rsquo;d have to figure out a way to update all of A&rsquo;s pointers any
+time its contents are moved around in physical memory. With virtual
+addressing, we get both flexibility and isolation, any time there&rsquo;s changes
+to where process A&rsquo;s contents are held, we simply update its mappings of
+virtual to physical addresses.</li><li>Support larger than memory workloads: The total amount of data a program
+deals with might exceed the available physical memory - with virtual
+addressing, physical memory instead serves as a cache on pages allocated on
+the disk and also those that are unallocated.</li></ol><p>Of course there are more reasons.</p><p>Back to caches, for the caches, we can get extended information via the <code>-C</code>
+flag:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>&gt; lscpu -C
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>NAME ONE-SIZE ALL-SIZE WAYS TYPE        LEVEL
+</span></span><span style=display:flex><span>L1d       32K     192K    <span style=color:#40a070>8</span> Data            <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L1i       32K     192K    <span style=color:#40a070>8</span> Instruction     <span style=color:#40a070>1</span>
+</span></span><span style=display:flex><span>L2       256K     1.5M    <span style=color:#40a070>4</span> Unified         <span style=color:#40a070>2</span>
+</span></span><span style=display:flex><span>L3        12M      12M   <span style=color:#40a070>16</span> Unified         <span style=color:#40a070>3</span>
+</span></span></code></pre></div><p>Here&rsquo;s what the columns mean, (from lscpu&rsquo;s man page):</p><pre tabindex=0><code>Available output columns for -C:
+          NAME  cache name
+      ONE-SIZE  size of one cache
+      ALL-SIZE  size of all system caches
+          WAYS  ways of associativity
+          TYPE  cache type
+         LEVEL  cache level
+</code></pre><p>At the first level, L1 is split into the <strong>instruction cache</strong> L1i and the
+<strong>data cache</strong> L1d as an optimization. L2 and L3 are unified which means they
+can hold either/both code instructions and data.</p><p>Even though memory is byte addressable, it&rsquo;s cached in L1, L2 and L3 as 64 byte
+blocks. While in the cache, the block plus additional metadata form a <em>cache
+line</em>.</p><p>As for <strong>associativity</strong>, let&rsquo;s start defining a &lsquo;fully associative cache&rsquo;: this
+is a cache where any block can be held in any cache line. It&rsquo;s the most flexible
+but also imposes the highest access costs (both in time taken and complexity of
+implementation). To reduce the cost, hardware designers divide caches into a
+given number of sets and each block can only be cached within a specific set.
+Hence the <em>set associative caches</em>. Every set has a fixed number of lines such
+that a cache with 8 lines per set will be referred to as an &lsquo;8-way
+set-associative cache&rsquo;. Given a fixed cache size, we can increase the number of
+lines per set which&rsquo;ll result in better caching but that&rsquo;ll also mean reducing
+the overall number of sets and increasing the lookup cost & complexity per set.
+This graph below (from Ulrich Drepper&rsquo;s
+<a href=https://akkadia.org/drepper/cpumemory.pdf>paper</a> &lsquo;What every Programmer Should
+Know About Memory&rsquo;) demonstrates the result of increasing lines per set:</p><p><figure><div><img loading=lazy alt="cache size vs associativity" src=/p/mem-cache-details/images/cache_size_vs_associativity.png width=356px height=358px></div></figure></p><p>Another trade-off that&rsquo;s worth pointing out is the <strong>size of the cache</strong>. From
+the graph above, we get the least amount of cache hits with the largest cache
+(16MB). However, it&rsquo;s hard and expensive to make a cache that&rsquo;s both large and
+fast, that&rsquo;s why L1 is the smallest but also the fastest, L2 is between and L3
+is the largest but slowest to access (though it&rsquo;s still way faster than
+accessing memory).</p><p>Back to associativity: in my case, both L1i and L1d are 8-way set-associative:
+it seems direct-mapped caches are no longer used for L1. Direct-mapped caches
+are at the other extreme end of associativity in that there&rsquo;s only 1 line per
+set - you get really fast access but that comes with much poor cache usage - if
+2 blocks map to the same set, one will evict the other, but with a 2 way set,
+both can be cached sat the same time.</p><p>L2 is 4-way and L3 is 16-way set associative. I&rsquo;m guessing they went with lower
+associativity for L2 based on the speed-associativity trade-off. With L3, it&rsquo;s
+shared across all cores so it ought to have a higher associativity.</p><h2 class=heading id=lshw>lshw
+<a href=#lshw>#</a></h2><p>Separately, we can use the <a href=https://linux.die.net/man/1/lshw>lshw</a> tool to get
+memory system details. From its man page: &ldquo;lshw is a small tool to extract
+detailed information on the hardware configuration of the machine. It can report
+exact memory configuration, firmware version, mainboard configuration, CPU
+version and speed, cache configuration, bus speed, etc&rdquo;.</p><p>Here&rsquo;s the output from the lshw tool. I&rsquo;ve formatted it into a table and omitted
+some details, but to get raw results, e.g. for L1 cache, you can use the command
+<code>sudo lshw | grep '\*\-cache:0' -A 7</code></p><table><thead><tr><th>description</th><th>L1 cache</th><th>L2 cache</th><th>L3 cache</th></tr></thead><tbody><tr><td>physical id</td><td>d</td><td>e</td><td>f</td></tr><tr><td>slot</td><td>L1 Cache</td><td>L2 Cache</td><td>L3 Cache</td></tr><tr><td>size</td><td>384KiB</td><td>1536KiB</td><td>12MiB</td></tr><tr><td>capacity</td><td>384KiB</td><td>1536KiB</td><td>12MiB</td></tr><tr><td>synchronous</td><td>true</td><td>true</td><td>true</td></tr><tr><td>internal</td><td>true</td><td>true</td><td>true</td></tr><tr><td>write-back</td><td>true</td><td>true</td><td>true</td></tr><tr><td>unified</td><td>true</td><td>true</td><td>true</td></tr></tbody></table><p>I&rsquo;m not quite sure what <strong>synchronous</strong> means, from the little I could gather
+online, it&rsquo;s got something to do with the CPU&rsquo;s clock frequency.</p><p><strong>internal</strong> means the caches are directly within the CPU.</p><p><strong>write-back</strong> means that if a data object is cached, any writes to it go solely
+to the cache and only when the block&rsquo;s getting evicted is the memory updated.
+It&rsquo;s faster than having to every write to memory even when you&rsquo;re writing to the
+same location several times such as in a loop. All the caches are write-back.
+They&rsquo;re also most likely write-allocate which means that before a data object is
+written to, it&rsquo;s loaded into a cache line i.e. fetch-on-write.</p><p>lshw reports L1 as unified but that&rsquo;s because it combines both L1i and L1d.</p><p>lshw also gives us the main memory details. From the output, the physical memory
+consists of two banks and each is based on the
+<a href=https://www.kingston.com/en/memory/ddr4-overview>DDR4 standard</a> which means
+it&rsquo;s faster, provides higher bandwidth and consumes less power compared to
+previous iterations.</p><pre tabindex=0><code># truncated
+&gt; sudo lshw  | grep &#39;\*\-memory$&#39; -A 24
+
+     *-memory
+        *-bank:0
+             description: SODIMM DDR4 Synchronous 2667 MHz (0.4 ns)
+             size: 32GiB
+             width: 64 bits
+        *-bank:1
+             description: SODIMM DDR4 Synchronous 2667 MHz (0.4 ns)
+             size: 32GiB
+             width: 64 bits
+</code></pre><h2 class=heading id=cpuid--tlb-details>cpuid & TLB details
+<a href=#cpuid--tlb-details>#</a></h2><p>I earlier mentioned that processes use virtual addresses which have to be
+translated into physical address. This could be done entirely in software by the
+operating system but it would be quite slow hence we need hardware support. As
+far as caching goes, we&rsquo;ve got the Translation Lookaside Buffer (TLB) that
+caches mappings between virtual addresses and physical addresses.</p><p>Still, none of the tools we&rsquo;ve used so far give us details on the TLB cache. On
+searching online, I got to the <a href=http://www.etallen.com/cpuid.html>cpuid</a> tool
+which can be used to retrieve the TLB details:</p><pre tabindex=0><code># downloading and using cpuid
+&gt; wget http://www.etallen.com/cpuid/cpuid-20230614.x86_64.tar.gz
+&gt; tar --strip-components=1 -xvf cpuid-20230614.x86_64.tar.gz
+&gt; ./cpuid  | grep &#39;CPU 0:&#39; -A 613 &gt; out.cpu0.cpuid
+</code></pre><p>Its output is a lot (7000 lines in my case) since it prints the same details for
+every logical core with the exception of each core&rsquo;s IDs. Therefore I&rsquo;ll only
+focus on the output from a single core.</p><p>Here&rsquo;s what I get for the TLB cache:</p><pre tabindex=0><code>cache and TLB information (2):
+   0x63: data TLB: 2M/4M pages, 4-way, 32 entries
+         data TLB: 1G pages, 4-way, 4 entries
+   0x03: data TLB: 4K pages, 4-way, 64 entries
+   0x76: instruction TLB: 2M/4M pages, fully, 8 entries
+   0xff: cache data is in CPUID leaf 4
+   0xb5: instruction TLB: 4K, 8-way, 64 entries
+   0xf0: 64 byte prefetching
+   0xc3: L2 TLB: 4K/2M pages, 6-way, 1536 entries
+</code></pre><p>Using getconf, my page size is 4KB so I&rsquo;ll ignore the rest of the non-4KB
+values:</p><pre tabindex=0><code>&gt; getconf PAGESIZE
+4096
+</code></pre><table><thead><tr><th>name</th><th>description</th><th>associativity</th><th>num entries (for 4K pages)</th></tr></thead><tbody><tr><td>L1 DTLB</td><td>data TLB</td><td>4-way</td><td>64</td></tr><tr><td>L1 ITLB</td><td>instruction TLB</td><td>8-way</td><td>64</td></tr><tr><td>L2 TLB</td><td>unified TLB</td><td>6-way</td><td>1536</td></tr></tbody></table><p>Each core has its TLB. We&rsquo;ve got two levels of TLB caching (just like with L1
+and L2). The higher levels are set-associative rather than fully-associative.
+This trend away from fully-associative L1 TLBs was detailed in [3]:</p><blockquote><p>The small size of the L1TLB is often made up for by making the cache fully
+associative, with an LRU eviction policy. Recently, this cache has been
+growing in size and, in the process, was changed to be set associative.</p></blockquote><p>The L1 ITLB has the highest associativity probably because code access patterns
+are more random due to layout plus all the libraries that have to be loaded.</p><h2 class=heading id=cache-details-from-cpuid>Cache details from cpuid
+<a href=#cache-details-from-cpuid>#</a></h2><p>cpuid also outputs the cache details. We&rsquo;ve already seen most of these:</p><table><thead><tr><th>cache</th><th>L1d</th><th>L1i</th><th>L2</th><th>L3</th></tr></thead><tbody><tr><td>type</td><td>data</td><td>instruction</td><td>unified</td><td>unified</td></tr><tr><td>self-initializing cache level</td><td>true</td><td>true</td><td>true</td><td>true</td></tr><tr><td>fully associative cache</td><td>false</td><td>false</td><td>false</td><td>false</td></tr><tr><td>system coherency line size</td><td>64</td><td>64</td><td>64</td><td>64</td></tr><tr><td>physical line partitions</td><td>1</td><td>1</td><td>1</td><td>1</td></tr><tr><td>ways of associativity</td><td>8</td><td>8</td><td>4</td><td>16</td></tr><tr><td>number of sets</td><td>64</td><td>64</td><td>1024</td><td>12288</td></tr><tr><td>inclusive to lower caches</td><td>false</td><td>false</td><td>false</td><td>true</td></tr><tr><td>complex cache indexing</td><td>false</td><td>false</td><td>false</td><td>true</td></tr><tr><td>size synth</td><td>32 KB</td><td>32 KB</td><td>256 KB</td><td>12 MB</td></tr></tbody></table><p>We&rsquo;ve already encountered most of these attributes. Let&rsquo;s go over new ones:</p><p>The <strong>self-initializing cache level</strong> attribute that&rsquo;s true for all the caches
+means the caches can pre-populate themselves with data from a lower level -
+rather than solely relying on explicit instructions from the CPU in order to
+determine what exactly to cache (description from ChatGPT).</p><p>The <strong>system coherency line size</strong> and <strong>physical line partitions</strong> entries
+confirm that the cache line holds 64 bytes of data as a single indivisible block
+across all the cache levels.</p><p>The <strong>inclusive to lower caches</strong> entry is a bit odd since I expected it to be
+true for all the levels. Once more, from Ulrich Drepper&rsquo;s paper (section 3.2):</p><blockquote><p>To be able to load new data in a cache it is almost always first necessary to
+make room in the cache. An eviction from L1d pushes the cache line down into
+L2 (which uses the same cache line size). This of course means room has to be
+made in L2. This in turn might push the content into L3 and ultimately into
+main memory. Each eviction is progressively more expensive. What is described
+here is the model for an exclusive cache as is preferred by modern AMD and VIA
+processors. Intel implements inclusive caches where each cache line in L1d is
+also present in L2. Therefore evicting from L1d is much faster. With enough L2
+cache the disadvantage of wasting memory for content held in two places is
+minimal and it pays off when evicting. A possible advantage of an exclusive
+cache is that loading a new cache line only has to touch the L1d and not the
+L2, which could be faster.</p></blockquote><p>Seems for the current times Intel has opted to make L1 and L2 exclusive thus
+making loads faster but evictions slightly more expensive.</p><p>On a light note, cpuid also helpfully informs us that there isn&rsquo;t an L4 cache
+hidden somewhere:</p><pre tabindex=0><code>--- cache 4 ---
+cache type                         = no more caches (0)
+</code></pre><h2 class=heading id=et-cetera>Et cetera
+<a href=#et-cetera>#</a></h2><p>cpuid provides other details that I won&rsquo;t get into here. For example, you can
+use it to get info on which cache control commands your system supports or
+whether your cache coherence system system uses a
+<a href=https://en.wikipedia.org/wiki/Bus_snooping>snooping protocol</a> (mine does) or
+even whether your system supports 5-level paging. Happy memory system exploring</p><h2 class=heading id=references>References:
+<a href=#references>#</a></h2><ol><li><a href=https://www.baeldung.com/linux/check-cache-size-l1-l2-l3>How to Find the Size of L1, L2, and L3 Cache in Linux - Aashish Khadka - Baeldung</a></li><li><a href=https://www.felixcloutier.com/x86/cpuid>x86 reference</a></li><li><a href=https://akkadia.org/drepper/cpumemory.pdf>What Every Programmer Should Know About Memory - Ulrich Drepper - 2007</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/p/cache-control-instrs/>x86 Cache Control Instructions</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/p/microbenchmarking-c/>Microbenchmarking: Way more than I set out to know</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

@@ -1,0 +1,272 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>PostgreSQL: Managing Roles, Attributes and Privileges | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/p/postgres-roles-users-groups-privileges/><meta property="og:url" content="https://www.bnmoch3.org/p/postgres-roles-users-groups-privileges/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="PostgreSQL: Managing Roles, Attributes and Privileges"><meta property="og:description" content="Using roles for permissions and authorization for users and groups in PG"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-12-10T00:00:00+00:00"><meta property="article:modified_time" content="2024-12-10T00:00:00+00:00"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/p/postgres-roles-users-groups-privileges/>PostgreSQL: Managing Roles, Attributes and Privileges</a></div><div><div class=single-intro-container><h1 class=single-title>PostgreSQL: Managing Roles, Attributes and Privileges</h1><p class=single-readtime><time datetime=2024-12-10T00:00:00+00:00>December 10, 2024</time>
+&nbsp; · &nbsp;
+11 min read</p></div><div class=single-tags><span><a href=https://www.bnmoch3.org/tags/postgresql/>#PostgreSQL</a></span></div><div class=single-content><p>Postgres handles DB access permissions through roles which can own database
+objects (tables, sequences, functions, schemas etc) and grant/revoke access
+privileges to these objects to/from other roles [1]. Also, roles can be assigned
+membership to other roles - the &lsquo;parent&rsquo; roles serves as a &lsquo;group&rsquo; and members
+assigned to that parent role inherit all the privileges and permissions of the
+parent.</p><p>Let&rsquo;s explore roles in Postgres.</p><p>I&rsquo;ve got an <code>admin</code> role already set up. Let&rsquo;s add a new role <code>some_user</code>:</p><pre tabindex=0><code>create role some_user with password &#39;some_password&#39;;
+</code></pre><p>Now let&rsquo;s list all the roles in currently in the database:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>select</span><span style=color:#bbb> </span>rolname<span style=color:#bbb> </span><span style=color:#007020;font-weight:700>from</span><span style=color:#bbb> </span>pg_roles;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>This outputs:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#bbb>           </span>rolname<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span>═════════════════════════════</span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>admin</span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_checkpoint<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_create_subscription<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_database_owner<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_execute_server_program<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_maintain<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_monitor<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_read_all_data<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_read_all_settings<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_read_all_stats<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_read_server_files<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_signal_backend<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_stat_scan_tables<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_use_reserved_connections<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_write_all_data<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>pg_write_server_files<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>postgres<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb> </span>some_user<span style=color:#bbb>
+</span></span></span></code></pre></div><p>You can see <code>some_user</code>, the role we created, at the bottom. The roles with the
+prefix &lsquo;pg_&rsquo; are
+<a href=https://www.postgresql.org/docs/current/predefined-roles.html>predefined roles</a>.
+From the docs: &ldquo;PostgreSQL provides a set of predefined roles that provide
+access to certain, commonly needed, privileged capabilities and information.
+Administrators&mldr; can GRANT these roles to users and/or other roles in their
+environment, providing those users with access to the specified capabilities and
+information&rdquo;. As an example, if <code>pg_read_all_settings</code> is granted to a role, it
+lets that role read all the configuration variables. For more details on each
+predefined role, check out
+<a href=https://www.postgresql.org/docs/current/predefined-roles.html>this section of the Docs</a>.</p><p>There&rsquo;s also another way of listing roles we&rsquo;ve created when using psql, via
+<code>\du</code>:</p><pre tabindex=0><code>admin@admin=# \du
+                             List of roles
+ Role name │                         Attributes
+═══════════╪════════════════════════════════════════════════════════════
+ admin     │ Superuser, Create role, Create DB
+ postgres  │ Superuser, Create role, Create DB, Replication, Bypass RLS
+ some_user │ Cannot login
+</code></pre><p>This gives us the role names plus attributes. We&rsquo;ll get to role attributes soon
+enough.</p><p>While still within psql, let&rsquo;s get the role we&rsquo;re currently using:</p><pre tabindex=0><code>admin@admin=# select current_user, session_user;
+ current_user │ session_user
+══════════════╪══════════════
+ admin        │ admin
+(1 row)
+</code></pre><p>We used the following functions:</p><ul><li><code>current_user</code>: this retrieves current role/user against which permissions
+will be checked</li><li><code>session_user</code>: this retrieves the original role/user that initiated the
+current database connection (see Docs section on
+<a href=https://www.postgresql.org/docs/9.1/functions-info.html>System Information Functions</a>)</li></ul><p>To change the current role/user, we can use <code>set role</code>; <code>session_user</code> remains
+unchanged:</p><pre tabindex=0><code>admin@admin=# set role some_user;
+SET
+admin@admin=&gt; select session_user, current_user;
+ session_user │ current_user
+══════════════╪══════════════
+ admin        │ some_user
+(1 row)
+
+admin@admin=&gt; reset role;
+RESET
+</code></pre><p>If <code>some_user</code> is a member of a group such as <code>read_access</code>, it can always carry
+out <code>set role</code> to that parent role even if <code>some_user</code> is not a superuser.</p><p>If we want to change the <code>session_user</code> too, we use <code>set session authorization</code>.
+However, to run this command, we must be a superuser:</p><pre tabindex=0><code>admin@admin=# set session authorization some_user;
+SET
+some_user@admin=&gt; select session_user, current_user;
+ session_user │ current_user
+══════════════╪══════════════
+ some_user    │ some_user
+(1 row)
+
+some_user@admin=&gt; reset session authorization;
+RESET
+</code></pre><p>Next, let&rsquo;s create a test database as admin:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>create</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>database</span><span style=color:#bbb> </span>some_db;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Then, in a separate shell, let&rsquo;s try to connect to the database using
+<code>some_user</code>:</p><pre tabindex=0><code>psql -h localhost -p 5432 -U some_user -d some_db
+</code></pre><p>This fails with the following error:</p><pre tabindex=0><code>psql: error: connection to server at &#34;localhost&#34; (127.0.0.1), port 5432 failed: \
+FATAL:  role &#34;some_user&#34; is not permitted to log in
+</code></pre><p>This brings us to
+<a href=https://www.postgresql.org/docs/current/role-attributes.html><strong>Role Attributes</strong></a>
+which I earlier alluded to. These are capabilities or permissions assigned to a
+role itself (i.e. set at the role level and cut across the entire DB). When we
+ran <code>\du</code> in psql, the second column <code>Attributes</code> had all the roles&rsquo; respective
+attributes.</p><p>Role Attributes are contrasted with
+<a href=https://www.postgresql.org/docs/current/ddl-priv.html><strong>Privileges</strong></a> which
+are capabilities or permissions a role has over specific database objects. We&rsquo;ll
+get to privileges later on.</p><p>The permission to login is an attribute that has to be given to a role. We could
+have assigned it at definition as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>create</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>role</span><span style=color:#bbb> </span>some_user<span style=color:#bbb> </span><span style=color:#007020;font-weight:700>with</span><span style=color:#bbb> </span>login<span style=color:#bbb> </span>password<span style=color:#bbb> </span><span style=color:#4070a0>&#39;some_password&#39;</span>;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>However, since <code>some_user</code> already exists, we&rsquo;ll have to alter the role to add
+the login attribute:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>alter</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>role</span><span style=color:#bbb> </span>some_user<span style=color:#bbb> </span><span style=color:#007020;font-weight:700>with</span><span style=color:#bbb> </span>login;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Here are all the role attributes available
+<a href=https://www.postgresql.org/docs/current/role-attributes.html>as per the Postgres 17 docs</a>:</p><ul><li><strong>login</strong>: can connect to the DB server and log in</li><li><strong>superuser</strong>: can bypass all permission checks, except the right to log in</li><li><strong>createdb</strong>: can create database</li><li><strong>createrole</strong>: can create another role. However, does not imply the role can
+create superusers or replication users. Also does not imply a role with
+<code>createrole</code> attribute can grant or revoke <code>replication</code> and <code>bypassrls</code>
+privileges</li><li><strong>replication</strong>: can initiate streaming replication</li><li><strong>password</strong>: set password that client can use to authenticate for login with
+role</li><li><strong>noinherit</strong>: disable inheriting privileges from groups (roles) the given
+role is a member of</li><li><strong>bypassrls</strong>: can bypass row-level security</li><li><strong>connection limit</strong>: sets the maximum concurrent connections a role can make,
+default is no limit (-1)</li></ul><p>Let&rsquo;s try to create a table as <code>some_user</code> whilst we&rsquo;ve connected to <code>some_db</code>:</p><pre tabindex=0><code>some_user@some_db=&gt; create table nums(id serial primary key, val int);
+ERROR:  42501: permission denied for schema public
+LINE 1: create table nums(id serial primary key, val int);
+                     ^
+LOCATION:  aclcheck_error, aclchk.c:2843
+</code></pre><p>We get an error. Recall that the owner of the database <code>some_db</code> is <code>admin</code> and
+that by default, Postgres creates the schema <code>public</code> for a database. The error
+message is pretty straightforward, <code>admin</code> needs to give permission to
+<code>some_user</code> to create a table within the <code>public</code> schema.</p><p>For the time being, the admin can create the table directly:</p><pre tabindex=0><code>admin@some_db=# create table nums(id serial primary key, val int);
+CREATE TABLE
+</code></pre><p>And insert some values:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>admin</span><span style=color:#666>@</span>some_db<span style=color:#666>=#</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>insert</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>into</span><span style=color:#bbb> </span>nums(val)<span style=color:#bbb> </span><span style=color:#007020;font-weight:700>values</span><span style=color:#bbb> </span>(<span style=color:#40a070>10</span>),(<span style=color:#40a070>20</span>),(<span style=color:#40a070>30</span>);<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>INSERT</span><span style=color:#bbb> </span><span style=color:#40a070>0</span><span style=color:#bbb> </span><span style=color:#40a070>3</span><span style=color:#bbb>
+</span></span></span></code></pre></div><p>Back at <code>some_user</code>&rsquo;s session, let&rsquo;s try to select values from the <code>nums</code> table:</p><pre tabindex=0><code>some_user@some_db=&gt; select * from nums;
+ERROR:  42501: permission denied for table nums
+LOCATION:  aclcheck_error, aclchk.c:2843
+</code></pre><p>Again, another error.</p><p>Which brings us to
+<a href=https://www.postgresql.org/docs/current/ddl-priv.html>privileges</a>, permissions
+granted over individual database objects by the owner.</p><p><code>admin</code> is the owner of <code>some_db</code>. Let&rsquo;s list all the databases in our system
+plus their respective owners:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#007020;font-weight:700>select</span><span style=color:#bbb> </span>datname<span style=color:#bbb> </span>db,<span style=color:#bbb> </span>pg_catalog.pg_get_userbyid(d.datdba)<span style=color:#bbb> </span><span style=color:#007020;font-weight:700>owner</span><span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>from</span><span style=color:#bbb> </span>pg_catalog.pg_database<span style=color:#bbb> </span>d<span style=color:#bbb>
+</span></span></span><span style=display:flex><span><span style=color:#bbb></span><span style=color:#007020;font-weight:700>order</span><span style=color:#bbb> </span><span style=color:#007020;font-weight:700>by</span><span style=color:#bbb> </span><span style=color:#40a070>1</span>;<span style=color:#bbb>
+</span></span></span></code></pre></div><p>Which gives:</p><pre tabindex=0><code>    db     │  owner
+═══════════╪══════════
+ admin     │ admin
+ postgres  │ postgres
+ some_db   │ admin
+ template0 │ postgres
+ template1 │ postgres
+</code></pre><p>Within <code>some_db</code>, admin also owns the <code>nums</code> table plus the associated
+<code>nums_id_seq</code> sequence for the<code>id</code> column:</p><pre tabindex=0><code>admin@some_db=# \d
+            List of relations
+ Schema │    Name     │   Type   │ Owner
+════════╪═════════════╪══════════╪═══════
+ public │ nums        │ table    │ admin
+ public │ nums_id_seq │ sequence │ admin
+</code></pre><p>Using the <code>\dn</code> command in psql, we can view all the schemas we got plus their
+respective owners:</p><pre tabindex=0><code class=language-psql data-lang=psql>admin@some_db=# \dn
+      List of schemas
+  Name  │       Owner
+════════╪═══════════════════
+ public │ pg_database_owner
+</code></pre><p>We&rsquo;ve got <code>public</code> schema. It is owned by <code>pg_database_owner</code>, one of the
+predefined roles we came across earlier. <code>pg_database_owner</code> is a &lsquo;group&rsquo; role
+for which the owner of the database, <code>admin</code> in our case, is added to as a
+member when the database is getting created. Check out this blog post,
+<a href=https://www.enterprisedb.com/blog/new-public-schema-permissions-postgresql-15>New Public Schema Permissions in PostgreSQL 15</a>
+from EnterpriseDB to see why Postgres uses what seems to be an indirect way to
+set the owner of a database&rsquo;s public schema.</p><p>Btw, to get what query a psql command &rsquo;expands&rsquo; to, use <code>\set ECHO_HIDDEN</code> as
+detailed
+<a href=https://andrewtimberlake.com/blog/2015/05/view-the-sql-query-behind-psql-commands>here</a>.</p><p>Let&rsquo;s start by allowing <code>some_user</code> to read from the <code>nums</code> table:</p><pre tabindex=0><code>admin@some_db=# grant select on nums to some_user;
+GRANT
+</code></pre><p>If we go to <code>some_user</code>&rsquo;s session, we can now read from <code>nums</code> table:</p><pre tabindex=0><code>some_user@some_db=&gt; select * from nums;
+ id │ val
+════╪═════
+  1 │  10
+  2 │  20
+  3 │  30
+</code></pre><p>What about allowing <code>some_user</code> to insert into <code>nums</code>:</p><pre tabindex=0><code>admin@some_db=# grant insert on nums to some_user;
+GRANT
+</code></pre><p>However, <code>some_user</code> still can&rsquo;t insert:</p><pre tabindex=0><code>some_user@some_db=&gt; insert into nums(val) values (40);
+ERROR:  42501: permission denied for sequence nums_id_seq
+LOCATION:  nextval_internal, sequence.c:652
+</code></pre><p>Recall that the <code>nums</code> table has an <code>id</code> primary key column which gets its
+default value from the <code>nums_id_seq</code> sequence. Let&rsquo;s give <code>some_user</code> permission
+to update the sequence value for <code>nums_id_seq</code>:</p><pre tabindex=0><code>admin@some_db=# grant update on nums_id_seq to some_user;
+GRANT
+</code></pre><p><code>some_user</code> can now populate the <code>id</code> field using the sequence:</p><pre tabindex=0><code>some_user@some_db=&gt; insert into nums(val) values (40);
+INSERT 0 1
+some_user@some_db=&gt; select * from nums;
+ id │ val
+════╪═════
+  1 │  10
+  2 │  20
+  3 │  30
+  4 │  40
+</code></pre><p>It also makes sense to give <code>some_user</code> permission to read the current value of
+the <code>nums_id_seq</code> if they need to:</p><pre tabindex=0><code>admin@some_db=# grant select on nums_id_seq to some_user;
+GRANT
+</code></pre><p>Now <code>some_user</code> can also read the current value:</p><pre tabindex=0><code>some_user@some_db=&gt; select currval(&#39;nums_id_seq&#39;);
+ currval
+═════════
+       4
+</code></pre><p>The <code>update</code> privilege is fine-grained and can be granted per column. For
+example, what if we want to allow <code>some_user</code> to update <code>val</code> but not <code>id</code>:</p><pre tabindex=0><code>admin@some_db=# grant update(val) on nums to some_user;
+GRANT
+</code></pre><p>At <code>some_user</code>, we can now carry out the following update:</p><pre tabindex=0><code>some_user@some_db=&gt; update nums set val=41 where id=4;
+UPDATE 1
+</code></pre><p>But we can&rsquo;t modify the <code>id</code> column:</p><pre tabindex=0><code>some_user@some_db=&gt; update nums set id=1000 where id=1;
+ERROR:  42501: permission denied for table nums
+LOCATION:  aclcheck_error, aclchk.c:2843
+</code></pre><p>We can also allow <code>some_user</code> to create their own objects on <code>some_db</code>&rsquo;s
+<code>public</code> schema:</p><pre tabindex=0><code>admin@some_db=# grant create on schema public to some_user;
+GRANT
+</code></pre><p>Now, <code>some_user</code> can create their own table, which is what we were trying to do
+previously:</p><pre tabindex=0><code>some_user@some_db=&gt; create table foo(a int);
+CREATE TABLE
+</code></pre><p>Listing the relations, we see that the owner of <code>foo</code> is <code>some_user</code>:</p><pre tabindex=0><code>admin@some_db=# \d
+              List of relations
+ Schema │    Name     │   Type   │   Owner
+════════╪═════════════╪══════════╪═══════════
+ public │ foo         │ table    │ some_user
+ public │ nums        │ table    │ admin
+ public │ nums_id_seq │ sequence │ admin
+(3 rows)
+</code></pre><p>Since <code>some_user</code> <em>owns</em> <code>foo</code>, they don&rsquo;t need any further permissions from
+<code>admin</code> to insert data, read, delete from it, update, truncate or drop from the
+table:</p><pre tabindex=0><code>some_user@some_db=&gt; insert into foo values (42);
+INSERT 0 1
+some_user@some_db=&gt; select * from foo;
+ a
+════
+ 42
+(1 row)
+
+some_user@some_db=&gt; update foo set a=43 where a=42;
+UPDATE 1
+some_user@some_db=&gt; truncate foo;
+TRUNCATE TABLE
+some_user@some_db=&gt; drop table foo;
+DROP TABLE
+some_user@some_db=&gt; create table foo(a int); -- create table again
+CREATE TABLE
+</code></pre><p>From the docs, here are all the available privileges:</p><ul><li><strong>select</strong>: can select from all columns of a table or table-like objects such
+as materialized views. Can also be restricted to specific columns. Necessary
+as a pre-condition for non-trivial update, delete or merge procedures</li><li><strong>insert</strong>: can insert new rows to a table. Can be restricted to specific
+columns, the unauthorized columns will be populated using the default values</li><li><strong>update</strong>: can update all or specific columns of a table</li><li><strong>delete</strong>: can delete row(s) of a table</li><li><strong>truncate</strong>: can truncate the table</li><li><strong>references</strong>: can refer to any or specific columns of a table when creating
+foreign keys to that table</li><li><strong>trigger</strong>: can create triggers on that table</li><li><strong>create</strong><ul><li>for databases: can create schemas, install trusted extensions</li><li>for schemas: can create objects within that schema</li><li>for tablespaces: can create tables, indexes, temporary files within the
+tablespace</li></ul></li><li><strong>connect</strong>: can connect to the database</li><li><strong>temporary</strong>: can create temporary tables</li><li><strong>execute</strong>: can call functions or procedures</li><li><strong>usage</strong>:<ul><li>for schemas: can look up objects within the schema</li><li>for sequences: can use <code>currval</code> and <code>nextval</code> functions</li><li>checks docs for additional details on how usage relates to procedural
+languages, types, domains, foreign data wrappers, foreign servers</li></ul></li><li><strong>set</strong>: can set a server config parameter</li><li><strong>alter system</strong>: can configure a server parameter using <code>alter system</code></li><li><strong>maintain</strong>: can carry out system maintenance tasks such as vacuum and
+analyze</li></ul><p>Let&rsquo;s change ownership of the <code>nums</code> table to <code>some_user</code>:</p><pre tabindex=0><code>admin@some_db=# alter table nums owner to some_user;
+ALTER TABLE
+</code></pre><p>Suppose we wanted to delete <code>some_user</code> from the system:</p><pre tabindex=0><code>admin@some_db=# drop role some_user;
+ERROR:  2BP01: role &#34;some_user&#34; cannot be dropped because some objects depend on it
+DETAIL:  privileges for schema public
+owner of sequence nums_id_seq
+owner of table nums
+owner of table foo
+LOCATION:  DropRole, user.c:1297
+</code></pre><p>We get an error. From the docs section on
+<a href=https://www.postgresql.org/docs/current/role-removal.html>dropping roles</a>:
+&ldquo;Because roles can own database objects and can hold privileges to access other
+objects, dropping a role is often not just a matter of a quick DROP ROLE. Any
+objects owned by the role must first be dropped or reassigned to other owners;
+and any permissions granted to the role must be revoked&rdquo;.</p><p>Here&rsquo;s how we&rsquo;ll go about dropping <code>some_user</code> then since they own some database
+objects (<code>nums</code>, <code>nums_id_seq</code>, <code>foo</code>) and have privileges granted to them in
+the <code>public</code> schema:</p><ol><li>We&rsquo;ll revert the ownership of <code>nums</code> and <code>nums_id_seq</code> back to <code>admin</code> since
+we want to keep that table</li><li>From there we&rsquo;ll drop everything else owned by <code>some_user</code> such as the table
+<code>foo</code>, and revoke the permissions granted to them on <code>public</code> schema</li><li>Finally we&rsquo;ll delete <code>some_user</code></li></ol><pre tabindex=0><code>admin@some_db=# alter table nums owner to admin;
+ALTER TABLE
+admin@some_db=# drop table foo;
+DROP TABLE
+admin@some_db=# revoke all on schema public from some_user;
+REVOKE
+admin@some_db=# drop role some_user;
+DROP ROLE
+</code></pre><p>If we&rsquo;ve got lots of objects and permissions we&rsquo;re dealing with, going through
+them one by one before dropping a role will be cumbersome. Postgres provides us
+a faster way:</p><ol><li>Drop the objects owned by <code>some_user</code> we don&rsquo;t want to retain</li><li>Reassign the rest to another user such as <code>admin</code> in one sweep using the
+<code>reassign owned by</code> command</li><li>Drop all the privileges granted to <code>some_users</code> in one sweep using the
+<code>drop owned by</code> command</li><li>Drop the role itself</li></ol><p>Assuming we want to keep all objects owned by <code>some_user</code>, we&rsquo;re going to skip
+the first step, then we can carry out step 2 to 4 as follows:</p><pre tabindex=0><code>reassign owned by some_user to admin;
+drop owned by some_user;
+drop role some_user;
+</code></pre><p>For more details on dropping roles, check the PG docs section on
+<a href=https://www.postgresql.org/docs/current/role-removal.html>Dropping Roles</a>.</p><p>That&rsquo;s all for now.</p><h2 class=heading id=references>References
+<a href=#references>#</a></h2><ol><li><a href=https://www.postgresql.org/docs/current/user-manag.html>PG Docs - Database Roles</a></li><li><a href=https://www.postgresql.org/docs/current/ddl-priv.html>PG Docs - Privileges</a></li><li><a href=https://rlopzc.com/posts/securing-your-postgresql-db-with-roles--privileges/>Securing your PostgreSQL DB with Roles & Privileges - Romario López</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/p/pg-multitenancy-models/>Multi-Tenancy Models in PostgreSQL</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/p/sql-asof-joins/>Timeseries and ASOF Joins</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>

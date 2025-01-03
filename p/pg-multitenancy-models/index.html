@@ -1,0 +1,90 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://www.bnmoch3.org//favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://www.bnmoch3.org//favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://www.bnmoch3.org//favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://www.bnmoch3.org//android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://www.bnmoch3.org//apple-touch-icon.png><meta name=description content><title>Multi-Tenancy Models in PostgreSQL | bnmoch3
+</title><link rel=canonical href=https://www.bnmoch3.org/p/pg-multitenancy-models/><meta property="og:url" content="https://www.bnmoch3.org/p/pg-multitenancy-models/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Multi-Tenancy Models in PostgreSQL"><meta property="og:description" content="Overview of various approaches for multi-tenancy implementation in Postgres"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2024-12-24T00:00:00+00:00"><meta property="article:modified_time" content="2024-12-24T00:00:00+00:00"><meta property="article:tag" content="PostgreSQL"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/p/pg-multitenancy-models/>Multi-Tenancy Models in PostgreSQL</a></div><div><div class=single-intro-container><h1 class=single-title>Multi-Tenancy Models in PostgreSQL</h1><p class=single-readtime><time datetime=2024-12-24T00:00:00+00:00>December 24, 2024</time>
+&nbsp; · &nbsp;
+7 min read</p></div><div class=single-tags><span><a href=https://www.bnmoch3.org/tags/postgresql/>#PostgreSQL</a></span></div><aside class=toc><p><strong>Table of contents</strong></p><nav id=TableOfContents><ul><li><a href=#separate-database-per-customer>Separate Database per Customer</a></li><li><a href=#shared-database-separate-schema-per-customer>Shared Database, Separate Schema per Customer</a></li><li><a href=#shared-database-shared-schema-with-tenant-discriminators>Shared Database, Shared Schema with Tenant Discriminators</a></li><li><a href=#further-reading>Further Reading</a></li></ul></nav></aside><div class=single-content><p>Case scenario, you&rsquo;ve got multiple customers and you need to figure out how
+you&rsquo;ll handle all their data. So now you&rsquo;ve got to choose and implement a
+<em>tenancy model</em> i.e. models on how each customer&rsquo;s data and operations will be
+kept separate. This post will be going over various tenancy models with regards
+to PostgreSQL, factors to consider, pros and cons.</p><p>As an aside, if you&rsquo;ve ever wondered why we use the term &rsquo;tenancy model&rsquo; instead
+of some other term like &lsquo;isolation model&rsquo; then here&rsquo;s a tidbit from one of
+<a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/saas-tenancy-app-design-patterns?view=azuresql">Microsoft&rsquo;s dev article&rsquo;s</a>:</p><blockquote><p>In the Software as a Service (SaaS) model, your company doesn&rsquo;t sell licenses
+to your software. Instead, each customer makes rent payments to your company,
+making each customer a tenant of your company. In return for paying rent, each
+tenant receives access to your SaaS application components, and has its data
+stored in the SaaS system</p></blockquote><p>There are three primary multi-tenancy modeling approaches in PostgreSQL:</p><ol><li><strong>Separate Database per Customer</strong></li><li><strong>Shared Database, Separate Schema per Customer</strong></li><li><strong>Shared Database, Shared Schema across all customers</strong></li></ol><p>Each model has various trade-offs. When choosing one, we have to keep the
+following factors in mind:</p><ul><li><strong>Scalability</strong>: as we expect growth in customers, the model we choose should
+not be a limiting factor in the overall system.</li><li><strong>Data Privacy & Isolation</strong>: customers expect that no one that isn&rsquo;t
+authorized should be able to access their data, the model we opt for might
+make data isolation easier or more involved.</li><li><strong>Performance Isolation</strong>: one customer&rsquo;s workload should not affect the
+expected performance of other customers (see the
+<a href=https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/noisy-neighbor.html>Noisy Neighbor Problem</a>)</li><li><strong>Operational Complexity</strong>: there will be schema migrations, monitoring needs,
+debugging escapades, backups, recovery and so on that we have to account for.</li><li><strong>Cost Efficiency</strong>: running a database costs money and resources, we should
+aim to keep costs as low as possible.</li><li><strong>Compliance</strong>: there probably will be regulations concerning data residency
+and security that we have to adhere to.</li><li><strong>Customizability</strong>: certain customers might want specific features, if we
+can&rsquo;t or won&rsquo;t say no, then the model should enable us to cater to them.</li></ul><p>Now, on to the models:</p><h2 class=heading id=separate-database-per-customer>Separate Database per Customer
+<a href=#separate-database-per-customer>#</a></h2><p>With this model, we provision a separate database instance for each customer
+that signs up. It is costly but has some merits:</p><ul><li>Maximum performance isolation.</li><li>Maximum data isolation. This also simplifies development, particularly our
+OLTP queries since once we&rsquo;ve connected to a customer&rsquo;s database, we don&rsquo;t
+have to include extra logic to ensure we&rsquo;re not leaking any customer
+information.</li><li>Geographical and Compliance Flexibility: it&rsquo;s easy to situate the database
+right where the customer is, if need be.</li><li>Customization Flexibility per customer.</li></ul><p>As for the demerits:</p><ul><li>Scalability: depending on the tooling (or lack thereof) used to manage <em>all</em>
+the databases, every new customer adds more burden to our system.</li><li>Operational Overhead: imagine having to upgrade the DB version or even carry
+out schema migrations across <em>all</em> the databases in a consistent manner.</li><li>Costs: resource utilization will be less efficient, some customers&rsquo; workloads
+will be too small to justify having an entire database instance provisioned
+just for them.</li><li>Limited Cross-customer operations: we&rsquo;ll have to run some queries across all
+the customers. If they each have separate DB instances, it&rsquo;s still doable
+though quite cumbersome.</li></ul><p>The one instance of database per customer I came across being done at massive
+scale was iirc Apple? maintaining an sqlite database per user for some service.
+Which ought to work quite well since sqlite is relatively lightweight.</p><p>But that&rsquo;s sqlite, if we&rsquo;re going with Postgres we&rsquo;ll need an entirely different
+approach. That&rsquo;s where <a href=https://neon.tech/>Neon Database</a> comes in. They&rsquo;ve
+built a platform for <em>serverless</em> Postgres instances whereby compute is
+separated from storage and compute can be scaled independently of storage and
+vice versa. This solves the <em>resource utilization</em> problem since small-scale
+customers can consume resources proportionate to their usage. As for the other
+challenges, they&rsquo;ve proposed and developed tooling for building <em>control planes</em>
+to manage multiple databases. For more information, check out the following
+articles from Neon:</p><ul><li><a href=https://neon.tech/use-cases/database-per-tenant>Database Per User at Scale - Neon</a></li><li><a href=https://neon.tech/blog/multi-tenancy-and-database-per-user-design-in-postgres>Multi-tenancy and Database-per-User Design in Postgres - Dian M Fay - Neon</a></li><li><a href=https://neon.tech/blog/control-planes-for-database-per-user-in-neon>Control Planes for Database-Per-User in Neon - Dian M Fay - Neon</a></li></ul><p>There is also <a href=https://atlasgo.io/>atlas</a> - open source tooling for managing
+your DB schema as code. They have a section on their docs where they go over
+using Atlas
+<a href=https://atlasgo.io/guides/database-per-tenant/intro>Database-per-Tenant Architectures</a> -
+worth checking out too.</p><h2 class=heading id=shared-database-separate-schema-per-customer>Shared Database, Separate Schema per Customer
+<a href=#shared-database-separate-schema-per-customer>#</a></h2><p>Schemas mean two separate things as far as Postgres goes: (1) namespacing for
+database objects, such as tables and indexes (2) DDL: all the design and SQL we
+invoke to define the actual tables and relationships across tables. This post is
+concerned with the first meaning and usage.</p><p>With this model, we&rsquo;ve got one database server and for each customer we take in,
+we will create a separate schema for them.</p><p>I&rsquo;d like to highlight and quote from this blog post:
+<a href=https://bmulholland.ca/for-developers/multi-tenancy-options/>&lsquo;Multi-Tenancy Options&rsquo;</a>,
+since the author does a better job than I would summarizing all the key
+advantages of the schema-based model:</p><blockquote><p>it is a good option for many use cases as it provides a good mix of data
+isolation, cross-container query capability, application schema
+customizability, shared administration, and shared resource usage. This option
+is well-suited for a moderate number of tenants with a moderate set of tables
+in each application schema. Serving the middle ground, this option is often
+chosen as a starting point when requirements and long-term needs do not
+clearly point to using one of the other options.</p></blockquote><p>I would still be cautious of opting for schema-based isolation as a starting
+point. Why:</p><ul><li>No performance isolation across customers since they are all on the same
+database</li><li>Limited data isolation since it&rsquo;s logical rather than physical</li><li>Postgres&rsquo; performance starts degrading (catalog bloat, cache inefficiency)
+once you have 100s of tables across 1000s or even 100,000s schemas</li><li>We still have some degree of operational complexity since each schema has to
+be managed separately</li></ul><p>For more details on this approach, check out:</p><ul><li><a href=https://blog.arkency.com/multitenancy-with-postgres-schemas-key-concepts-explained/>Multitenancy with Postgres schemas: key concepts explained - Tomasz Wróbel</a></li><li><a href=https://medium.com/infinite-monkeys/our-multi-tenancy-journey-with-postgres-schemas-and-apartment-6ecda151a21f>&lsquo;Our Multi-tenancy Journey with Postgres Schemas and
+Apartment&rsquo; - Brad Robertson</a></li></ul><p>Also if you opt for the schema-based model, the
+<a href=https://github.com/denishpatel/pg-clone-schema>pg-clone-schema</a> tool might
+come in handy if you&rsquo;ve got a template schema and want to create a new customer
+schema for each customer you sign up based on the template.</p><h2 class=heading id=shared-database-shared-schema-with-tenant-discriminators>Shared Database, Shared Schema with Tenant Discriminators
+<a href=#shared-database-shared-schema-with-tenant-discriminators>#</a></h2><p>With this approach, we start off with one database and one schema. Rows from
+different customers commingle with each other. This means that every table has
+to have an additional <code>customer_id</code> or <code>tenant_id</code> column for
+isolation/filtering (i.e. the tenant discriminators). Also, we have to make sure
+every query filters on the customer ID.</p><p>There are two customer filtering approaches:</p><ul><li>Explicit: we add a filter clause to every query</li><li>Implicit: using Row Level Security</li></ul><p>Advantages of this model:</p><ul><li>Operations and Maintenance are simplified, we&rsquo;ve got one database and one main
+schema to manage</li><li>It is resource efficient.</li><li>Cross-customer operations are relatively trivial</li></ul><p>As for the disadvantages:</p><ul><li>Every customer has to be on the same schema, there&rsquo;s no room for some bespoke
+customization that your sales team might assure a lead. On the other hand, if
+we make a customization for one customer, it also benefits all the other
+customers.</li><li>Invasiveness: every query has to filter on customer ID</li><li>We&rsquo;ll need lots and lots of testing to ensure none of our codepaths leak
+customer data. To be fair, we still do need testing with the other models - no
+approach offers 100% prevention of data breaches out of the box</li><li>There&rsquo;s no performance isolation, we&rsquo;ll have to implement some other means
+atop the data-access layer to ensure fairness, e.g rate limiting or sharding
+by customer ID across a distributed setup.</li></ul><p>This is approach plus Row Level Security is what I&rsquo;d probably start with for a
+new product.</p><h2 class=heading id=further-reading>Further Reading
+<a href=#further-reading>#</a></h2><p>If you&rsquo;re interested in exploring multi-tenacy further, here are some articles I
+found quite useful:</p><ol><li><a href=https://www.crunchydata.com/blog/designing-your-postgres-database-for-multi-tenancy>Designing Your Postgres Database for Multi-tenancy - Craig Kerstiens</a></li><li><a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/saas-tenancy-app-design-patterns?view=azuresql">Multitenant SaaS database tenancy patterns - Azure SQL Database</a></li><li><a href=https://postgrespro.com/list/thread-id/2196817>Thread: Multi tenancy: schema vs databases - Postgres Mailing List</a></li><li><a href=https://techtonics.medium.com/multitenant-database-designs-strategies-with-postgresql-55a9e3ec882c>Multitenant Database Designs Strategies — with PostgreSQL - Satish Mishra</a></li></ol></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/p/postgres-row-level-security/>Fine-grained Authorization with Row Level Security in PostgreSQL</a></div></div></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/p/postgres-roles-users-groups-privileges/>PostgreSQL: Managing Roles, Attributes and Privileges</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>
