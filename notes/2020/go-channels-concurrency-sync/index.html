@@ -1,5 +1,4 @@
-<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnmoch3.org/favicon.ico?><link rel=icon type=image/png sizes=16x16 href=https://bnmoch3.org/favicon-16x16.png?><link rel=icon type=image/png sizes=32x32 href=https://bnmoch3.org/favicon-32x32.png?><link rel=icon type=image/png sizes=192x192 href=https://bnmoch3.org/android-chrome-192x192.png?><link rel=apple-touch-icon sizes=180x180 href=https://bnmoch3.org/apple-touch-icon.png?><meta name=description content><title>Go Channels Suffice for Synchronization | bnmoch3
-</title><link rel=canonical href=https://bnmoch3.org/notes/2020/go-channels-concurrency-sync/><meta property="og:url" content="https://bnmoch3.org/notes/2020/go-channels-concurrency-sync/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Go Channels Suffice for Synchronization"><meta property="og:description" content="Or how to implement Futures/Promises in Go without having to juggle locks and waitgroups"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2020-01-21T00:00:00+00:00"><meta property="article:modified_time" content="2020-01-21T00:00:00+00:00"><meta property="article:tag" content="Golang"><link rel=stylesheet href=/assets/combined.min.01980ad4202828eb32272e7b1654f79f3c0022c15b1c932668dff73dffaf7e88.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnmoch3.org/favicon.ico?><link rel=icon type=image/png sizes=16x16 href=https://bnmoch3.org/favicon-16x16.png?><link rel=icon type=image/png sizes=32x32 href=https://bnmoch3.org/favicon-32x32.png?><link rel=icon type=image/png sizes=192x192 href=https://bnmoch3.org/android-chrome-192x192.png?><link rel=apple-touch-icon sizes=180x180 href=https://bnmoch3.org/apple-touch-icon.png?><meta name=description content><title>Go Channels Suffice for Synchronization | bnmoch3</title><link rel=canonical href=https://bnmoch3.org/notes/2020/go-channels-concurrency-sync/><meta property="og:url" content="https://bnmoch3.org/notes/2020/go-channels-concurrency-sync/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="Go Channels Suffice for Synchronization"><meta property="og:description" content="Or how to implement Futures/Promises in Go without having to juggle locks and waitgroups"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2020-01-21T00:00:00+00:00"><meta property="article:modified_time" content="2020-01-21T00:00:00+00:00"><meta property="article:tag" content="Golang"><link rel=stylesheet href=/assets/combined.min.bfb51fa3110844de3117ce8da7190d50165deb2fc526273808d6975119098310.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
 <span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
 <span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/notes/2020/go-channels-concurrency-sync/>Go Channels Suffice for Synchronization</a></div><div><div class=single-intro-container><h1 class=single-title>Go Channels Suffice for Synchronization</h1><p class=single-readtime><time datetime=2020-01-21T00:00:00+00:00>January 21, 2020</time>
 &nbsp; · &nbsp;
@@ -22,9 +21,9 @@ read-only channel through which the result is received asynchronously. The
 <code>timeout</code> argument is there to avoid waiting for the result indefinitely. One
 can then check whether the result is available by using the <code>HasResult</code> method.
 If the result is available, it is retrieved using the <code>GetResult</code> method. If it
-hasn&rsquo;t arrived yet, <code>GetResult</code> blocks until it&rsquo;s available or a timeout occurs.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Completer is a channel that the future expects to receive
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// a result on.  The future only receives on this channel.
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#007020;font-weight:700>type</span> Completer <span style=color:#666>&lt;-</span><span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>interface</span>{}
+hasn&rsquo;t arrived yet, <code>GetResult</code> blocks until it&rsquo;s available or a timeout occurs.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Completer is a channel that the future expects to receive</span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// a result on.  The future only receives on this channel.</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>type</span> Completer <span style=color:#666>&lt;-</span><span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>interface</span>{}
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>type</span> Future <span style=color:#007020;font-weight:700>struct</span> {<span style=color:#666>...</span>}
 </span></span><span style=display:flex><span>
@@ -65,10 +64,10 @@ get to the <code>GetResult</code> method.</p><div class=highlight><pre tabindex=
 </span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>New</span>(completer <span style=color:#666>&lt;-</span><span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>interface</span>{}, timeout time.Duration) <span style=color:#666>*</span>Future {
 </span></span><span style=display:flex><span>   f <span style=color:#666>:=</span> <span style=color:#666>&amp;</span>Future{}
 </span></span><span style=display:flex><span>   f.wg.<span style=color:#06287e>Add</span>(<span style=color:#40a070>1</span>)
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   <span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>listenForResult</span>(f, completer, timeout)
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   <span style=color:#007020;font-weight:700>return</span> f
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>listenForResult</span>(f, completer, timeout)
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>return</span> f
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>When the value arrives from the <code>completer</code> channel (or a timeout occurs), the
 future&rsquo;s <code>setItem</code> method is called with the result. Now, this is where things
@@ -102,19 +101,19 @@ that were blocked can then proceed and read the result. Simply put, the
 waitgroup is there for notifying blocked callers. The same can be achieved by
 having callers block directly while trying to &lsquo;read&rsquo; a value from a channel and
 then closing the channel when the result is ready.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#007020;font-weight:700>type</span> Future <span style=color:#007020;font-weight:700>struct</span> {
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   completed <span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>struct</span>{}
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>   completed <span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>struct</span>{}
 </span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>New</span>(completer <span style=color:#666>&lt;-</span><span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>interface</span>{}, timeout time.Duration) <span style=color:#666>*</span>Future {
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// Note that the channel is unbuffered
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   f <span style=color:#666>:=</span> <span style=color:#666>&amp;</span>Future{
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// Note that the channel is unbuffered</span>
+</span></span><span style=display:flex><span>   f <span style=color:#666>:=</span> <span style=color:#666>&amp;</span>Future{
 </span></span><span style=display:flex><span>       completed: <span style=color:#007020>make</span>(<span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>struct</span>{}),
 </span></span><span style=display:flex><span>   }
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   <span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>listenForResult</span>(f, completer, timeout)
-</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   <span style=color:#007020;font-weight:700>return</span> f
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>go</span> <span style=color:#06287e>listenForResult</span>(f, completer, timeout)
+</span></span><span style=display:flex><span>   <span style=color:#60a0b0;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>return</span> f
 </span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> <span style=color:#06287e>listenForResult</span>(f <span style=color:#666>*</span>Future, ch <span style=color:#666>&lt;-</span><span style=color:#007020;font-weight:700>chan</span> <span style=color:#007020;font-weight:700>interface</span>{}, timeout time.Duration) {
@@ -126,8 +125,8 @@ then closing the channel when the result is ready.</p><div class=highlight><pre 
 </span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>case</span> <span style=color:#666>&lt;-</span>t.C:
 </span></span><span style=display:flex><span>       f.<span style=color:#06287e>setItem</span>(<span style=color:#007020;font-weight:700>nil</span>, errTimeout)
 </span></span><span style=display:flex><span>   }
-</span></span><span style=display:flex><span>   <span style=color:#007020>close</span>(f.complete) <span style=color:#60a0b0;font-style:italic>// broadcast completion
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>}
+</span></span><span style=display:flex><span>   <span style=color:#007020>close</span>(f.complete) <span style=color:#60a0b0;font-style:italic>// broadcast completion</span>
+</span></span><span style=display:flex><span>}
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>func</span> (f <span style=color:#666>*</span>Future) <span style=color:#06287e>GetResult</span>() (<span style=color:#007020;font-weight:700>interface</span>{}, <span style=color:#902000>error</span>) {
 </span></span><span style=display:flex><span>   f.lock.<span style=color:#06287e>Lock</span>()
@@ -137,8 +136,8 @@ then closing the channel when the result is ready.</p><div class=highlight><pre 
 </span></span><span style=display:flex><span>   }
 </span></span><span style=display:flex><span>   f.lock.<span style=color:#06287e>Unlock</span>()
 </span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>   <span style=color:#666>&lt;-</span>f.completed <span style=color:#60a0b0;font-style:italic>// blocks until either value is sent or channel is closed
-</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>   <span style=color:#007020;font-weight:700>return</span> f.item, f.err
+</span></span><span style=display:flex><span>   <span style=color:#666>&lt;-</span>f.completed <span style=color:#60a0b0;font-style:italic>// blocks until either value is sent or channel is closed</span>
+</span></span><span style=display:flex><span>   <span style=color:#007020;font-weight:700>return</span> f.item, f.err
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>As <a href=https://yourbasic.org/golang/broadcast-channel/>specified</a>, channels are
 safe for concurrent receives and all reads from a closed channel receive the

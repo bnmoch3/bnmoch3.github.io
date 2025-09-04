@@ -1,0 +1,282 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnmoch3.org/favicon.ico?><link rel=icon type=image/png sizes=16x16 href=https://bnmoch3.org/favicon-16x16.png?><link rel=icon type=image/png sizes=32x32 href=https://bnmoch3.org/favicon-32x32.png?><link rel=icon type=image/png sizes=192x192 href=https://bnmoch3.org/android-chrome-192x192.png?><link rel=apple-touch-icon sizes=180x180 href=https://bnmoch3.org/apple-touch-icon.png?><meta name=description content><title>JavaScript Inheritance from the Ground Up | bnmoch3</title><link rel=canonical href=https://bnmoch3.org/p/js-prototypes-inheritance/><meta property="og:url" content="https://bnmoch3.org/p/js-prototypes-inheritance/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="JavaScript Inheritance from the Ground Up"><meta property="og:description" content="Prototypes, Classes and Everything in Between"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-09-03T00:00:00+00:00"><meta property="article:modified_time" content="2025-09-03T00:00:00+00:00"><meta property="article:tag" content="JavaScript"><link rel=stylesheet href=/assets/combined.min.bfb51fa3110844de3117ce8da7190d50165deb2fc526273808d6975119098310.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/posts/>Posts</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/p/js-prototypes-inheritance/>JavaScript Inheritance from the Ground Up</a></div><div><div class=single-intro-container><h1 class=single-title>JavaScript Inheritance from the Ground Up</h1><p class=single-readtime><time datetime=2025-09-03T00:00:00+00:00>September 3, 2025</time>
+&nbsp; · &nbsp;
+10 min read</p></div><div class=single-tags><span><a href=https://bnmoch3.org/tags/javascript/>#JavaScript</a></span></div><aside class=toc><p><strong>Table of contents</strong></p><nav id=TableOfContents><ul><li><a href=#introduction>Introduction</a></li><li><a href=#first-attempt-at-inheritance>First Attempt at Inheritance</a></li><li><a href=#functions-__proto__-vs-prototype>Functions&rsquo; <code>__proto__</code> vs <code>.prototype</code></a></li><li><a href=#fixing-the-inheritance-setup-code>Fixing the Inheritance Setup Code</a></li><li><a href=#digging-into-prototype>Digging into <code>.prototype</code></a></li><li><a href=#property-descriptors>Property Descriptors</a><ul><li><a href=#back-to-prototype>Back to <code>.prototype</code></a></li></ul></li><li><a href=#prototype-prototype-chain><code>.prototype</code> Prototype Chain</a></li><li><a href=#a-different-approach-for-oop>A Different Approach for OOP</a></li><li><a href=#es6-classes-and-the-extends-keyword>ES6 Classes and the <code>extends</code> Keyword</a></li><li><a href=#static-methods>Static Methods</a></li><li><a href=#extras>Extras</a></li></ul></nav></aside><div class=single-content><h2 class=heading id=introduction>Introduction
+<a href=#introduction>#</a></h2><p>Lately, I’ve been digging deeper into JavaScript (courtesy of this book,
+<a href=https://www.manning.com/books/secrets-of-the-javascript-ninja>Secrets of the JavaScript Ninja</a>).
+One question I kept asking myself as I went along: how does one actually
+achieve/implement inheritance? This post is a record of my learnings along the
+way.</p><p>Let&rsquo;s start with the rudimentals, &ldquo;what is inheritance and why?&rdquo;:</p><ul><li>Inheritance: defining a general thing once and creating specialized versions
+which automatically get all of the general&rsquo;s features plus their own unique
+ones</li><li>Why inheritance: code reuse, polymorphism et cetera</li></ul><h2 class=heading id=first-attempt-at-inheritance>First Attempt at Inheritance
+<a href=#first-attempt-at-inheritance>#</a></h2><p>I read elsewhere that some of the modern JavaScript features are syntactic sugar
+over what was already present in the language, specifically <code>class</code> and
+<code>extends</code>. So as I was working through the &ldquo;Object Orientation with Prototypes&rdquo;
+chapter, I got curious as to how inheritance could be achieved with prototypes.</p><p>Suppose we&rsquo;ve got a <code>Person</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Person(name) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>Person.prototype.greet <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>function</span> () {
+</span></span><span style=display:flex><span>  console.log(<span style=color:#4070a0>`Hello, this is </span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.name<span style=color:#70a0d0>}</span><span style=color:#4070a0>`</span>);
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>And a <code>Ninja</code> who <em>is</em> a <code>Person</code> i.e. should inherit from <code>Person</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(name, skill) {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// we need to call the parent/superclass to initialize the `Person` parts of
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#60a0b0;font-style:italic>// a Ninja object
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>Ninja.prototype.fight <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>function</span> () {
+</span></span><span style=display:flex><span>  console.log(<span style=color:#4070a0>`</span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.name<span style=color:#70a0d0>}</span><span style=color:#4070a0> can fight at </span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.skill<span style=color:#70a0d0>}</span><span style=color:#4070a0> level`</span>);
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>This was my first stab at inheritance:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(name, skill) {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// inherit from Person
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  Person.call(<span style=color:#007020;font-weight:700>this</span>, name);
+</span></span><span style=display:flex><span>  <span style=color:#007020>Object</span>.setPrototypeOf(<span style=color:#007020>Object</span>.getPrototypeOf(<span style=color:#007020;font-weight:700>this</span>), Person.prototype);
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// now init Ninja-specific stuff
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>We can now do the following:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> n <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Ninja(<span style=color:#4070a0>&#34;Alice&#34;</span>, <span style=color:#4070a0>&#34;Advanced&#34;</span>);
+</span></span><span style=display:flex><span>n.greet();
+</span></span><span style=display:flex><span>n.fight();
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Hello, this is Alice
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Alice can fight at Advanced level
+</span></span></span></code></pre></div><p>A couple of notes:</p><ul><li>The goal I had in mind with <code>Person.call(this, name)</code> is to achieve
+<em>constructor delegation</em>: instead of repeating the work that the <code>Person</code>
+constructor already does, just delegate to it directly</li><li>To use <code>Person</code> as a constructor, we need to invoke it with the <code>new</code> keyword,
+however, this will just instantiate an entirely different object</li><li>Hence the usage of the <code>call</code> method which lets us set the <code>this</code> value in
+addition to providing the required arguments for the <code>Person</code> constructor</li><li>From what I know wrt OOP in other languages, the <code>Person.call(this, name)</code> has
+to come before setting the properties specific to <code>Ninja</code> just in case
+initialzing any of the <code>Ninja</code>-specific properties depends on the
+<code>Person</code>-specific properties. The inverse cannot be true (none of the <code>Person</code>
+properties could depend on <code>Ninja</code> since the inheritance relationship flows
+one-way from Parent to Child)</li></ul><p>So far so good.</p><p>Now, let&rsquo;s go to this line:
+<code>Object.setPrototypeOf(Object.getPrototypeOf(this), Person.prototype);</code>. My goal
+here was to set up the prototype chain such that a <code>Ninja</code> object has access to
+the <code>Person</code> methods (a Ninja <em>is</em> a Person). Unfortunately, I was being too
+clever with the <code>Object.getPrototypeOf(this)</code> part since I could have as well
+just used <code>Ninja.prototype</code> directly.</p><h2 class=heading id=functions-__proto__-vs-prototype>Functions&rsquo; <code>__proto__</code> vs <code>.prototype</code>
+<a href=#functions-__proto__-vs-prototype>#</a></h2><p>When you create an object via a constructor function in JavaScript, that
+object&rsquo;s internal prototype (<code>__proto__</code>) is automatically set to the function&rsquo;s
+<code>.prototype</code> property. Worth emphasizing, a function&rsquo;s <code>.prototype</code> is not the
+same thing as the function&rsquo;s own internal prototype <code>__proto__</code>.</p><p>Allow me to go over this distinction again: when you define a function in
+Javascript, it comes with two different prototype-related things. Let&rsquo;s consider
+<code>Person</code>, it comes with:</p><ul><li><code>Person.prototype</code>: Every constructible function in Javascript gets a
+<code>.prototype</code> property which is an object.<ul><li>When you use the function as a constructor e.g. <code>new Person(...)</code>, this
+object becomes the prototype of the newly created instances.</li><li>When you add methods and properties to this <code>.prototype</code> object, all
+instances will have access to them (it becomes part of their prototype
+chain).</li><li>Also worth pointing out now, this <code>.prototype</code>object comes with a
+<code>.constructor</code> property which points back to the function itself. The
+property is non-enumerable which means it won&rsquo;t show up in <code>for...in</code>,
+<code>Object.keys</code> and so on.</li><li>The <code>.constructor</code> property is there so that when we create <code>Person</code>
+instances, we can retrieve the constructor function that was used if needed.</li></ul></li><li><code>Person.__proto__</code> ( or <code>Object.getPrototypeOf(Person)</code>): This is the
+function&rsquo;s own prototype.<ul><li>Since functions are also objects, they get their own prototype chain.</li><li>Note, for <code>Person</code>, its <code>__proto__</code> is set to <code>Function.prototype</code>. This
+means the function <code>Person</code> is itself an instance of the built-in <code>Function</code>
+constructor.</li><li>Through its prototype chain, it inherits methods like <code>.call</code> which we used
+earlier, as well as <code>.apply</code>, <code>.bind</code> among others.</li></ul></li></ul><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> assert from <span style=color:#4070a0>&#34;assert&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Person(name) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Person.prototype is different from Person.__proto__
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>console.log(Person.prototype); <span style=color:#60a0b0;font-style:italic>// {}
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>console.log(<span style=color:#007020>Object</span>.getPrototypeOf(Person)); <span style=color:#60a0b0;font-style:italic>// [Function (anonymous)] Object
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>assert(<span style=color:#007020>Object</span>.getPrototypeOf(Person) <span style=color:#666>!==</span> Person.prototype);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Person is an instance of Function
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>assert(Person <span style=color:#007020;font-weight:700>instanceof</span> <span style=color:#007020>Function</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// Hence Person&#39;s prototype is Function.prototype
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>assert(<span style=color:#007020>Object</span>.getPrototypeOf(Person) <span style=color:#666>===</span> <span style=color:#007020>Function</span>.prototype);
+</span></span></code></pre></div><h2 class=heading id=fixing-the-inheritance-setup-code>Fixing the Inheritance Setup Code
+<a href=#fixing-the-inheritance-setup-code>#</a></h2><p>Now, back to the my &lsquo;inheritance&rsquo; code. Let&rsquo;s use <code>Person.prototype</code> in lieu of
+<code>Object.getPrototypeOf(this)</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(name, skill) {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// inherit from Person
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  Person.call(<span style=color:#007020;font-weight:700>this</span>, name);
+</span></span><span style=display:flex><span>  assert(<span style=color:#007020>Object</span>.getPrototypeOf(<span style=color:#007020;font-weight:700>this</span>) <span style=color:#666>===</span> Ninja.prototype);
+</span></span><span style=display:flex><span>  <span style=color:#007020>Object</span>.setPrototypeOf(Ninja.prototype, Person.prototype);
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// now init Ninja-specific stuff
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Rewritten this way, the issue jumps out: <strong>why is the prototype of Ninja being
+reset on every single instantiation?</strong> It&rsquo;s unnecessary and a potential
+performance problem</p><p>To fix it, let&rsquo;s set up the prototype chain <em>once</em> outside of the constructor:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(name, skill) {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// inherit from Person
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  Person.call(<span style=color:#007020;font-weight:700>this</span>, name);
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// now init Ninja-specific stuff
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span><span style=color:#007020>Object</span>.setPrototypeOf(Ninja.prototype, Person.prototype);
+</span></span></code></pre></div><h2 class=heading id=digging-into-prototype>Digging into <code>.prototype</code>
+<a href=#digging-into-prototype>#</a></h2><p>Let&rsquo;s go back to the <code>Person</code> function for a moment this time minus the <code>greet</code>
+method:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Person(name) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>As already mentioned, every function in Javascript automatically gets a
+<code>.prototype</code> property when it&rsquo;s created. If we print this object, it seems
+empty:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span>console.log(Person.prototype); <span style=color:#60a0b0;font-style:italic>// {}
+</span></span></span></code></pre></div><p>Properties can be <strong>enumerable</strong> or <strong>non-enumerable</strong>. If non-enumerable, they
+won&rsquo;t show up when you use common traversal or inspection methods (e.g. when
+using <code>console.log</code>, <code>Object.keys</code>,<code>Object.values</code>,<code>Object.entries</code> or
+<code>JSON.stringify</code>).</p><p>There are other property attributes too besides enumerability.</p><h2 class=heading id=property-descriptors>Property Descriptors
+<a href=#property-descriptors>#</a></h2><p>In fact, if we take the property key, value and attributes, these encompass
+what&rsquo;s referred to as &ldquo;property descriptors&rdquo;. The attributes govern behavious
+like:</p><ul><li>Can the property be deleted from the object?</li><li>Can its value be changed?</li><li>Will it show up in <code>for...in</code>, Object.keys and so on?</li><li>Can the property&rsquo;s attributes be reconfigured</li><li>When accessing it do we implicitly use getter/setter functions or just
+get/modify the value directly</li></ul><p>There are two kinds of properties descriptors:</p><ul><li><strong>data descriptor</strong>: has value that may or may not be writable. Configured
+throught he following attributes: (writable, configurable, enumerable):<ul><li><strong>writable</strong> (true/false): if true, the value of a property can be modified
+via the assignment operator</li><li><strong>configurable</strong> (true/false):<ul><li>if set to false, the property cannot be deleted (e.g. <code>delete obj.foo</code>)</li><li>also, if false, the descriptors of the property cannot be modified, e.g.
+set <code>writable</code> from <code>true</code> to <code>false</code> later on, or change from data to
+accessor descriptor</li></ul></li><li><strong>enumerable</strong> (true/false):<ul><li>if false, the property will not show up during commonly used object
+traversal and inspection methods, such as <code>for-in</code> loops, <code>console.log</code>,
+<code>Object.keys</code>, <code>Object.entries</code> and <code>JSON.stringify</code></li></ul></li></ul></li><li><strong>accessor descriptor</strong>: property described by getter-setter pair of functions
+that are set via the <code>get</code>/<code>set</code> attributes<ul><li><strong>get</strong>: getter function, cannot be defined if <code>value</code> and/or <code>writeable</code>
+are defined</li><li><strong>set</strong>: setter function, cannot be defined if <code>value</code> and/or <code>writable</code> are
+defined</li></ul></li></ul><p>Property descriptors are defined and configured through the
+<code>Object.defineProperty</code> static method.</p><p>For example, given <code>ninja</code> which is a <code>Ninja</code> instance, let&rsquo;s add a color
+property:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> ninja <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Ninja(<span style=color:#4070a0>&#34;Eve&#34;</span>, <span style=color:#4070a0>&#34;Beginner&#34;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020>Object</span>.defineProperty(ninja, <span style=color:#4070a0>&#34;colour&#34;</span>, {
+</span></span><span style=display:flex><span>  enumerable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>true</span>,
+</span></span><span style=display:flex><span>  configurable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>false</span>,
+</span></span><span style=display:flex><span>  writable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>false</span>,
+</span></span><span style=display:flex><span>  value<span style=color:#666>:</span> <span style=color:#4070a0>&#34;black&#34;</span>,
+</span></span><span style=display:flex><span>});
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// fails
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>ninja.colour <span style=color:#666>=</span> <span style=color:#4070a0>&#34;blue&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// fails
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span><span style=color:#007020;font-weight:700>delete</span> ninja.colour;
+</span></span></code></pre></div><h3 class=heading id=back-to-prototype>Back to <code>.prototype</code>
+<a href=#back-to-prototype>#</a></h3><p>Back to <code>.prototype</code>, if we want all property names directly on an object
+regardless of whether they&rsquo;re enumerable or not, we can use
+<code>Object.getOwnPropertyNames</code> to get them.</p><p>Let&rsquo;s do so with <code>Person.prototype</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span>console.log(<span style=color:#007020>Object</span>.getOwnPropertyNames(Person.prototype));
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// [&#34;constructor&#34;]
+</span></span></span></code></pre></div><p><code>Person.prototype</code> has a <code>.constructor</code> property. The value of this property is
+the function <code>Person</code> itself i.e. it <em>points</em> back to <code>Person</code>. This means that
+given any instance of <code>Person</code> we can always retrieve the function that was used
+to construct it:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span>assert(Person.prototype.constructor <span style=color:#666>===</span> Person);
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> bob <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Person(<span style=color:#4070a0>&#34;Bob&#34;</span>);
+</span></span><span style=display:flex><span>assert(bob.constructor <span style=color:#666>===</span> Person);
+</span></span></code></pre></div><p>Let&rsquo;s get more details on the <code>.constructor</code> property:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Person(name) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> desc <span style=color:#666>=</span> <span style=color:#007020>Object</span>.getOwnPropertyDescriptor(Person.prototype, <span style=color:#4070a0>&#34;constructor&#34;</span>);
+</span></span><span style=display:flex><span>console.log(desc);
+</span></span></code></pre></div><p>This prints:</p><pre tabindex=0><code>{
+  value: [Function: Person],
+  writable: true,
+  enumerable: false,
+  configurable: true
+}
+</code></pre><p>Informally, we could say that the <code>.constructor</code> property is there so that
+objects can <em>remember</em> which specific function was used to construct them. It&rsquo;s
+non-enumerable since we often don&rsquo;t need to nor have to access it.</p><h2 class=heading id=prototype-prototype-chain><code>.prototype</code> Prototype Chain
+<a href=#prototype-prototype-chain>#</a></h2><p>Now that we&rsquo;ve seen what&rsquo;s inside <code>Person.prototype</code>, let&rsquo;s look at its
+prototype chain. The prototype of <code>Person.prototype</code> is <code>Object.prototype</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span>assert(<span style=color:#007020>Object</span>.getPrototypeOf(Person.prototype) <span style=color:#666>===</span> <span style=color:#007020>Object</span>.prototype);
+</span></span></code></pre></div><p>And the prototype of <code>Object.prototype</code> is <code>null</code></p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span>assert(<span style=color:#007020>Object</span>.getPrototypeOf(<span style=color:#007020>Object</span>.prototype) <span style=color:#666>===</span> <span style=color:#007020;font-weight:700>null</span>);
+</span></span></code></pre></div><p>Therefore, the full prototype chain of an instance of <code>Person</code> is:</p><pre tabindex=0><code>alice --&gt; Person.prototype --&gt; Object.prototype --&gt; null
+</code></pre><p>The function <code>Person</code> itself has the following prototype chain:</p><pre tabindex=0><code>Person --&gt; Function.prototype --&gt; Object.prototype --&gt; null
+</code></pre><p>As for an instance of <code>Ninja</code>
+(<code>const alice = new Ninja("Alice", "intermediate")</code>):</p><pre tabindex=0><code>alice --&gt; Ninja.prototype --&gt; Person.prototype --&gt; Object.prototype --&gt; null
+</code></pre><h2 class=heading id=a-different-approach-for-oop>A Different Approach for OOP
+<a href=#a-different-approach-for-oop>#</a></h2><p>Another approach is to set the <code>.prototype</code> of the constructor to an instance of
+the <em>parent</em>. This is what the book goes for. In our case:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(name, skill) {
+</span></span><span style=display:flex><span>  Person.call(<span style=color:#007020;font-weight:700>this</span>, name);
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// has to come before adding methods to the Person prototype
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>Ninja.prototype <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Person();
+</span></span></code></pre></div><p>As expected, all <code>Ninja</code> instances automatically get access to the parent
+<code>Person</code> methods:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> dan <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Ninja(<span style=color:#4070a0>&#34;Dan&#34;</span>, <span style=color:#4070a0>&#34;intermediate&#34;</span>);
+</span></span><span style=display:flex><span>dan.greet();
+</span></span><span style=display:flex><span>dan.fight();
+</span></span><span style=display:flex><span>console.log(<span style=color:#4070a0>&#34;dan instanceof Ninja:&#34;</span>, dan <span style=color:#007020;font-weight:700>instanceof</span> Ninja);
+</span></span><span style=display:flex><span>console.log(<span style=color:#4070a0>&#34;dan instanceof Person:&#34;</span>, dan <span style=color:#007020;font-weight:700>instanceof</span> Person);
+</span></span></code></pre></div><p>Which outputs:</p><pre tabindex=0><code>Hello, this is Dan
+Dan can fight at intermediate level
+dan instanceof Ninja: true
+dan instanceof Person: true
+</code></pre><p>Btw, it&rsquo;s probably a good idea to briefly mention how <code>instanceof</code> works. From
+<a href=https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof>MDN</a>:
+the &ldquo;instanceof operator tests to see if the prototype property of a constructor
+appears anywhere in the prototype chain of an object&rdquo;.</p><p>Back to the code, while it does work, it breaks one key expectation which is
+that the prototype object of Ninja is expected to have a <code>constructor</code> property.
+Let&rsquo;s rectify that:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#60a0b0;font-style:italic>// has to come before adding methods to the Person prototype
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>Ninja.prototype <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Person();
+</span></span><span style=display:flex><span><span style=color:#007020>Object</span>.defineProperty(Ninja.prototype, <span style=color:#4070a0>&#34;constructor&#34;</span>, {
+</span></span><span style=display:flex><span>  value<span style=color:#666>:</span> Ninja,
+</span></span><span style=display:flex><span>  writable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>true</span>,
+</span></span><span style=display:flex><span>  enumerable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>false</span>,
+</span></span><span style=display:flex><span>  configurable<span style=color:#666>:</span> <span style=color:#007020;font-weight:700>true</span>,
+</span></span><span style=display:flex><span>});
+</span></span></code></pre></div><p>All good. Now the prototype chain of an instance of Ninja is as follows:</p><pre tabindex=0><code>dan --&gt; person instance(Ninja.prototype) --&gt; Person.prototype --&gt; Object.prototype --&gt; null
+</code></pre><h2 class=heading id=es6-classes-and-the-extends-keyword>ES6 Classes and the <code>extends</code> Keyword
+<a href=#es6-classes-and-the-extends-keyword>#</a></h2><p>With ES6, we&rsquo;ve now got the <code>class</code> keyword and <code>extends</code> for inheritance.</p><p>Should make transitioning from class-based OOP languages to the prototype-based
+JS much easier.</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>class</span> Person {
+</span></span><span style=display:flex><span>  constructor(name) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  greet() {
+</span></span><span style=display:flex><span>    console.log(<span style=color:#4070a0>`Hello, this is </span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.name<span style=color:#70a0d0>}</span><span style=color:#4070a0>`</span>);
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>class</span> Ninja <span style=color:#007020;font-weight:700>extends</span> Person {
+</span></span><span style=display:flex><span>  constructor(name, skill) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>super</span>(name); <span style=color:#60a0b0;font-style:italic>// calls Person&#39;s constructor
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>    <span style=color:#007020;font-weight:700>this</span>.skill <span style=color:#666>=</span> skill;
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  fight() {
+</span></span><span style=display:flex><span>    console.log(<span style=color:#4070a0>`</span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.name<span style=color:#70a0d0>}</span><span style=color:#4070a0> can fight at </span><span style=color:#70a0d0>${</span><span style=color:#007020;font-weight:700>this</span>.skill<span style=color:#70a0d0>}</span><span style=color:#4070a0> level`</span>);
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Also worth pointing out, it doesn&rsquo;t use a instance of the parent for
+inheritance:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> desc <span style=color:#666>=</span> <span style=color:#007020>Object</span>.getOwnPropertyDescriptor(Ninja.prototype, <span style=color:#4070a0>&#34;constructor&#34;</span>);
+</span></span><span style=display:flex><span>console.log(desc);
+</span></span></code></pre></div><p>Which ouptuts:</p><pre tabindex=0><code>{
+  value: [class Ninja extends Person],
+  writable: true,
+  enumerable: false,
+  configurable: true
+}
+</code></pre><p>Note that <code>Ninja.prototype instanceof Person</code> evaluates to true, which is
+expected. But it would be misleading to conclude from this that
+<code>Ninja.prototype</code> is an actual instance of Person. What <code>instanceof</code> checks is
+whether <code>Person.prototype</code> appears somewhere in the prototype chain of
+<code>Ninja.prototype</code> nothing else more.</p><h2 class=heading id=static-methods>Static Methods
+<a href=#static-methods>#</a></h2><p>For extras, suppose we want to add a <code>fight</code> static method on <code>Ninja</code>. With ES6
+classes, it&rsquo;s as follows:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>class</span> Ninja <span style=color:#007020;font-weight:700>extends</span> Person {
+</span></span><span style=display:flex><span>  ...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>static</span> fight(ninja1, ninja2) {
+</span></span><span style=display:flex><span>    console.log(<span style=color:#4070a0>`</span><span style=color:#70a0d0>${</span>ninja1.name<span style=color:#70a0d0>}</span><span style=color:#4070a0> fights </span><span style=color:#70a0d0>${</span>ninja2.name<span style=color:#70a0d0>}</span><span style=color:#4070a0>`</span>);
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> alice <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Ninja(<span style=color:#4070a0>&#34;Alice&#34;</span>, <span style=color:#4070a0>&#34;advanced&#34;</span>);
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> dan <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Ninja(<span style=color:#4070a0>&#34;Dan&#34;</span>, <span style=color:#4070a0>&#34;intermediate&#34;</span>);
+</span></span><span style=display:flex><span>Ninja.fight(alice, dan);
+</span></span></code></pre></div><p>The equivalent of this when using functions as constructors:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Ninja(...){...}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Ninja.fight <span style=color:#666>=</span> (ninja1, ninja2) =&gt; {
+</span></span><span style=display:flex><span>  console.log(<span style=color:#4070a0>`</span><span style=color:#70a0d0>${</span>ninja1.name<span style=color:#70a0d0>}</span><span style=color:#4070a0> fights </span><span style=color:#70a0d0>${</span>ninja2.name<span style=color:#70a0d0>}</span><span style=color:#4070a0>`</span>);
+</span></span><span style=display:flex><span>};
+</span></span></code></pre></div><p>Since functions are objects, we can just add properties directly on them. That’s
+all static methods really is: functions &rsquo;living&rsquo; on the constructor, not on its
+instances. That&rsquo;s all for now.</p><h2 class=heading id=extras>Extras
+<a href=#extras>#</a></h2><p>What happens if you try to set an object as its own prototype:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> Person(name) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>this</span>.name <span style=color:#666>=</span> name;
+</span></span><span style=display:flex><span>  <span style=color:#007020>Object</span>.setPrototypeOf(<span style=color:#007020;font-weight:700>this</span>, <span style=color:#007020;font-weight:700>this</span>);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> p <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>new</span> Person(<span style=color:#4070a0>&#34;Alice&#34;</span>);
+</span></span></code></pre></div><p>You get a <code>TypeError: Cyclic __proto__ value ...</code></p><p>Also this gets you another <code>TypeError: Cyclic __proto__ value ...</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> A() {}
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>function</span> B() {}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020>Object</span>.setPrototypeOf(A.prototype, B.prototype);
+</span></span><span style=display:flex><span><span style=color:#007020>Object</span>.setPrototypeOf(B.prototype, A.prototype);
+</span></span></code></pre></div><script src=https://giscus.app/client.js data-repo=bnmoch3/blog data-repo-id=R_kgDOIU86DQ data-category data-category-id=DIC_kwDOIU86Dc4Clvgl data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=gruvbox_light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/p/postgres-row-level-security/>Fine-grained Authorization with Row Level Security in PostgreSQL</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer><script async src=https://scripts.simpleanalyticscdn.com/latest.js></script></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>
