@@ -1,0 +1,496 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://bnmoch3.org/favicon.ico?><link rel=icon type=image/png sizes=16x16 href=https://bnmoch3.org/favicon-16x16.png?><link rel=icon type=image/png sizes=32x32 href=https://bnmoch3.org/favicon-32x32.png?><link rel=icon type=image/png sizes=192x192 href=https://bnmoch3.org/android-chrome-192x192.png?><link rel=apple-touch-icon sizes=180x180 href=https://bnmoch3.org/apple-touch-icon.png?><meta name=description content><title>CORS | bnmoch3</title><link rel=canonical href=https://bnmoch3.org/notes/2025/cors-overview/><meta property="og:url" content="https://bnmoch3.org/notes/2025/cors-overview/"><meta property="og:site_name" content="bnmoch3"><meta property="og:title" content="CORS"><meta property="og:description" content="Cross-Origin Resource Sharing"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="notes"><meta property="article:published_time" content="2025-10-29T00:00:00+00:00"><meta property="article:modified_time" content="2025-10-29T00:00:00+00:00"><meta property="article:tag" content="Web"><meta property="article:tag" content="JavaScript"><link rel=stylesheet href=/assets/combined.min.bfb51fa3110844de3117ce8da7190d50165deb2fc526273808d6975119098310.css media=all></head><body class=light><div class=content><header><div class=header><div class=flex><p class=small><a href=/>/home</a></p><p class=small><a href=/about>/about</a></p><p class=small><a href=/posts>/posts</a></p><p class=small><a href=/notes>/notes</a></p><p class=small><a href=/tags>/tags</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a>
+<span class=breadcrumbs-separator>> </span><a href=/notes/>Notes</a>
+<span class=breadcrumbs-separator>> </span><a class=breadcrumbs-current href=/notes/2025/cors-overview/>CORS</a></div><div><div class=single-intro-container><h1 class=single-title>CORS</h1><p class=single-readtime><time datetime=2025-10-29T00:00:00+00:00>October 29, 2025</time>
+&nbsp; · &nbsp;
+17 min read</p></div><aside class=toc><p><strong>Table of contents</strong></p><nav id=TableOfContents><ul><li><a href=#intro>Intro</a><ul><li><a href=#setting-up-the-front-end-code>Setting up the Front-End Code</a></li><li><a href=#setting-up-the-backend-code>Setting up the backend code</a></li><li><a href=#making-a-post-request-from-the-frontend>Making a POST request from the frontend</a></li><li><a href=#fixing-the-cors-error>Fixing the CORS error</a></li><li><a href=#quick-refactor-of-backend-code>Quick Refactor of Backend Code</a></li></ul></li><li><a href=#cors-the-big-picture>CORS: The Big Picture</a><ul><li><a href=#same-origin-policy>Same-origin Policy</a></li><li><a href=#cors-http-headers-for-requests-and-responses>CORS: HTTP Headers for Requests and Responses</a></li><li><a href=#client-http-request-headers-for-cors>Client HTTP request headers for CORS</a></li><li><a href=#server-http-response-headers-for-cors>Server HTTP response headers for CORS</a></li><li><a href=#rejecting-cross-origin-requests>Rejecting Cross-Origin Requests</a></li></ul></li><li><a href=#simple-requests-and-preflight-requests>Simple Requests and Preflight Requests</a></li></ul></nav></aside><div class=single-content><h2 class=heading id=intro>Intro
+<a href=#intro>#</a></h2><h3 class=heading id=setting-up-the-front-end-code>Setting up the Front-End Code
+<a href=#setting-up-the-front-end-code>#</a></h3><p>Let&rsquo;s start with the following HTML:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-html data-lang=html><span style=display:flex><span><span style=color:#007020>&lt;!DOCTYPE html&gt;</span>
+</span></span><span style=display:flex><span>&lt;<span style=color:#062873;font-weight:700>html</span> <span style=color:#4070a0>lang</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;en&#34;</span>&gt;
+</span></span><span style=display:flex><span>  &lt;<span style=color:#062873;font-weight:700>head</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>meta</span> <span style=color:#4070a0>charset</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;utf-8&#34;</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>meta</span> <span style=color:#4070a0>name</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;viewport&#34;</span> <span style=color:#4070a0>content</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;width=device-width, initial-scale=1&#34;</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>meta</span> <span style=color:#4070a0>name</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;color-scheme&#34;</span> <span style=color:#4070a0>content</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;light dark&#34;</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>link</span> <span style=color:#4070a0>rel</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;stylesheet&#34;</span> <span style=color:#4070a0>href</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;css/concrete.min.css&#34;</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>title</span>&gt;Foobar&lt;/<span style=color:#062873;font-weight:700>title</span>&gt;
+</span></span><span style=display:flex><span>  &lt;/<span style=color:#062873;font-weight:700>head</span>&gt;
+</span></span><span style=display:flex><span>  &lt;<span style=color:#062873;font-weight:700>body</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>main</span>&gt;
+</span></span><span style=display:flex><span>      &lt;<span style=color:#062873;font-weight:700>h1</span>&gt;Demo&lt;/<span style=color:#062873;font-weight:700>h1</span>&gt;
+</span></span><span style=display:flex><span>      &lt;<span style=color:#062873;font-weight:700>p</span> <span style=color:#4070a0>id</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;greeting&#34;</span>&gt;Loading...&lt;/<span style=color:#062873;font-weight:700>p</span>&gt;
+</span></span><span style=display:flex><span>    &lt;/<span style=color:#062873;font-weight:700>main</span>&gt;
+</span></span><span style=display:flex><span>    &lt;<span style=color:#062873;font-weight:700>script</span> <span style=color:#4070a0>src</span><span style=color:#666>=</span><span style=color:#4070a0>&#34;./script.js&#34;</span>&gt;&lt;/<span style=color:#062873;font-weight:700>script</span>&gt;
+</span></span><span style=display:flex><span>  &lt;/<span style=color:#062873;font-weight:700>body</span>&gt;
+</span></span><span style=display:flex><span>&lt;/<span style=color:#062873;font-weight:700>html</span>&gt;
+</span></span></code></pre></div><p>and javascript:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020>document</span>.addEventListener(<span style=color:#4070a0>&#34;DOMContentLoaded&#34;</span>, () =&gt; {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// set greeting
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>const</span> greetingEl <span style=color:#666>=</span> <span style=color:#007020>document</span>.getElementById(<span style=color:#4070a0>&#34;greeting&#34;</span>);
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>const</span> name <span style=color:#666>=</span> <span style=color:#4070a0>&#34;John Doe&#34;</span>;
+</span></span><span style=display:flex><span>  greetingEl.textContent <span style=color:#666>=</span> <span style=color:#4070a0>`Hello, </span><span style=color:#70a0d0>${</span>name<span style=color:#70a0d0>}</span><span style=color:#4070a0>!`</span>;
+</span></span><span style=display:flex><span>});
+</span></span></code></pre></div><p>I am using <a href=https://parceljs.org/>parcel</a> as a quick tool to set up the
+frontend.</p><h3 class=heading id=setting-up-the-backend-code>Setting up the backend code
+<a href=#setting-up-the-backend-code>#</a></h3><p>As for the backend, we&rsquo;ve got the following flask server:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>datetime</span> <span style=color:#007020;font-weight:700>as</span> <span style=color:#0e84b5;font-weight:700>dt</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>from</span> <span style=color:#0e84b5;font-weight:700>flask</span> <span style=color:#007020;font-weight:700>import</span> Flask, jsonify, request
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>app <span style=color:#666>=</span> Flask(<span style=color:#bb60d5>__name__</span>)
+</span></span><span style=display:flex><span>app<span style=color:#666>.</span>config[<span style=color:#4070a0>&#34;MAX_CONTENT_LENGTH&#34;</span>] <span style=color:#666>=</span> <span style=color:#40a070>1024</span> <span style=color:#666>*</span> <span style=color:#40a070>1024</span>  <span style=color:#60a0b0;font-style:italic># 1 MB JSON payload limit</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@app.errorhandler</span>(<span style=color:#40a070>413</span>)
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>request_entity_too_large</span>(error):
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> jsonify({<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Payload too large&#34;</span>}), <span style=color:#40a070>413</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@app.route</span>(<span style=color:#4070a0>&#34;/greet&#34;</span>, methods<span style=color:#666>=</span>[<span style=color:#4070a0>&#34;POST&#34;</span>])
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>greet</span>():
+</span></span><span style=display:flex><span>    data <span style=color:#666>=</span> request<span style=color:#666>.</span>get_json(silent<span style=color:#666>=</span><span style=color:#007020;font-weight:700>True</span>)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> <span style=color:#007020;font-weight:700>not</span> data <span style=color:#007020;font-weight:700>or</span> <span style=color:#4070a0>&#34;name&#34;</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>in</span> data:
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> jsonify({<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Missing required field: &#39;name&#39;&#34;</span>}), <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    name <span style=color:#666>=</span> data<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;name&#34;</span>)
+</span></span><span style=display:flex><span>    lang <span style=color:#666>=</span> data<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;lang&#34;</span>, <span style=color:#4070a0>&#34;en&#34;</span>)<span style=color:#666>.</span>lower()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    greetings <span style=color:#666>=</span> {<span style=color:#4070a0>&#34;en&#34;</span>: <span style=color:#4070a0>&#34;Hello&#34;</span>, <span style=color:#4070a0>&#34;es&#34;</span>: <span style=color:#4070a0>&#34;Hola&#34;</span>, <span style=color:#4070a0>&#34;fr&#34;</span>: <span style=color:#4070a0>&#34;Bonjour&#34;</span>}
+</span></span><span style=display:flex><span>    greeting <span style=color:#666>=</span> greetings<span style=color:#666>.</span>get(lang)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> greeting <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>None</span>:
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> jsonify(
+</span></span><span style=display:flex><span>            {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;Invalid or unsupported language selection: &#39;</span><span style=color:#70a0d0>{</span>lang<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#39;&#34;</span>}
+</span></span><span style=display:flex><span>        ), <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    result <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;greeting&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;</span><span style=color:#70a0d0>{</span>greeting<span style=color:#70a0d0>}</span><span style=color:#4070a0>, </span><span style=color:#70a0d0>{</span>name<span style=color:#70a0d0>}</span><span style=color:#4070a0>!&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;timestamp&#34;</span>: dt<span style=color:#666>.</span>datetime<span style=color:#666>.</span>now(dt<span style=color:#666>.</span>UTC)<span style=color:#666>.</span>isoformat() <span style=color:#666>+</span> <span style=color:#4070a0>&#34;Z&#34;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> jsonify(result)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>if</span> <span style=color:#bb60d5>__name__</span> <span style=color:#666>==</span> <span style=color:#4070a0>&#34;__main__&#34;</span>:
+</span></span><span style=display:flex><span>    app<span style=color:#666>.</span>run(
+</span></span><span style=display:flex><span>        host<span style=color:#666>=</span><span style=color:#4070a0>&#34;localhost&#34;</span>,
+</span></span><span style=display:flex><span>        port<span style=color:#666>=</span><span style=color:#40a070>5000</span>,
+</span></span><span style=display:flex><span>        debug<span style=color:#666>=</span><span style=color:#007020;font-weight:700>True</span>,
+</span></span><span style=display:flex><span>    )
+</span></span></code></pre></div><p>On running the backend server, we can see some of the expected output via
+httpie:</p><pre tabindex=0><code>&gt; http --print=b POST :5000/greet
+{
+    &#34;error&#34;: &#34;Missing required field: &#39;name&#39;&#34;
+}
+
+
+&gt; http --print=b POST :5000/greet name=&#34;Alice&#34; lang=&#34;foo&#34;
+{
+    &#34;error&#34;: &#34;Invalid or unsupported language selection: &#39;foo&#39;&#34;
+}
+
+
+&gt; http --print=b POST :5000/greet name=&#34;Alice&#34; lang=&#34;es&#34;
+{
+    &#34;greeting&#34;: &#34;Hola, Alice!&#34;,
+    &#34;timestamp&#34;: &#34;2025-10-22T13:05:27.121465+00:00Z&#34;
+}
+</code></pre><h3 class=heading id=making-a-post-request-from-the-frontend>Making a POST request from the frontend
+<a href=#making-a-post-request-from-the-frontend>#</a></h3><p>Now, let&rsquo;s try retrieving the greeting via frontend which is being served via
+Parcel by default on port 1234:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-javascript data-lang=javascript><span style=display:flex><span><span style=color:#007020;font-weight:700>const</span> API_BASE_URL <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:5000&#34;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>async</span> <span style=color:#007020;font-weight:700>function</span> fetchGreeting(name, lang) {
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>const</span> response <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>await</span> fetch(<span style=color:#4070a0>`</span><span style=color:#70a0d0>${</span>API_BASE_URL<span style=color:#70a0d0>}</span><span style=color:#4070a0>/greet`</span>, {
+</span></span><span style=display:flex><span>    method<span style=color:#666>:</span> <span style=color:#4070a0>&#34;POST&#34;</span>,
+</span></span><span style=display:flex><span>    headers<span style=color:#666>:</span> {
+</span></span><span style=display:flex><span>      <span style=color:#4070a0>&#34;Content-Type&#34;</span><span style=color:#666>:</span> <span style=color:#4070a0>&#34;application/json&#34;</span>,
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>    body<span style=color:#666>:</span> JSON.stringify({ name, lang }),
+</span></span><span style=display:flex><span>  });
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>if</span> (<span style=color:#666>!</span>response.ok) {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>const</span> errorData <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>await</span> response.json().<span style=color:#007020;font-weight:700>catch</span>(() =&gt; ({}));
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>throw</span> <span style=color:#007020;font-weight:700>new</span> <span style=color:#007020>Error</span>(errorData.error <span style=color:#666>||</span> <span style=color:#4070a0>`Server error: </span><span style=color:#70a0d0>${</span>response.status<span style=color:#70a0d0>}</span><span style=color:#4070a0>`</span>);
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>return</span> response.json();
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020>document</span>.addEventListener(<span style=color:#4070a0>&#34;DOMContentLoaded&#34;</span>, <span style=color:#007020;font-weight:700>async</span> () =&gt; {
+</span></span><span style=display:flex><span>  <span style=color:#60a0b0;font-style:italic>// set greeting
+</span></span></span><span style=display:flex><span><span style=color:#60a0b0;font-style:italic></span>  <span style=color:#007020;font-weight:700>const</span> greetingEl <span style=color:#666>=</span> <span style=color:#007020>document</span>.getElementById(<span style=color:#4070a0>&#34;greeting&#34;</span>);
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>const</span> name <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Alice&#34;</span>;
+</span></span><span style=display:flex><span>  <span style=color:#007020;font-weight:700>try</span> {
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>const</span> { greeting } <span style=color:#666>=</span> <span style=color:#007020;font-weight:700>await</span> fetchGreeting(name, <span style=color:#4070a0>&#34;es&#34;</span>);
+</span></span><span style=display:flex><span>    greetingEl.textContent <span style=color:#666>=</span> greeting;
+</span></span><span style=display:flex><span>  } <span style=color:#007020;font-weight:700>catch</span> (error) {
+</span></span><span style=display:flex><span>    greetingEl.textContent <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Error: failed to fetch greeting&#34;</span>;
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>const</span> errorEl <span style=color:#666>=</span> <span style=color:#007020>document</span>.createElement(<span style=color:#4070a0>&#34;pre&#34;</span>);
+</span></span><span style=display:flex><span>    errorEl.textContent <span style=color:#666>=</span> error.message;
+</span></span><span style=display:flex><span>    errorEl.style.color <span style=color:#666>=</span> <span style=color:#4070a0>&#34;red&#34;</span>;
+</span></span><span style=display:flex><span>    errorEl.style.whiteSpace <span style=color:#666>=</span> <span style=color:#4070a0>&#34;pre-wrap&#34;</span>;
+</span></span><span style=display:flex><span>    greetingEl.insertAdjacentElement(<span style=color:#4070a0>&#34;afterend&#34;</span>, errorEl);
+</span></span><span style=display:flex><span>    console.error(error);
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>});
+</span></span></code></pre></div><p>Unfortunately, we get the following error (at the browser console):</p><pre tabindex=0><code>Access to fetch at &#39;http://localhost:5000/greet&#39; from origin
+&#39;http://localhost:1234&#39; has been blocked by CORS policy: Response to preflight
+request doesn&#39;t pass access control check: No &#39;Access-Control-Allow-Origin&#39;
+header is present on the requested resource.
+
+script.js:4
+ POST http://localhost:5000/greet net::ERR_FAILED
+fetchGreeting	@	script.js:4
+(anonymous)	@	script.js:23
+
+script.js:32 TypeError: Failed to fetch
+    at fetchGreeting (script.js:4:26)
+    at HTMLDocument.&lt;anonymous&gt; (script.js:23:32)
+(anonymous)	@	script.js:32
+</code></pre><h3 class=heading id=fixing-the-cors-error>Fixing the CORS error
+<a href=#fixing-the-cors-error>#</a></h3><p>Now, this can be fixed easily by using <code>flask_cors</code> flask extension:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>datetime</span> <span style=color:#007020;font-weight:700>as</span> <span style=color:#0e84b5;font-weight:700>dt</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>from</span> <span style=color:#0e84b5;font-weight:700>flask</span> <span style=color:#007020;font-weight:700>import</span> Flask, jsonify, request
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>from</span> <span style=color:#0e84b5;font-weight:700>flask_cors</span> <span style=color:#007020;font-weight:700>import</span> CORS
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>app <span style=color:#666>=</span> Flask(<span style=color:#bb60d5>__name__</span>)
+</span></span><span style=display:flex><span>CORS(app)
+</span></span></code></pre></div><p>But having experienced CORS issues recently, I wanted to take the opportunity to
+actually learn what CORS really is about, what does it prevent or solve and all
+that. Hence this blog post.</p><p>First, let&rsquo;s see how to fix it manually without <code>flask_cors</code>. The fix is
+entirely in the backend:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#555;font-weight:700>@app.route</span>(<span style=color:#4070a0>&#34;/greet&#34;</span>, methods<span style=color:#666>=</span>[<span style=color:#4070a0>&#34;OPTIONS&#34;</span>])
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>greet_options</span>():
+</span></span><span style=display:flex><span>    response <span style=color:#666>=</span> make_response()
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Methods&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;POST, OPTIONS&#34;</span>
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Headers&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Content-Type&#34;</span>
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>status_code <span style=color:#666>=</span> <span style=color:#40a070>204</span>  <span style=color:#60a0b0;font-style:italic># No Content</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> response
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@app.route</span>(<span style=color:#4070a0>&#34;/greet&#34;</span>, methods<span style=color:#666>=</span>[<span style=color:#4070a0>&#34;POST&#34;</span>])
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>greet</span>():
+</span></span><span style=display:flex><span>    data <span style=color:#666>=</span> request<span style=color:#666>.</span>get_json(silent<span style=color:#666>=</span><span style=color:#007020;font-weight:700>True</span>)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> <span style=color:#007020;font-weight:700>not</span> data <span style=color:#007020;font-weight:700>or</span> <span style=color:#4070a0>&#34;name&#34;</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>in</span> data:
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> jsonify({<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Missing required field: &#39;name&#39;&#34;</span>})
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> response, <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    name <span style=color:#666>=</span> data<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;name&#34;</span>)
+</span></span><span style=display:flex><span>    lang <span style=color:#666>=</span> data<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;lang&#34;</span>, <span style=color:#4070a0>&#34;en&#34;</span>)<span style=color:#666>.</span>lower()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    greetings <span style=color:#666>=</span> {<span style=color:#4070a0>&#34;en&#34;</span>: <span style=color:#4070a0>&#34;Hello&#34;</span>, <span style=color:#4070a0>&#34;es&#34;</span>: <span style=color:#4070a0>&#34;Hola&#34;</span>, <span style=color:#4070a0>&#34;fr&#34;</span>: <span style=color:#4070a0>&#34;Bonjour&#34;</span>}
+</span></span><span style=display:flex><span>    greeting <span style=color:#666>=</span> greetings<span style=color:#666>.</span>get(lang)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> greeting <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>None</span>:
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> jsonify(
+</span></span><span style=display:flex><span>            {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;Invalid or unsupported language selection: &#39;</span><span style=color:#70a0d0>{</span>lang<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#39;&#34;</span>}
+</span></span><span style=display:flex><span>        )
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> response, <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    result <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;greeting&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;</span><span style=color:#70a0d0>{</span>greeting<span style=color:#70a0d0>}</span><span style=color:#4070a0>, </span><span style=color:#70a0d0>{</span>name<span style=color:#70a0d0>}</span><span style=color:#4070a0>!&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;timestamp&#34;</span>: dt<span style=color:#666>.</span>datetime<span style=color:#666>.</span>now(dt<span style=color:#666>.</span>UTC)<span style=color:#666>.</span>isoformat() <span style=color:#666>+</span> <span style=color:#4070a0>&#34;Z&#34;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    response <span style=color:#666>=</span> jsonify(result)
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> response
+</span></span></code></pre></div><h3 class=heading id=quick-refactor-of-backend-code>Quick Refactor of Backend Code
+<a href=#quick-refactor-of-backend-code>#</a></h3><p>This code fixes the CORS issue but before proceeding, let&rsquo;s clean it up a little
+bit:</p><ul><li>validation checks are scattered all over, should be centralized</li><li><code>http://localhost:1234</code> is a magic string and should be placed in a named
+constant to avoid duplication and make it easier to change</li></ul><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#007020;font-weight:700>import</span> <span style=color:#0e84b5;font-weight:700>datetime</span> <span style=color:#007020;font-weight:700>as</span> <span style=color:#0e84b5;font-weight:700>dt</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>from</span> <span style=color:#0e84b5;font-weight:700>dataclasses</span> <span style=color:#007020;font-weight:700>import</span> dataclass
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>from</span> <span style=color:#0e84b5;font-weight:700>typing</span> <span style=color:#007020;font-weight:700>import</span> Any, Dict, Optional, Tuple
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>ALLOWED_ORIGIN <span style=color:#666>=</span> <span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@dataclass</span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>class</span> <span style=color:#0e84b5;font-weight:700>GreetingRequest</span>:
+</span></span><span style=display:flex><span>    name: <span style=color:#007020>str</span>
+</span></span><span style=display:flex><span>    lang: <span style=color:#007020>str</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>parse_greeting_request</span>(
+</span></span><span style=display:flex><span>    data: Optional[Dict[<span style=color:#007020>str</span>, Any]],
+</span></span><span style=display:flex><span>) <span style=color:#666>-&gt;</span> Tuple[Optional[GreetingRequest], Optional[Dict[<span style=color:#007020>str</span>, <span style=color:#007020>str</span>]]]:
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> <span style=color:#007020;font-weight:700>not</span> data:  <span style=color:#60a0b0;font-style:italic># check if data exists</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> <span style=color:#007020;font-weight:700>None</span>, {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Missing request body&#34;</span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> <span style=color:#4070a0>&#34;name&#34;</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>in</span> data:  <span style=color:#60a0b0;font-style:italic># name is a required field</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> <span style=color:#007020;font-weight:700>None</span>, {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Missing required field: &#39;name&#39;&#34;</span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    name <span style=color:#666>=</span> data[<span style=color:#4070a0>&#34;name&#34;</span>]  <span style=color:#60a0b0;font-style:italic># name should not be an empty string</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> <span style=color:#007020;font-weight:700>not</span> name <span style=color:#007020;font-weight:700>or</span> <span style=color:#007020;font-weight:700>not</span> name<span style=color:#666>.</span>strip():
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> <span style=color:#007020;font-weight:700>None</span>, {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>&#34;Field &#39;name&#39; cannot be empty&#34;</span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># check and validate language</span>
+</span></span><span style=display:flex><span>    lang <span style=color:#666>=</span> data<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;lang&#34;</span>, <span style=color:#4070a0>&#34;en&#34;</span>)<span style=color:#666>.</span>lower()
+</span></span><span style=display:flex><span>    valid_languages <span style=color:#666>=</span> {<span style=color:#4070a0>&#34;en&#34;</span>, <span style=color:#4070a0>&#34;es&#34;</span>, <span style=color:#4070a0>&#34;fr&#34;</span>}
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> lang <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>in</span> valid_languages:
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> <span style=color:#007020;font-weight:700>None</span>, {<span style=color:#4070a0>&#34;error&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;Invalid or unsupported language selection: &#39;</span><span style=color:#70a0d0>{</span>lang<span style=color:#70a0d0>}</span><span style=color:#4070a0>&#39;&#34;</span>}
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> GreetingRequest(name<span style=color:#666>=</span>name<span style=color:#666>.</span>strip(), lang<span style=color:#666>=</span>lang), <span style=color:#007020;font-weight:700>None</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@app.route</span>(<span style=color:#4070a0>&#34;/greet&#34;</span>, methods<span style=color:#666>=</span>[<span style=color:#4070a0>&#34;POST&#34;</span>, <span style=color:#4070a0>&#34;OPTIONS&#34;</span>])
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>greet</span>():
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># OPTIONS</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> request<span style=color:#666>.</span>method <span style=color:#666>==</span> <span style=color:#4070a0>&#34;OPTIONS&#34;</span>:
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> make_response()
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> ALLOWED_ORIGIN
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Methods&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;POST, OPTIONS&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Headers&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Content-Type&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>status_code <span style=color:#666>=</span> <span style=color:#40a070>204</span>  <span style=color:#60a0b0;font-style:italic># No Content</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> response
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># POST</span>
+</span></span><span style=display:flex><span>    payload <span style=color:#666>=</span> request<span style=color:#666>.</span>get_json(silent<span style=color:#666>=</span><span style=color:#007020;font-weight:700>True</span>)
+</span></span><span style=display:flex><span>    req, error <span style=color:#666>=</span> parse_greeting_request(payload)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> error:
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> jsonify(error)
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> ALLOWED_ORIGIN
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> response, <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># from here on, greeting is valid</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>assert</span> req <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>None</span>
+</span></span><span style=display:flex><span>    greetings <span style=color:#666>=</span> {<span style=color:#4070a0>&#34;en&#34;</span>: <span style=color:#4070a0>&#34;Hello&#34;</span>, <span style=color:#4070a0>&#34;es&#34;</span>: <span style=color:#4070a0>&#34;Hola&#34;</span>, <span style=color:#4070a0>&#34;fr&#34;</span>: <span style=color:#4070a0>&#34;Bonjour&#34;</span>}
+</span></span><span style=display:flex><span>    result <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;greeting&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;</span><span style=color:#70a0d0>{</span>greetings[req<span style=color:#666>.</span>lang]<span style=color:#70a0d0>}</span><span style=color:#4070a0>, </span><span style=color:#70a0d0>{</span>req<span style=color:#666>.</span>name<span style=color:#70a0d0>}</span><span style=color:#4070a0>!&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;timestamp&#34;</span>: dt<span style=color:#666>.</span>datetime<span style=color:#666>.</span>now(dt<span style=color:#666>.</span>UTC)<span style=color:#666>.</span>isoformat() <span style=color:#666>+</span> <span style=color:#4070a0>&#34;Z&#34;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    response <span style=color:#666>=</span> jsonify(result)
+</span></span><span style=display:flex><span>    response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> ALLOWED_ORIGIN
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> response
+</span></span></code></pre></div><h2 class=heading id=cors-the-big-picture>CORS: The Big Picture
+<a href=#cors-the-big-picture>#</a></h2><p>When I used <code>httpie</code> (an alternative to curl), I did not get any CORS &rsquo;errors&rsquo;.
+However, when I used the browser, I did. Let&rsquo;s step back a bit and see why:
+Users use user agents to access web resources. User agents include browsers
+(Chrome, Firefox) and command-line tools (httpie, curl). With my browser, I got
+CORS errors because it has to enforce some security policies to protect users
+(me) whereas command-line tools such as curl don&rsquo;t have to.</p><p>Within a browser, users typically have multiple websites open in different tabs
+and windows. Each website runs its own JavaScript and the browser has to keep
+the websites isolated such that a script running for one origin (e.g. evil.com)
+is prevented from accessing the user&rsquo;s data that&rsquo;s on a different origin (e.g.
+bank.com). This browser-enforced security policy is what&rsquo;s called &ldquo;Same-Origin
+Policy&rdquo; (SOP) and is what provides the isolation. As such, CORS (Cross-Origin
+Resource Sharing) is a mechanism that allows servers to selectively relax SOP by
+sending HTTP headers that browsers recognize and enforce. SOP is the security
+measure (blocks cross-origin access by default) and CORS is the relaxation
+mechanism (allows it when explicitly permitted).</p><p>Btw, it&rsquo;s worth pointing out, curl/httpie don&rsquo;t need to enforce SOP because they
+do not execute arbitrary JavaScript from multiple origins within the same
+process. The user (me) explicitly controls each request and there&rsquo;s no risk of a
+malicious script leveraging my authenticated sessions to steal data from other
+origins</p><h3 class=heading id=same-origin-policy>Same-origin Policy
+<a href=#same-origin-policy>#</a></h3><p>References:</p><ul><li><a href=https://web.dev/articles/same-origin-policy>web.dev Same-origin policy</a></li><li><a href=https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy>MDN Same-origin policy</a></li></ul><p>SOP: &ldquo;The same-origin policy is a browser security feature that restricts how
+documents and scripts on one origin can interact with resources on another
+origin&rdquo; - web.dev.</p><p>What is considered same-origin: &ldquo;An origin is defined by the scheme (also known
+as the protocol, for example HTTP or HTTPS), port (if it is specified), and
+host. When all three are the same for two URLs, they are considered same-origin.
+For example, <a href=http://www.example.com/foo>http://www.example.com/foo</a> is the same origin as
+<a href=http://www.example.com/bar>http://www.example.com/bar</a> but not <a href=https://www.example.com/bar>https://www.example.com/bar</a> because the
+scheme is different&rdquo; - web.dev.</p><p>Also note, <code>https://www.example.com</code> and <code>https://api.example.com</code> are
+considered different origins since &lsquo;<a href=https://www.example.com>www.example.com</a>&rsquo; and &lsquo;api.example.com&rsquo; are
+different hosts as per the browser even though they share the same domain
+&rsquo;example.com&rsquo;. Is this the right call, it does seem a bit restrictive? Well it&rsquo;s
+the right call security-wise for two key reasons:</p><ol><li><strong>Organizational separation</strong>: (e.g admin.example.com vs blog.example.com) -
+This is defense-in-depth. It&rsquo;s a minor nuisance requiring CORS configuration,
+but provides valuable isolation: if blog.example.com is compromised (e.g. via
+WordPress vulnerability), scripts from that subdomain cannot read responses
+from admin.example.com.</li><li><strong>Multi-tenancy</strong> (e.g alice.notion.so and bob.notion.so) - This separation
+is absolutely necessary. JavaScript running on alice.notion.so must not be
+able to fetch and read data from bob.notion.so.</li></ol><p>The web is built on cross-origin requests. A typical web page might load images
+from some host, CSS files from a different host, embed a video from some other
+host and so on. As such, not all cross origin requests are blocked by SOP.</p><p><strong>General rule</strong>: &ldquo;Embedding cross-origin resources is permitted; reading
+cross-origin resources is blocked&rdquo; - web.dev. Reading in this case means
+accessing the content/data of the resource programmatically via JavaScript.</p><p>Specifically permitted cross-origin resources (web.dev, MDN):</p><ul><li><strong>iframes</strong>: one can embed cross-origin websites within an iframe (unless
+blocked by <code>X-Frame-Options</code> or CSP headers), but cannot read the iframe&rsquo;s
+DOM/content via JavaScript</li><li><strong>CSS</strong>: one can embed cross-origin CSS files via <code>&lt;link></code> or <code>@import</code>
+(correct <code>Content-Type</code> header is required i.e. <code>Content-Type: text/css</code>)</li><li><strong>Forms</strong>: one can submit to cross-origin URLs via <code>action</code> attribute. This
+raises separate security concerns at the backend since the server cannot
+assume that the form data is from its own origin (check out
+<a href=https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/CSRF>CSRF</a>).</li><li><strong>Images</strong>: one can embed and display images from cross-origin sources via
+<code>&lt;img></code>, but cannot read the pixel/binary data via JavaScript</li><li><strong>Video/Audio</strong>: one can embed cross-origin videos and audios via <code>&lt;video></code>
+and <code>&lt;audio></code> elements e.g. from YouTube.</li><li><strong>Scripts</strong>: one can embed cross-origin scripts via <code>&lt;scrupt src="..."></code> but
+cross-origin fetch/XHR requests from such scripts are still subject to
+SOP/CORS based on the page&rsquo;s origin, not the script&rsquo;s origin</li><li><strong>Fonts</strong>: one can apply cross-origin fonts via <code>@font-face</code>. Some browsers
+allow cross-origin fonts, others require same-origin</li><li><strong>Plugins</strong>: one can embed external resources with <code>&lt;object></code> and <code>&lt;embed></code>
+elements</li></ul><h3 class=heading id=cors-http-headers-for-requests-and-responses>CORS: HTTP Headers for Requests and Responses
+<a href=#cors-http-headers-for-requests-and-responses>#</a></h3><p>References:</p><ul><li><a href=https://web.dev/articles/cross-origin-resource-sharing>web.dev Cross-Origin Resource Sharing (CORS)</a></li><li><a href=https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS>MDN Cross-Origin Resource Sharing (CORS)</a></li><li><a href=https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing>OWASP - Testing Cross Origin Resource Sharing</a></li></ul><p>A bit of an overview:</p><ul><li>CORS works via HTTP headers for the request and response</li><li>There are two types of cross-origin requests: simple requests and preflighted
+requests</li></ul><p><strong>Simple Requests:</strong></p><ul><li>Before sending the request the browser adds an <code>Origin</code> header to the request
+e.g. <code>http://localhost:1234</code></li><li>The <code>Origin</code> header is a
+<a href=https://developer.mozilla.org/en-US/docs/Glossary/Forbidden_request_header>Forbidden request header</a>,
+we aren&rsquo;t allowed to set it or modify it via JavaScript</li><li>The server (e.g. running at <code>http://localhost:5000</code>) receives the request and
+should check <code>Origin</code>. As part of the response, it adds
+<code>Access-Control-Allow-Origin</code> to the header with the appropriate value (e.g.,
+<code>http://localhost:1234</code>)</li><li>Once the browser receives the response, it determines whether to allow
+JavaScript to read the response based on the CORS headers</li></ul><p><strong>Preflighted Requests:</strong></p><ul><li>For non-simple requests, the browser first sends a preflight OPTIONS request
+before the actual request</li><li>The preflight includes:<ul><li><code>Origin</code>: where the request is coming from</li><li><code>Access-Control-Request-Method</code>: the HTTP method of the actual request</li><li><code>Access-Control-Request-Headers</code>: any custom headers that will be used</li></ul></li><li>The server responds to the preflight with:<ul><li><code>Access-Control-Allow-Origin</code>: allowed origin</li><li><code>Access-Control-Allow-Methods</code>: allowed HTTP methods</li><li><code>Access-Control-Allow-Headers</code>: allowed custom headers</li><li><code>Access-Control-Max-Age</code> (optional): how long to cache this preflight</li></ul></li><li>If the preflight succeeds (server approves), the browser then sends the actual
+request with only the <code>Origin</code> header</li><li>If the preflight fails, the actual request is never sent by the browser</li></ul><h3 class=heading id=client-http-request-headers-for-cors>Client HTTP request headers for CORS
+<a href=#client-http-request-headers-for-cors>#</a></h3><ul><li><code>Origin</code>:<ul><li>Tells server where the request is coming from i.e. the origin</li><li>Set by browser automatically, JavaScript cannot modify it</li><li>Used in all cross-origin requests both simple and preflighted</li><li>Can be null in certain cases ie the browser does not have a meaningful
+origin (eg if the user opened a local HTML file with <code>file:///</code>) for the
+rest or it is intentionally hiding it for privacy/security reasons</li><li>If the API should only be accessed from known origins then the server should
+reject requests with <code>"null"</code> origin. Null should not be inclded in the
+allow list</li></ul></li><li><code>Access-Control-Request-Method</code>:<ul><li>Used in preflight OPTIONS requests only to tell the server what HTTP method
+will be used in the actual request e.g. POST, PUT, DELETE. Note included in
+the actual request after preflight</li><li>Set by browser automatically, JavaScript cannot modify it</li></ul></li><li><code>Access-Control-Request-Headers</code>:<ul><li>Used in preflight OPTIONS requests only to tell the server what custom
+headers will be used in the actual request. Not included in the actual
+request after preflight</li><li>Set automatically by the browser, cannot be modified via JavaScript</li><li>Any header that is not in the CORS-safelisted request headers (and thus
+triggers preflight) is considered &ldquo;custom&rdquo; e.g. &ldquo;Cache-Control&rdquo; and
+&ldquo;Authorization&rdquo;</li></ul></li></ul><h3 class=heading id=server-http-response-headers-for-cors>Server HTTP response headers for CORS
+<a href=#server-http-response-headers-for-cors>#</a></h3><ul><li><code>Access-Control-Allow-Origin</code>:<ul><li>Allowed values: <code>&lt;origin></code> or wildcard <code>*</code></li><li>It&rsquo;s for the server to tell the browser either that specific origin is
+allowed to access the resource OR with the wildcard, any origin is allowed
+to access the resource</li><li>Though if the request from the browser contains any credentials (cookies,
+authorization headers or TLS client certificates) but the server replies
+with a wildcard for allowed origins, then (for security), the browser blocks
+the script from reading the response</li></ul></li><li><code>Vary</code>:<ul><li>A general HTTP header for caches (CDNs, reverse proxies, browser) rather
+than a CORS-related header</li><li>Can be set to wildcard <code>*</code> meaning the response is uncacheable OR one or
+more specific request header names</li><li>If set as <code>Vary: Origin</code> it means: cache separately for each <code>origin</code> value
+in the request header e.g. requests from <code>alice.example.com</code> and
+<code>bob.example.com</code> get separate cache entries, even if all other headers are
+identical</li><li>Required for CORS when the server dynamically sets
+<code>Access-Control-Allow-Origin</code> to different origins from an allowlist</li><li>Prevents caches from serving response with the wrong origin to another
+origin</li></ul></li><li><code>Access-Control-Allow-Methods</code>:<ul><li>for server to list the specific &ldquo;methods allowed when accessing the
+resource&rdquo; - MDN</li><li>used in response to a preflight OPTIONS request</li><li>including OPTIONS is harmless and superfluous for preflight purposes
+initiated automatically by the browser alone. It&rsquo;s only necessary if you
+want to allow JavaScript to make actual OPTIONS requests e.g. for API
+discovery mechanisms.</li></ul></li><li><code>Access-Control-Allow-Headers</code>:<ul><li>for server to list the specific HTTP headers that can be used when making
+the actual request</li><li>used in response to a preflight OPTIONS request</li></ul></li><li><code>Access-Control-Allow-Credentials</code>:<ul><li>for server to tell the browser whether credentials (cookies, authz headers,
+TLS certs) can be included in cross-origin requests</li><li>can only be set to <code>true</code> (no other value is valid)</li><li>If any cross-origin request (both simple and non-simple) sent by the browser
+included credentials but the server did not set this header in its response
+then the browser will block JavaScript from reading the response.</li><li>Note: if the server sets this header, then it must specify a specific origin
+in <code>Access-Control-Allow-Origin</code> rather than the wildcard.</li></ul></li><li><code>Access-Control-Expose-Headers</code>:<ul><li>for server to list which response headers JavaScript is allowed to read</li><li>by default, JavaScript is allowed to read the following headers:
+Cache-Control, Content-Language, Content-Length, Content-Type, Expires,
+Last-Modified, Pragma. These are considered &ldquo;safe&rdquo; to be exposed</li><li>For any header outside of these that the server wants browser-based
+JavaScript to read, it must list it in this header field</li></ul></li><li><code>Access-Control-Max-Age</code>:<ul><li>for caching preflight response in the browser so that the browser does not
+need to send OPTIONS requests repeatedly</li><li>set to number of seconds</li><li>cached per specific combination of endpoint (URL), HTTP method, headers and
+origin</li></ul></li></ul><h3 class=heading id=rejecting-cross-origin-requests>Rejecting Cross-Origin Requests
+<a href=#rejecting-cross-origin-requests>#</a></h3><p>Suppose a server receives a request from an origin that is not in its allow
+list. For <strong>simple requests</strong>, the server has 2 options:</p><ol><li><strong>Don&rsquo;t include the CORS headers</strong>: the server receives and processes the
+request and sends the response minus the CORS headers. The browser blocks
+JavaScript from reading the response. Other user agents like curl/httpie will
+read the response quite fine</li><li><strong>Return an error status</strong>: e.g. 403. Server receives the request but rejects
+it with a 403. Browser also blocks it since there&rsquo;s no CORS headers.
+JavaScript cannot see the 403 status, it just sees a generic network/CORS
+error. The browser console shows the CORS error.</li></ol><p>For <strong>preflight requests</strong>, the server should reject at the OPTIONS stage in two
+ways:</p><ol><li><strong>Dont include the CORS headers for the preflight response</strong>: Browser
+receives the OPTIONS response but since it doesn&rsquo;t have the requisite CORS
+headers, it never sends the actual request</li><li><strong>Return error status for preflight</strong>: eg. 403. Since the preflight request
+is errored out, the browser never sends the actual request</li></ol><p>Let&rsquo;s rewrite the handler such that we&rsquo;ve got multiple allowed origins, plus
+incorporate other stuff we&rsquo;ve come along:</p><div class=highlight><pre tabindex=0 style=background-color:#f0f0f0;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>ALLOWED_ORIGINS <span style=color:#666>=</span> {<span style=color:#4070a0>&#34;http://localhost:1234&#34;</span>, <span style=color:#4070a0>&#34;https://app.example.com&#34;</span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>add_cors_headers</span>(response, origin):
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># add CORS headers to response if origin is in allowed origins</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> origin <span style=color:#007020;font-weight:700>in</span> ALLOWED_ORIGINS:
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> origin
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Vary&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Origin&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> response
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#555;font-weight:700>@app.route</span>(<span style=color:#4070a0>&#34;/greet&#34;</span>, methods<span style=color:#666>=</span>[<span style=color:#4070a0>&#34;POST&#34;</span>, <span style=color:#4070a0>&#34;OPTIONS&#34;</span>])
+</span></span><span style=display:flex><span><span style=color:#007020;font-weight:700>def</span> <span style=color:#06287e>greet</span>():
+</span></span><span style=display:flex><span>    origin <span style=color:#666>=</span> request<span style=color:#666>.</span>headers<span style=color:#666>.</span>get(<span style=color:#4070a0>&#34;Origin&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># handle preflight</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> request<span style=color:#666>.</span>method <span style=color:#666>==</span> <span style=color:#4070a0>&#34;OPTIONS&#34;</span>:
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>if</span> origin <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>in</span> ALLOWED_ORIGINS:
+</span></span><span style=display:flex><span>            <span style=color:#007020;font-weight:700>return</span> make_response(), <span style=color:#40a070>403</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> make_response()
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Origin&#34;</span>] <span style=color:#666>=</span> origin
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Methods&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;POST&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Allow-Headers&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Content-Type&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Access-Control-Max-Age&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;60&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>headers[<span style=color:#4070a0>&#34;Vary&#34;</span>] <span style=color:#666>=</span> <span style=color:#4070a0>&#34;Origin&#34;</span>
+</span></span><span style=display:flex><span>        response<span style=color:#666>.</span>status_code <span style=color:#666>=</span> <span style=color:#40a070>204</span>  <span style=color:#60a0b0;font-style:italic># No Content</span>
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> response
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># handle POST</span>
+</span></span><span style=display:flex><span>    payload <span style=color:#666>=</span> request<span style=color:#666>.</span>get_json(silent<span style=color:#666>=</span><span style=color:#007020;font-weight:700>True</span>)
+</span></span><span style=display:flex><span>    req, error <span style=color:#666>=</span> parse_greeting_request(payload)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>if</span> error:
+</span></span><span style=display:flex><span>        response <span style=color:#666>=</span> jsonify(error)
+</span></span><span style=display:flex><span>        <span style=color:#007020;font-weight:700>return</span> add_cors_headers(response, origin), <span style=color:#40a070>400</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#60a0b0;font-style:italic># from here on, greeting is valid</span>
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>assert</span> req <span style=color:#007020;font-weight:700>is</span> <span style=color:#007020;font-weight:700>not</span> <span style=color:#007020;font-weight:700>None</span>
+</span></span><span style=display:flex><span>    greetings <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;en&#34;</span>: <span style=color:#4070a0>&#34;Hello&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;es&#34;</span>: <span style=color:#4070a0>&#34;Hola&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;fr&#34;</span>: <span style=color:#4070a0>&#34;Bonjour&#34;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    result <span style=color:#666>=</span> {
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;greeting&#34;</span>: <span style=color:#4070a0>f</span><span style=color:#4070a0>&#34;</span><span style=color:#70a0d0>{</span>greetings[req<span style=color:#666>.</span>lang]<span style=color:#70a0d0>}</span><span style=color:#4070a0>, </span><span style=color:#70a0d0>{</span>req<span style=color:#666>.</span>name<span style=color:#70a0d0>}</span><span style=color:#4070a0>!&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#4070a0>&#34;timestamp&#34;</span>: dt<span style=color:#666>.</span>datetime<span style=color:#666>.</span>now(dt<span style=color:#666>.</span>UTC)<span style=color:#666>.</span>isoformat() <span style=color:#666>+</span> <span style=color:#4070a0>&#34;Z&#34;</span>,
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    response <span style=color:#666>=</span> jsonify(result)
+</span></span><span style=display:flex><span>    <span style=color:#007020;font-weight:700>return</span> add_cors_headers(response, origin)
+</span></span></code></pre></div><h2 class=heading id=simple-requests-and-preflight-requests>Simple Requests and Preflight Requests
+<a href=#simple-requests-and-preflight-requests>#</a></h2><p><strong>Simple requests</strong>: use only GET/HEAD/POST with CORS-safelisted headers.</p><p><strong>Non-simple requests</strong>: either use other methods or custom headers or
+non-safelisted content-types such as <code>application/json</code>. These require a
+preflight OPTIONS request first to get server permission.</p><p>A bit of repetition but here&rsquo;s how web.dev explains it:</p><blockquote><p>When a web app makes a complex HTTP request, the browser adds a preflight
+request to the beginning of the request chain.</p><p>The CORS specification defines a complex request as follows:</p><ul><li>A request that uses methods other than GET, POST, or HEAD.</li><li>A request that includes headers other than Accept, Accept-Language or
+Content-Language.</li><li>A request that has a Content-Type header other than
+application/x-www-form-urlencoded, multipart/form-data, or text/plain.</li></ul><p>Browsers automatically create any necessary preflight requests and send them
+before the actual request message. The preflight request is an OPTIONS request
+like the following example:</p><p>The server response can also include an Access-Control-Max-Age header to
+specify the duration in seconds to cache preflight results. This allows the
+client to send multiple complex requests without needing to repeat the
+preflight request.</p></blockquote><p>In my case, even though it&rsquo;s a POST request, the requested content is json hence
+it triggers a preflight request:</p><p>Here&rsquo;s the preflight request that my browser makes, it&rsquo;s essentially asking &lsquo;can
+I send a POST request?&rsquo;:</p><pre tabindex=0><code>Incoming request: OPTIONS /greet
+        Host: localhost:5000
+        Connection: keep-alive
+        Accept: */*
+        Access-Control-Request-Method: POST
+        Access-Control-Request-Headers: content-type
+        Origin: http://localhost:1234
+        User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+        Sec-Fetch-Mode: cors
+        Sec-Fetch-Site: same-site
+        Sec-Fetch-Dest: empty
+        Referer: http://localhost:1234/
+        Accept-Encoding: gzip, deflate, br, zstd
+        Accept-Language: en-US,en;q=0.9
+</code></pre><ul><li><code>Host</code>: the server hostname + port that the browser is sending the request to</li><li><code>Connection: keep-alive</code>: don&rsquo;t close TCP after this request</li><li><code>Accept: */*</code>: browser will accept any content type in response -</li><li><code>Access-Control-Request-Method: POST</code>: tell server which method the actual
+request will use</li><li><code>Access-Control-Request-Headers: content-type</code>: tell server the list of
+headers it will use for the actual request</li><li><code>Origin: http://localhost:1234</code>: tell server where the request originates
+from, can&rsquo;t be modified by JS</li><li><code>User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36</code>:
+browser identification</li><li><code>Sec-Fetch-Mode: cors</code>: security header, indicates this is a cors request</li><li><code>Sec-Fetch-Site: same-site</code>: different port but same &lsquo;domain&rsquo; (localhost:1234
+& localhost:5000) are treated as same domain</li><li><code>Sec-Fetch-Dest: empty</code>: destination</li><li><code>Referer: http://localhost:1234/</code>: the page URL that initiated this request</li><li><code>Accept-Encoding: gzip, deflate, br, zstd</code>: compression algos the browser
+supports</li><li><code>Accept-Language: en-US,en;q=0.9</code>: preferred languages</li></ul><p>Here&rsquo;s the backend&rsquo;s response to the preflight request:</p><pre tabindex=0><code>Outgoing response: 204 NO CONTENT
+        Content-Type: text/html; charset=utf-8
+        Access-Control-Allow-Origin: http://localhost:1234
+        Access-Control-Allow-Methods: POST
+        Access-Control-Allow-Headers: Content-Type
+        Access-Control-Max-Age: 60
+        Vary: Origin
+</code></pre><ul><li><code>Content-Type: text/html; charset=utf-8</code>: Flask default, not really needed
+since there&rsquo;s no content</li><li><code>Access-Control-Allow-Origin: http://localhost:1234</code>: Tells browser this
+origin is allowed</li><li><code>Access-Control-Allow-Methods: POST</code>: Tells browser this method is allowed for
+the actual request</li><li><code>Access-Control-Allow-Headers: Content-Type</code>: tells browser this header(s) is
+allowed for the actual request</li><li><code>Access-Control-Max-Age: 60</code>: cache the preflight for 60 seconds</li><li><code>Vary: Origin</code>: cache separately for each different origin value</li></ul><p>From there, the frontend can now make the actual request:</p><pre tabindex=0><code>Incoming request: POST /greet
+        Host: localhost:5000
+        Connection: keep-alive
+        Content-Length: 28
+        Sec-Ch-Ua-Platform: &#34;Linux&#34;
+        User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+        Sec-Ch-Ua: &#34;Google Chrome&#34;;v=&#34;141&#34;, &#34;Not?A_Brand&#34;;v=&#34;8&#34;, &#34;Chromium&#34;;v=&#34;141&#34;
+        Content-Type: application/json
+        Sec-Ch-Ua-Mobile: ?0
+        Accept: */*
+        Origin: http://localhost:1234
+        Sec-Fetch-Site: same-site
+        Sec-Fetch-Mode: cors
+        Sec-Fetch-Dest: empty
+        Referer: http://localhost:1234/
+        Accept-Encoding: gzip, deflate, br, zstd
+        Accept-Language: en-US,en;q=0.9
+</code></pre><p>Most headers are the same as the preflight, with these additions:</p><ul><li><code>Content-Length: 28</code>: size of request body (JSON payload) in bytes</li><li><code>Content-Type: application/json</code>: type of data sent</li></ul><p>And the server provides the response:</p><pre tabindex=0><code>Outgoing response: 200 OK
+        Content-Type: application/json
+        Content-Length: 85
+        Access-Control-Allow-Origin: http://localhost:1234
+        Vary: Origin
+</code></pre><ul><li><code>Content-Type: application/json</code>: response contains JSON</li><li><code>Content-Length: 85</code>: size of response body</li><li><code>Access-Control-Allow-Origin: http://localhost:1234</code>: CORS, allow JavaScript
+to read this response</li><li><code>Vary: Origin</code>: cache separately per origin</li></ul><p>Since the preflight response can be cached for 60 seconds, if I reload the
+webpage immediately, it doesn&rsquo;t send a preflight request, instead it just sends
+the POST request directly</p><script src=https://giscus.app/client.js data-repo=bnmoch3/blog data-repo-id=R_kgDOIU86DQ data-category data-category-id=DIC_kwDOIU86Dc4Clvgl data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=gruvbox_light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flex><div class=single-pagination-next></div><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text><a href=/notes/2025/creating-duckdb-table-function-extension/>Creating a DuckDB Table Function Extension</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>&mldr;</p></footer><script async src=https://scripts.simpleanalyticscdn.com/latest.js></script></body><script>function isAuto(){return document.body.classList.contains("auto")}function setTheme(){if(!isAuto())return;document.body.classList.remove("auto");let e="light";window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches&&(e="dark"),document.body.classList.add(e)}function invertBody(){document.body.classList.toggle("dark"),document.body.classList.toggle("light")}isAuto()&&window.matchMedia("(prefers-color-scheme: dark)").addListener(invertBody),setTheme()</script></html>
